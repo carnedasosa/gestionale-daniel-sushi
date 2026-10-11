@@ -108,8 +108,8 @@ Il primo menù si importa da `daniel-sushi/data/menu.json` (categorie, voci, fla
 
 ## 7. Tappe
 
-1. **Base** — progetto, database, import del menù, login staff/admin, admin menù (con allergeni e disponibilità), schermo staff con stati in tempo reale.
-2. **Tavolo** — tavoli e QR, apertura/chiusura con codice, ordine dal tavolo, «ordinato finora», riepilogo conto. *Si può provare in sala appena finita.*
+1. **Base** — progetto, database, import del menù, login staff/admin, admin menù (con allergeni e disponibilità), menù pubblico con allergeni. *Daniel può iniziare subito a compilare gli allergeni.*
+2. **Tavolo** — schermo staff con stati in tempo reale, tavoli e QR, apertura/chiusura con codice, ordine dal tavolo (con note e composer della poke), «ordinato finora», riepilogo conto. *Si può provare in sala appena finita.*
 3. **Domicilio e asporto** — zone, orari, fasce, checkout, accettazione con suono, pagina dello stato, email, collegamento dei bottoni «Ordina ora» del sito.
 
 Ogni tappa ha il suo piano d'implementazione e si chiude con una prova completa del flusso.
