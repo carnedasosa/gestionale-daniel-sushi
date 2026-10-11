@@ -2,19 +2,21 @@ import Link from 'next/link'
 import { db } from '@/server/db'
 import { contaAllergeniDaConfermare, leggiMenu } from '@/menu/repo'
 import { formatEuro } from '@/domain/soldi'
+import { testoBannerAllergeni } from '@/menu/testo-banner'
 import { cambiaDisponibilita } from './azioni'
 
 export default async function AdminMenu({ searchParams }: { searchParams: Promise<{ filtro?: string }> }) {
   const { filtro } = await searchParams
   const soloDaConfermare = filtro === 'allergeni'
   const [menu, daConfermare] = await Promise.all([leggiMenu(db), contaAllergeniDaConfermare(db)])
+  const banner = testoBannerAllergeni(daConfermare)
 
   return (
     <>
       <h1 className="heading">Menù</h1>
       {daConfermare > 0 && (
         <div className="avviso" role="status">
-          <strong>{daConfermare} piatti</strong> hanno gli allergeni da confermare. Senza allergeni confermati gli ordini da casa non possono partire.{' '}
+          <strong>{banner.evidenza}</strong> {banner.resto} Senza allergeni confermati gli ordini da casa non possono partire.{' '}
           {soloDaConfermare
             ? <Link className="ds-link" href="/admin/menu">Mostra tutti</Link>
             : <Link className="ds-link" href="/admin/menu?filtro=allergeni">Mostra solo questi</Link>}
@@ -40,8 +42,10 @@ export default async function AdminMenu({ searchParams }: { searchParams: Promis
                       <td className={p.allergeniConfermati ? '' : 'stato-allergeni--no'}>{p.allergeniConfermati ? 'Confermati' : 'Da confermare'}</td>
                       <td>
                         <form action={cambiaDisponibilita.bind(null, p.id, !p.disponibile)}>
-                          <button className="ds-btn ds-btn--secondary" aria-label={`${p.nome}: ${p.disponibile ? 'segna esaurito' : 'rimetti disponibile'}`}>
+                          <button className="ds-btn ds-btn--secondary">
+                            <span className="visually-hidden">{p.nome}: </span>
                             {p.disponibile ? 'Sì' : 'Esaurito'}
+                            <span className="visually-hidden"> ({p.disponibile ? 'tocca per segnare esaurito' : 'tocca per rimettere disponibile'})</span>
                           </button>
                         </form>
                       </td>

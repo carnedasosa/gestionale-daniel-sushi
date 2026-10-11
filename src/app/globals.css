@@ -21,6 +21,6 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* Campi di modulo condivisi tra l'accesso e i moduli del gestionale. */
 .campo { display: grid; gap: var(--sp-4); }
-.campo input, .campo textarea, .campo select {
+.campo input:not([type=checkbox]), .campo textarea, .campo select {
   font: inherit; padding: 12px 14px; border: 1px solid var(--inchiostro); border-radius: 8px; background: var(--bianco);
 }

@@ -9,5 +9,6 @@
 .stato-allergeni--no { color: var(--arancio-ink); font-weight: 700; }
 .griglia-allergeni { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--sp-8); }
 .modulo-piatto { display: grid; gap: var(--sp-16); max-width: 720px; padding: var(--sp-24); }
+.modulo-piatto fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .errore-campo { color: var(--arancio-ink); font-size: 14px; margin: 0; }
 @media (max-width: 640px) { .tabella-piatti .colonna-desc { display: none; } }
