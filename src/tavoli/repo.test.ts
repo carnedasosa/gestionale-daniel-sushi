@@ -19,7 +19,7 @@ it('crea tavoli, ordina e valida slug e id', async () => {
   expect(nuova.chiave).not.toBe(t.chiave)
   expect(await tavoloDaChiave(db,t.chiave)).toBeNull()
   expect(await aggiornaTavolo(db, 'x', { nome: 'X', attivo: false, posizione: 0 })).toBeNull()
-  expect(await chiudiSessione(db, 'x')).toBe(false)
+  expect(await chiudiSessione(db, 'x')).toMatchObject({ ok: false })
   expect(await sessioneApertaPerId(db, 'x')).toBeNull()
   expect(await verificaCodice(db, 'x', '1234')).toBeNull()
 })

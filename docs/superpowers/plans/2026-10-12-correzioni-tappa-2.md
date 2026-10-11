@@ -88,18 +88,18 @@ create unique index ordini_chiave_invio_unica on public.ordini (chiave_invio) wh
 
 **Modifica:** `src/tavoli/ordini-repo.ts`, `src/tavoli/repo.ts` (+test), `src/app/staff/azioni.ts` (+test), `SchermoStaff.tsx`, `src/app/staff/conto/[sessione]/page.tsx`.
 
-- [ ] I1: `ordiniAttivi` non filtra più sulle sessioni aperte: mostra tutti gli ordini `inviato`/`in_preparazione` (la cucina li vede finché non sono serviti o annullati, anche a tavolo chiuso). La card indica «tavolo chiuso» se la sessione è chiusa.
-- [ ] I1 (chiusura sicura): `chiudiSessione(db, sessioneId, contoVistoAlle: Date | null)` restituisce `{ ok: true }` oppure `{ ok: false, motivo: 'ordini_in_cucina', n }` / `{ ok: false, motivo: 'ordini_dopo_conto', n }`. Lo staff chiude in due modi: dal conto (Task 5, sotto) passando l'ora in cui il conto è stato caricato; dalla card con conferma. Se ci sono ordini ancora in cucina o arrivati dopo il conto, l'azione restituisce l'avviso e la UI chiede conferma esplicita («Ci sono 2 ordini ancora in cucina / 1 ordine arrivato dopo il conto: chiudere comunque?»); con `forza: true` chiude.
-- [ ] I2: «Chiudi tavolo» porta alla pagina conto della sessione appena chiusa (`router.push('/staff/conto/<id>')` dopo l'esito ok). Nella pagina conto: se la sessione è aperta, bottone «Chiudi tavolo» (l'unico pieno) che usa `contoVistoAlle`; se è chiusa, scritta «Tavolo chiuso alle HH:MM». Nella sezione Tavoli dello schermo staff aggiungi «Conti recenti»: le sessioni chiuse nelle ultime 6 ore con link al conto.
-- [ ] M5: la pagina conto si aggiorna da sola (`AggiornamentoAutomatico ogniSecondi={10}`) finché la sessione è aperta.
-- [ ] M2: nella pagina conto, ogni voce ha «Annulla» (secondario, con conferma) che annulla le righe corrispondenti anche di ordini già serviti; il totale si ricalcola. Serve una funzione repo che annulli le righe raggruppate (per sessione + identità della voce) in transazione.
-- [ ] M4: le righe «Poke composta» nel conto non vengono raggruppate tra loro se le scelte differiscono, e mostrano le scelte sotto il nome (testo piccolo, `--inchiostro-tenue`).
-- [ ] M1: se annullando una riga un ordine resta senza righe attive, l'ordine passa a `annullato` (stessa transazione).
-- [ ] M3: il conteggio ordini nella card del tavolo esclude gli annullati (aggiorna anche il test che oggi si aspetta 2).
-- [ ] M6: `SchermoStaff` al primo montaggio considera «già visti» gli ordini presenti senza suonare; suona ed evidenzia solo quelli comparsi dopo.
-- [ ] M12: in `inviaOrdine` sostituisci `elencoTavoli(tx)` sotto lock con una query mirata al solo tavolo/sessione.
-- [ ] Test repo (PGlite) per ogni punto sopra; test azioni con mock per i rami di `chiudiTavolo`.
-- [ ] Verifica, commit.
+- [x] I1: `ordiniAttivi` non filtra più sulle sessioni aperte: mostra tutti gli ordini `inviato`/`in_preparazione` (la cucina li vede finché non sono serviti o annullati, anche a tavolo chiuso). La card indica «tavolo chiuso» se la sessione è chiusa.
+- [x] I1 (chiusura sicura): `chiudiSessione(db, sessioneId, contoVistoAlle: Date | null)` restituisce `{ ok: true }` oppure `{ ok: false, motivo: 'ordini_in_cucina', n }` / `{ ok: false, motivo: 'ordini_dopo_conto', n }`. Lo staff chiude in due modi: dal conto (Task 5, sotto) passando l'ora in cui il conto è stato caricato; dalla card con conferma. Se ci sono ordini ancora in cucina o arrivati dopo il conto, l'azione restituisce l'avviso e la UI chiede conferma esplicita («Ci sono 2 ordini ancora in cucina / 1 ordine arrivato dopo il conto: chiudere comunque?»); con `forza: true` chiude.
+- [x] I2: «Chiudi tavolo» porta alla pagina conto della sessione appena chiusa (`router.push('/staff/conto/<id>')` dopo l'esito ok). Nella pagina conto: se la sessione è aperta, bottone «Chiudi tavolo» (l'unico pieno) che usa `contoVistoAlle`; se è chiusa, scritta «Tavolo chiuso alle HH:MM». Nella sezione Tavoli dello schermo staff aggiungi «Conti recenti»: le sessioni chiuse nelle ultime 6 ore con link al conto.
+- [x] M5: la pagina conto si aggiorna da sola (`AggiornamentoAutomatico ogniSecondi={10}`) finché la sessione è aperta.
+- [x] M2: nella pagina conto, ogni voce ha «Annulla» (secondario, con conferma) che annulla le righe corrispondenti anche di ordini già serviti; il totale si ricalcola. Serve una funzione repo che annulli le righe raggruppate (per sessione + identità della voce) in transazione.
+- [x] M4: le righe «Poke composta» nel conto non vengono raggruppate tra loro se le scelte differiscono, e mostrano le scelte sotto il nome (testo piccolo, `--inchiostro-tenue`).
+- [x] M1: se annullando una riga un ordine resta senza righe attive, l'ordine passa a `annullato` (stessa transazione).
+- [x] M3: il conteggio ordini nella card del tavolo esclude gli annullati (aggiorna anche il test che oggi si aspetta 2).
+- [x] M6: `SchermoStaff` al primo montaggio considera «già visti» gli ordini presenti senza suonare; suona ed evidenzia solo quelli comparsi dopo.
+- [x] M12: in `inviaOrdine` sostituisci `elencoTavoli(tx)` sotto lock con una query mirata al solo tavolo/sessione.
+- [x] Test repo (PGlite) per ogni punto sopra; test azioni con mock per i rami di `chiudiTavolo`.
+- [x] Verifica, commit.
 
 ### Task 6: Schermo staff resistente alle cadute di rete (I5)
 

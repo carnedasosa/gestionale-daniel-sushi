@@ -57,9 +57,24 @@ export async function apriSessione(db: Db, tavoloId: string, genera: () => strin
   throw new Error('Impossibile aprire il tavolo: riprova')
   })
 }
-export async function chiudiSessione(db: Db, sessioneId: string): Promise<boolean> {
-  if (!idValido(sessioneId)) return false
-  return (await db.query('update sessioni_tavolo set chiusa_il=now() where id=$1 and chiusa_il is null returning id', [sessioneId])).length === 1
+export type EsitoChiusura = { ok: true } | { ok: false; motivo: 'ordini_in_cucina' | 'ordini_dopo_conto' | 'sessione_non_valida'; n: number }
+export async function chiudiSessione(db: Db, sessioneId: string,contoVistoAlle: Date | null = null,forza = false): Promise<EsitoChiusura> {
+  const invalida = { ok: false as const,motivo: 'sessione_non_valida' as const,n: 0 }
+  if (!idValido(sessioneId) || typeof forza !== 'boolean' || (contoVistoAlle !== null && !(contoVistoAlle instanceof Date && Number.isFinite(contoVistoAlle.getTime())))) return invalida
+  return db.transazione(async tx => {
+    const [s] = await tx.query<{ chiusa: Date | null }>('select chiusa_il as chiusa from sessioni_tavolo where id=$1 for update',[sessioneId])
+    if (!s) return invalida
+    if (s.chiusa) return { ok: true }
+    const [n] = await tx.query<{ cucina: number; dopo: number }>(`select count(*) filter(where stato in ('inviato','in_preparazione'))::int as cucina,count(*) filter(where creato_il>$2)::int as dopo from ordini where sessione_id=$1 and stato<>'annullato'`,[sessioneId,contoVistoAlle])
+    if (!forza && n.dopo>0) return { ok: false,motivo: 'ordini_dopo_conto',n: n.dopo }
+    if (!forza && n.cucina>0) return { ok: false,motivo: 'ordini_in_cucina',n: n.cucina }
+    await tx.query('update sessioni_tavolo set chiusa_il=clock_timestamp() where id=$1',[sessioneId])
+    return { ok: true }
+  })
+}
+export interface ContoRecente { id: string; tavoloNome: string; chiusaIl: Date }
+export async function contiRecenti(db: Db): Promise<ContoRecente[]> {
+  return db.query<ContoRecente>(`select s.id,t.nome as "tavoloNome",s.chiusa_il as "chiusaIl" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.chiusa_il>=now()-interval '6 hours' order by s.chiusa_il desc`)
 }
 export interface SessioneConTavolo extends SessioneAperta { tavoloChiave: string; chiusaIl: Date | null }
 export async function sessionePerId(db: Db, sessioneId: string): Promise<SessioneConTavolo | null> {

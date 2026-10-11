@@ -3,12 +3,14 @@ import Link from 'next/link'
 import { useContext, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatEuro } from '@/domain/soldi'
+import { arriviCucina } from '@/domain/arrivi-cucina'
 import type { OrdineClient, RiepilogoTavolo } from '@/tavoli/ordini-repo'
-import type { TavoloConSessione } from '@/tavoli/repo'
+import type { TavoloConSessione, ContoRecente } from '@/tavoli/repo'
 import { DettaglioRighe } from '@/componenti/DettaglioRighe'
 import { ConfermaAzione } from '@/componenti/ConfermaAzione'
 import { SuonoTurno } from './InizioTurno'
-import { apriTavolo, chiudiTavolo, sbloccaTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, type EsitoStaff } from './azioni'
+import { ChiudiTavolo } from './ChiudiTavolo'
+import { apriTavolo, sbloccaTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, type EsitoStaff } from './azioni'
 
 type Esegui = (azione: () => Promise<EsitoStaff>) => void
 export type TavoloStaff = Omit<TavoloConSessione,'sessione'> & { sessione: (Omit<NonNullable<TavoloConSessione['sessione']>,'apertaIl'> & { apertaIl: string }) | null }
@@ -16,6 +18,7 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
   return <article className={`ds-card staff-ordine${nuovo ? ' staff-ordine--nuovo' : ''}`} onPointerDown={leggi}>
     <h3 className="heading-sm">{o.tavoloNome} · n. {o.numero}</h3><p>{minuti} min · {formatEuro(o.totaleCent)} {nuovo && <span className="ds-badge ds-badge--new">Nuovo ordine</span>}</p>
+    {o.tavoloChiuso && <p className="staff-nota">Tavolo chiuso</p>}
     <DettaglioRighe righe={o.righe} area="staff" azioneRiga={r => <ConfermaAzione inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => esegui(() => annullaRigaStaff(r.id))}>Annulla<span className="visually-hidden"> {r.nome}</span></ConfermaAzione>} />
     <div className="staff-azioni"><button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => { leggi(); esegui(() => avanzaOrdine(o.id)) }}>{o.stato === 'inviato' ? 'In preparazione' : 'Servito'}</button>
       <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numero}?`} conferma={() => esegui(() => annullaOrdineStaff(o.id))}>Annulla ordine</ConfermaAzione>
@@ -23,16 +26,17 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
     </div>
   </article>
 }
-export function SchermoStaff({ tavoli,ordini,riepiloghi,ora }: { tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; ora: string }) {
+export function SchermoStaff({ tavoli,ordini,riepiloghi,contiRecenti,ora }: { tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[]; ora: string }) {
   const [errore,setErrore] = useState<string | null>(null)
   const [nuovi,setNuovi] = useState<Set<string>>(new Set())
-  const visti = useRef(new Set<string>())
+  const visti = useRef<Set<string> | null>(null)
   const [inCorso,startTransition] = useTransition()
   const bloccato = useRef(false)
   const router = useRouter(), suona = useContext(SuonoTurno)
   useEffect(() => {
-    const nuoviIds = ordini.filter(o => !visti.current.has(o.id)).map(o => o.id)
-    for (const o of ordini) visti.current.add(o.id)
+    const arrivi = arriviCucina(visti.current,ordini.map(o => o.id))
+    const nuoviIds = arrivi.nuovi
+    visti.current = arrivi.visti
     if (nuoviIds.length) {
       setNuovi(s => new Set([...s,...nuoviIds])); suona(3)
     }
@@ -60,8 +64,9 @@ export function SchermoStaff({ tavoli,ordini,riepiloghi,ora }: { tavoli: TavoloS
         <p className="display staff-codice" aria-label={`Codice ${s.codice}`}>{s.codice}</p><p>Aperto alle {new Date(s.apertaIl).toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</p>
         {s.tentativi > 0 && <div className="staff-azioni"><p>{s.tentativi} tentativi sbagliati</p><button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => esegui(() => sbloccaTavolo(s.id))}>Sblocca</button></div>}
         <p>{r?.numeroOrdini ?? 0} ordini · {formatEuro(r?.totaleCent ?? 0)}</p><div className="staff-azioni"><Link className="ds-btn ds-btn--secondary" href={`/staff/conto/${s.id}`}>Conto</Link>
-          <ConfermaAzione inCorso={inCorso} domanda={`Chiudere il tavolo ${t.nome}? I clienti non potranno più ordinare.`} conferma={() => esegui(() => chiudiTavolo(s.id))}>Chiudi tavolo</ConfermaAzione></div>
+          <ChiudiTavolo sessioneId={s.id} /></div>
       </> : <button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => esegui(() => apriTavolo(t.id))}>Apri tavolo</button>}</article>
     })}</div></section>
+    <section><h2 className="heading">Conti recenti</h2>{!contiRecenti.length && <p>Nessun tavolo chiuso nelle ultime 6 ore.</p>}<ul className="staff-conti-recenti">{contiRecenti.map(c => <li key={c.id}><Link className="ds-link" href={`/staff/conto/${c.id}`}>{c.tavoloNome} · chiuso alle {new Date(c.chiusaIl).toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</Link></li>)}</ul></section>
   </>
 }
