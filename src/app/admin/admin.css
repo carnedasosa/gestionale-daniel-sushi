@@ -1,14 +1,14 @@
 .admin__barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-16); padding: var(--sp-16); background: var(--bianco); border-bottom: 1px solid var(--filetto); }
 .admin__nav { display: flex; gap: var(--sp-16); margin-right: auto; }
 .admin__contenuto { padding-block: var(--sp-24); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-24); }
-.avviso { padding: var(--sp-16); border: 2px solid var(--arancio); border-radius: 8px; background: var(--bianco); }
-.tabella-scroll { position: relative; overflow-x: auto; }
-.tabella-piatti { width: 100%; border-collapse: collapse; background: var(--bianco); }
-.tabella-piatti th, .tabella-piatti td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--filetto); vertical-align: middle; }
-.tabella-piatti .num { font-variant-numeric: tabular-nums; width: 3.5em; }
-.stato-allergeni--no { color: var(--arancio-ink); font-weight: 700; }
-.griglia-allergeni { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--sp-8); }
-.modulo-piatto { display: grid; gap: var(--sp-16); max-width: 720px; padding: var(--sp-24); }
-.modulo-piatto fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
-.errore-campo { color: var(--arancio-ink); font-size: 14px; margin: 0; }
-@media (max-width: 640px) { .tabella-piatti .colonna-desc { display: none; } }
+.admin-avviso { padding: var(--sp-16); border: 2px solid var(--arancio); border-radius: 8px; background: var(--bianco); }
+.admin-tabella-scroll { position: relative; overflow-x: auto; }
+.admin-tabella-piatti { width: 100%; border-collapse: collapse; background: var(--bianco); }
+.admin-tabella-piatti th, .admin-tabella-piatti td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--filetto); vertical-align: middle; }
+.admin-tabella-piatti .num { font-variant-numeric: tabular-nums; width: 3.5em; }
+.admin-stato-allergeni--no { color: var(--arancio-ink); font-weight: 700; }
+.admin-griglia-allergeni { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--sp-8); }
+.admin-modulo-piatto { display: grid; gap: var(--sp-16); max-width: 720px; padding: var(--sp-24); }
+.admin-modulo-piatto fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.admin-errore-campo { color: var(--arancio-ink); font-size: 14px; margin: 0; }
+@media (max-width: 640px) { .admin-tabella-piatti .admin-colonna-secondaria { display: none; } }
