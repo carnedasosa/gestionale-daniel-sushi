@@ -66,6 +66,8 @@ Prezzi poke temporanei: base 9 €, extra 1 €. Dopo consenso separato sono sta
 
 Ultimo controllo completo: 173 test in 39 file, typecheck, lint e build senza `.env.local` passati l'11 ottobre alle 21:47. Successivamente sono stati aggiornati soltanto questo resoconto, le checkbox del piano e le immagini. Ripristinato il server di sviluppo su `localhost:3000` e terminati i proxy temporanei di prova.
 
+Branch pubblicato e [PR #3](https://github.com/carnedasosa/gestionale-daniel-sushi/pull/3) aperta verso `main` con descrizione in italiano. Nessun merge o deploy eseguito.
+
 Prima di stampare QR definitivi va configurato `APP_URL` con l'origine effettiva dell'applicazione. Con i prezzi poke originali null, la poke composta rimane indisponibile finché l'amministratore li imposta.
 
 ## Evidenze visive
