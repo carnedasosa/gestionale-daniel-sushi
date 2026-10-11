@@ -22,7 +22,14 @@ export async function salvaPiatto(id: string, stato: StatoModulo, fd: FormData):
   const invii = stato.invii + 1
   const esito = validaPiatto(input)
   if (!esito.ok) return { salvato: false, errori: esito.errori, erroreGenerale: null, valori: input, invii }
-  const piatto = await aggiornaPiatto(db, id, esito.dati)
+  let piatto: Awaited<ReturnType<typeof aggiornaPiatto>>
+  try {
+    piatto = await aggiornaPiatto(db, id, esito.dati)
+  } catch (err) {
+    // Solo il messaggio, mai variabili d'ambiente: la stringa di connessione contiene la password.
+    console.error('salvaPiatto non riuscito:', err instanceof Error ? err.message : 'errore sconosciuto')
+    return { salvato: false, errori: {}, erroreGenerale: 'Salvataggio non riuscito: controlla la connessione e riprova.', valori: input, invii }
+  }
   if (!piatto) return { salvato: false, errori: {}, erroreGenerale: 'Piatto non trovato: forse è stato eliminato.', valori: input, invii }
   revalidatePath('/admin/menu')
   revalidatePath(`/admin/menu/${piatto.id}`)
@@ -33,7 +40,13 @@ export async function salvaPiatto(id: string, stato: StatoModulo, fd: FormData):
 export async function cambiaDisponibilita(id: string, disponibile: boolean): Promise<void> {
   await richiediRuolo('admin')
   if (typeof disponibile !== 'boolean') return
-  await impostaDisponibile(db, id, disponibile)
+  try {
+    // Se il piatto non esiste più (false) si rivalida comunque: la pagina mostra lo stato reale.
+    await impostaDisponibile(db, id, disponibile)
+  } catch (err) {
+    console.error('cambiaDisponibilita non riuscito:', err instanceof Error ? err.message : 'errore sconosciuto')
+    return
+  }
   revalidatePath('/admin/menu')
   revalidatePath('/')
 }
