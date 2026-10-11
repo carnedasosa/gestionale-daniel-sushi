@@ -2,6 +2,7 @@
 // L'utente va prima creato in Supabase → Authentication → Users → Add user.
 import postgres from 'postgres'
 import { assegnaRuoloPerEmail } from '../src/auth/ruoli-repo'
+import { adattaSql } from '../src/server/db-adapter'
 
 // Niente top-level await: senza "type": "module" tsx esegue lo script come CommonJS.
 async function main(): Promise<number> {
@@ -16,7 +17,7 @@ async function main(): Promise<number> {
   }
   const sql = postgres(process.env.DATABASE_URL, { prepare: false, max: 1 })
   try {
-    const db = { query: async <T,>(t: string, p: unknown[] = []) => (await sql.unsafe(t, p as never[])) as unknown as T[] }
+    const db = adattaSql(sql)
     const ok = await assegnaRuoloPerEmail(db, email, ruolo)
     console.log(ok ? `Ruolo ${ruolo} assegnato a ${email}` : `Nessun utente con email ${email}`)
     return ok ? 0 : 1

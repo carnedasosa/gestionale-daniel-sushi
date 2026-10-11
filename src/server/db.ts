@@ -1,6 +1,7 @@
 import 'server-only'
 import postgres from 'postgres'
 import type { Db } from './db-tipi'
+import { adattaSql } from './db-adapter'
 
 let sql: postgres.Sql | undefined
 
@@ -16,4 +17,5 @@ export const db: Db = {
   async query<T>(text: string, params: unknown[] = []) {
     return (await client().unsafe(text, params as postgres.ParameterOrJSON<never>[])) as unknown as T[]
   },
+  transazione: (fn) => adattaSql(client()).transazione(fn),
 }

@@ -1,4 +1,4 @@
-import { PGlite } from '@electric-sql/pglite'
+import { PGlite, type Transaction } from '@electric-sql/pglite'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import type { Db } from '@/server/db-tipi'
@@ -23,11 +23,21 @@ export async function creaDbDiTest(opzioni: { seed?: boolean } = {}): Promise<{ 
     await pg.exec(readFileSync(path.join(cartella, file), 'utf8'))
   }
   if (opzioni.seed) await pg.exec(readFileSync('supabase/seed.sql', 'utf8'))
-  const db: Db = {
-    async query<T>(text: string, params: unknown[] = []) {
-      const res = await pg.query<T>(text, params as never[])
-      return res.rows
+  const adatta = (client: PGlite | Transaction): Db => ({
+    async query<T>(text: string, params: unknown[] = []) { return (await client.query<T>(text,params as never[])).rows },
+    async transazione<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
+      if ('transaction' in client) return client.transaction(tx => fn(adatta(tx)))
+      await client.query('savepoint sotto_transazione')
+      try {
+        const risultato = await fn(adatta(client))
+        await client.query('release savepoint sotto_transazione')
+        return risultato
+      } catch (err) {
+        await client.query('rollback to savepoint sotto_transazione')
+        throw err
+      }
     },
-  }
+  })
+  const db = adatta(pg)
   return { pg, db }
 }

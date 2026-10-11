@@ -11,6 +11,9 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
         <strong className="heading-sm">Gestionale</strong>
         <nav className="admin__nav">
           <Link href="/admin/menu" className="ds-link">Menù</Link>
+          <Link href="/admin/tavoli" className="ds-link">Tavoli</Link>
+          <Link href="/admin/poke" className="ds-link">Poke</Link>
+          <Link href="/staff" className="ds-link">Schermo staff</Link>
           <Link href="/" className="ds-link">Vedi il menù pubblico</Link>
         </nav>
         <form action={esci}><button className="ds-btn ds-btn--secondary">Esci</button></form>
