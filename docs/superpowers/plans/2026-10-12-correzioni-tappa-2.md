@@ -28,8 +28,8 @@
 
 ### Task 1: Igiene del repository
 
-- [ ] Aggiungi a `.gitignore` la riga `.superpowers/` (cartella di lavoro degli agenti, contiene report: oggi non è ignorata e un `git add .` la pubblicherebbe nel repo pubblico). Verifica con `git check-ignore -v .superpowers/qualcosa`.
-- [ ] Commit.
+- [x] Aggiungi a `.gitignore` la riga `.superpowers/` (cartella di lavoro degli agenti, contiene report: oggi non è ignorata e un `git add .` la pubblicherebbe nel repo pubblico). Verifica con `git check-ignore -v .superpowers/qualcosa`.
+- [x] Commit.
 
 ### Task 2: Migrazione — chiave QR, tentativi per sessione e IP, chiave d'invio
 
