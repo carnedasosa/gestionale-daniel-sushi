@@ -325,6 +325,8 @@ export async function contoSessione(db: Db, sessioneId: string): Promise<Conto |
 
 ### Task 10: Applicare la migrazione e prova nel browser
 
+- [x] Migrazione reale autorizzata, advisor controllati, flusso provato e pulizia autorizzata completata. Risultati, correzioni e limiti della prova in `docs/verifiche/2026-10-11-tappa-2.md`.
+
 Il progetto Supabase è `daniel-sushi` (ref `rxsywhdznaugfhmsdjsa`) nell'organizzazione free «daniel sushi». **Chiedi all'utente** prima di applicare la migrazione al database reale. Applicala con lo strumento che hai (MCP Supabase `apply_migration`, oppure uno script locale che esegue il file con `DATABASE_URL` da `.env.local` tramite `postgres` senza stamparla). Poi controlla gli advisor di sicurezza: è atteso solo «RLS enabled, no policy».
 
 Prova nel browser con `npm run dev` (l'utente fa il login da sé: **non inserire mai la sua password**; per lo staff può creare un secondo utente e assegnare `npm run ruolo -- <email> staff`):
@@ -342,6 +344,6 @@ Prova nel browser con `npm run dev` (l'utente fa il login da sé: **non inserire
 
 ### Task 11: Revisione finale e consegna
 
-- [ ] Rileggi tutto il diff del branch contro la spec (§4.2, §4.3, §5) e la Review Focus di questo piano; correggi ciò che manca.
-- [ ] `npm test && npm run typecheck && npm run lint && npm run build` verdi senza flag.
+- [x] Rileggi tutto il diff del branch contro la spec (§4.2, §4.3, §5) e la Review Focus di questo piano; correggi ciò che manca.
+- [x] `npm test && npm run typecheck && npm run lint && npm run build` verdi senza flag.
 - [ ] Push del branch `tappa-2-tavolo` e PR verso il branch base, in italiano: cosa contiene, verifiche fatte nel browser, cosa resta (tappa 3: domicilio e asporto), decisioni prese rispetto al piano.
