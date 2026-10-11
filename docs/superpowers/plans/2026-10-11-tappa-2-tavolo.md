@@ -346,4 +346,4 @@ Prova nel browser con `npm run dev` (l'utente fa il login da sé: **non inserire
 
 - [x] Rileggi tutto il diff del branch contro la spec (§4.2, §4.3, §5) e la Review Focus di questo piano; correggi ciò che manca.
 - [x] `npm test && npm run typecheck && npm run lint && npm run build` verdi senza flag.
-- [ ] Push del branch `tappa-2-tavolo` e PR verso il branch base, in italiano: cosa contiene, verifiche fatte nel browser, cosa resta (tappa 3: domicilio e asporto), decisioni prese rispetto al piano.
+- [x] Push del branch `tappa-2-tavolo` e PR verso il branch base, in italiano: cosa contiene, verifiche fatte nel browser, cosa resta (tappa 3: domicilio e asporto), decisioni prese rispetto al piano. PR #2 verso `main` (tappa 1 già unita): https://github.com/carnedasosa/gestionale-daniel-sushi/pull/2.
