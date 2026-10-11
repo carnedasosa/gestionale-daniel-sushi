@@ -29,3 +29,6 @@ img { max-width: 100%; height: auto; display: block; }
 .display, .heading-lg, .heading, .heading-sm { color: var(--indaco); }
 .display { font-size: clamp(64px, 9vw, 112px); }
 .heading-lg { font-size: clamp(44px, 5.4vw, 64px); }
+
+/* Pagina 404. */
+.non-trovata { display: grid; justify-items: start; gap: var(--sp-16); padding-block: var(--sp-56); }
