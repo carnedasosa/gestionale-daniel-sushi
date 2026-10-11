@@ -9,6 +9,7 @@ export function validaCarrello(input: unknown): { ok: true; righe: RigaCarrello[
     if (!r || typeof r !== 'object' || Array.isArray(r) || !Number.isInteger(r.quantita) || r.quantita < 1 || r.quantita > 20 || typeof r.nota !== 'string' || r.nota.length > 200) return errore
     if (r.piattoId !== null && !idValido(r.piattoId)) return errore
     if (r.piattoId === null && (!r.poke || typeof r.poke !== 'object' || Array.isArray(r.poke))) return errore
+    if (r.piattoId === null && !Object.values(r.poke).every(v => Array.isArray(v) && v.every(scelta => typeof scelta === 'string'))) return errore
     if (r.piattoId !== null && r.poke !== undefined) return errore
     righe.push({ piattoId: r.piattoId, quantita: r.quantita, nota: r.nota.trim(), ...(r.piattoId === null ? { poke: r.poke } : {}) })
   }

@@ -1,10 +1,6 @@
 .tavolo-pagina { padding-block: var(--sp-16) var(--sp-128); }
 .tavolo-codice { display: grid; gap: var(--sp-16); padding: var(--sp-24); max-width: 480px; }
 .tavolo-codice input { min-width: 0; width: 100%; }
-.tavolo-pannello { width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 32px); padding: var(--sp-24); border: 1px solid var(--filetto); border-radius: var(--radius-card); background: var(--carta); color: var(--inchiostro); }
-.tavolo-pannello::backdrop { background: var(--inchiostro); opacity: .5; }
-.tavolo-pannello-testa { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-16); }
-.tavolo-pannello h2 { margin: 0; }
 .tavolo-dish-azioni { grid-column: 2 / 4; padding-top: var(--sp-12); }
 .tavolo-quantita { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-12); }
 .tavolo-quantita .ds-btn { min-width: var(--tap); min-height: var(--tap); padding-inline: var(--sp-16); }
@@ -20,5 +16,6 @@
 .tavolo-ordinato { margin-top: var(--sp-48); display: grid; gap: var(--sp-16); }
 .tavolo-righe { padding-left: var(--sp-24); display: grid; gap: var(--sp-16); }
 .tavolo-nota, .tavolo-avviso { border-left: var(--sp-4) solid var(--arancio); padding-left: var(--sp-12); overflow-wrap: anywhere; }
+.tavolo-avviso[role="status"] { position: fixed; bottom: 88px; left: var(--sp-16); right: var(--sp-16); z-index: 4; margin: 0 auto; max-width: 640px; padding: var(--sp-16); background: var(--carta); border: 1px solid var(--filetto); border-left: var(--sp-4) solid var(--arancio); border-radius: var(--radius-card); }
 .tavolo-pagina h1, .tavolo-pagina h3, .tavolo-righe li { overflow-wrap: anywhere; }
 @media (max-width: 480px) { .tavolo-pannello { padding: var(--sp-16); } .tavolo-pagina .dish { grid-template-columns: 24px minmax(0, 1fr) auto; } }

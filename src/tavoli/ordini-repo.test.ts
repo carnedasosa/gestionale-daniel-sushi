@@ -77,3 +77,27 @@ it('riepiloghi staff: numero ordini e totale senza annullati', async () => {
   await annullaOrdine(db,a.ordine.id)
   expect(await riepiloghiTavoli(db)).toEqual([{ sessioneId: sessione, numeroOrdini: 2, totaleCent: 1200 }])
 })
+it('un ordine misto con un esaurito non salva neppure le righe disponibili', async () => {
+  const { db } = ambiente
+  const [altro] = await db.query<{ id: string }>('select id from piatti where numero=2')
+  await db.query('update piatti set disponibile=false where id=$1',[altro.id])
+  expect((await creaOrdineTavolo(db,sessione,[...righe(),{ piattoId: altro.id,quantita: 1,nota: '' }])).ok).toBe(false)
+  expect(await db.query('select * from ordini')).toEqual([])
+  expect(await db.query('select * from righe_ordine')).toEqual([])
+})
+it('identifica per ID il solo esaurito anche se due piatti hanno lo stesso nome', async () => {
+  const { db } = ambiente
+  const [altro] = await db.query<{ id: string }>('select id from piatti where numero=2')
+  await db.query('update piatti set nome=$2,disponibile=false where id=$1',[altro.id,'Salmone'])
+  expect(await creaOrdineTavolo(db,sessione,[...righe(),{ piattoId: altro.id,quantita: 1,nota: '' }])).toMatchObject({
+    ok: false, nonDisponibili: ['Salmone'], nonDisponibiliIds: [altro.id],
+  })
+  expect(await db.query('select * from ordini')).toEqual([])
+})
+it('annullamenti di righe concorrenti mantengono il totale corretto', async () => {
+  const { db } = ambiente
+  const e = await creaOrdineTavolo(db,sessione,[...righe(),...righe()]); if (!e.ok) throw new Error(e.errore)
+  const risultati = await Promise.all(e.ordine.righe.map(r => annullaRiga(db,r.id)))
+  expect(risultati).toEqual([true,true])
+  expect((await ordiniDellaSessione(db,sessione))[0].totaleCent).toBe(0)
+})

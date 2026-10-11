@@ -41,11 +41,14 @@ export function MenuOrdinabile({ categorie,config,sessioneId,slug }: { categorie
   useEffect(() => { if (caricato) { try { sessionStorage.setItem(`carrello_${sessioneId}`,JSON.stringify(righe)) } catch { /* Storage non disponibile. */ } } },[righe,sessioneId,caricato])
   const modificaPiatto = (id: string,q: number) => {
     if (invio.current || !caricato) return
+    setMessaggio(null)
     const i = righe.findIndex(r => r.piattoId === id)
     if (i === -1 && righe.length >= 40) { setErrore('Puoi aggiungere al massimo 40 righe per ordine.'); return }
     setRighe(r => q === 0 ? r.filter(v => v.piattoId !== id) : i === -1 ? [...r,{ piattoId: id,quantita: q,nota: '' }] : r.map((v,j) => j === i ? { ...v,quantita: q } : v))
   }
   const aggiungiPoke = (poke: SceltePoke) => {
+    if (invio.current || !caricato) return
+    setMessaggio(null)
     if (righe.length >= 40) { setErrore('Puoi aggiungere al massimo 40 righe per ordine.'); return }
     setRighe(r => [...r,{ piattoId: null,quantita: 1,nota: '',poke }]); setPokeAperta(false)
   }
@@ -61,7 +64,11 @@ export function MenuOrdinabile({ categorie,config,sessioneId,slug }: { categorie
       try {
         const esito = await inviaOrdine(slug,JSON.stringify(righe))
         if (esito.ok) { setRighe([]); setMessaggio(`Ordine n. ${esito.numero} inviato in cucina`); router.refresh(); risolvi(true) }
-        else { setErrore(`${esito.errore ?? 'Invio non riuscito.'}${esito.nonDisponibili?.length ? `: ${esito.nonDisponibili.join(', ')}` : ''}`); if (esito.nonDisponibili) setRighe(r => r.filter(v => !esito.nonDisponibili!.includes(v.piattoId ? piatti.find(p => p.id === v.piattoId)?.nome ?? 'Piatto non più in menù' : 'Poke composta'))); risolvi(false); router.refresh() }
+        else {
+          setErrore(`${esito.errore ?? 'Invio non riuscito.'}${esito.nonDisponibili?.length ? `: ${esito.nonDisponibili.join(', ')}` : ''}`)
+          if (esito.nonDisponibiliIds) setRighe(r => r.filter(v => v.piattoId === null || !esito.nonDisponibiliIds!.includes(v.piattoId)))
+          risolvi(false); router.refresh()
+        }
       } catch { setErrore('Invio non riuscito: controlla la connessione e riprova.'); risolvi(false) }
       finally { invio.current = false }
     })

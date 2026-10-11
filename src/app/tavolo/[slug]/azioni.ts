@@ -63,7 +63,7 @@ async function sessioneAutorizzata(slug: string) {
   const sessione = await sessioneApertaPerId(db,id)
   return sessione?.tavoloSlug === slug ? sessione : null
 }
-export interface EsitoInvio { ok: boolean; errore?: string; nonDisponibili?: string[]; numero?: number }
+export interface EsitoInvio { ok: boolean; errore?: string; nonDisponibili?: string[]; nonDisponibiliIds?: string[]; numero?: number }
 export async function inviaOrdine(slug: string, carrelloJson: string): Promise<EsitoInvio> {
   try {
     const sessione = await sessioneAutorizzata(slug)

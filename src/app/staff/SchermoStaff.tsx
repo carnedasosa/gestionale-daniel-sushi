@@ -6,6 +6,7 @@ import { formatEuro } from '@/domain/soldi'
 import type { OrdineClient, RiepilogoTavolo } from '@/tavoli/ordini-repo'
 import type { TavoloConSessione } from '@/tavoli/repo'
 import { DettaglioRighe } from '@/componenti/DettaglioRighe'
+import { ConfermaAzione } from '@/componenti/ConfermaAzione'
 import { SuonoTurno } from './InizioTurno'
 import { apriTavolo, chiudiTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, type EsitoStaff } from './azioni'
 
@@ -15,9 +16,9 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
   return <article className={`ds-card staff-ordine${nuovo ? ' staff-ordine--nuovo' : ''}`} onPointerDown={leggi}>
     <h3 className="heading-sm">{o.tavoloNome} · n. {o.numero}</h3><p>{minuti} min · {formatEuro(o.totaleCent)} {nuovo && <span className="ds-badge ds-badge--new">Nuovo ordine</span>}</p>
-    <DettaglioRighe righe={o.righe} area="staff" azioneRiga={r => <button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => { if (confirm(`Annullare ${r.nome}?`)) esegui(() => annullaRigaStaff(r.id)) }}>Annulla<span className="visually-hidden"> {r.nome}</span></button>} />
+    <DettaglioRighe righe={o.righe} area="staff" azioneRiga={r => <ConfermaAzione inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => esegui(() => annullaRigaStaff(r.id))}>Annulla<span className="visually-hidden"> {r.nome}</span></ConfermaAzione>} />
     <div className="staff-azioni"><button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => { leggi(); esegui(() => avanzaOrdine(o.id)) }}>{o.stato === 'inviato' ? 'In preparazione' : 'Servito'}</button>
-      <button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => { if (confirm(`Annullare l’ordine n. ${o.numero}?`)) esegui(() => annullaOrdineStaff(o.id)) }}>Annulla ordine</button>
+      <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numero}?`} conferma={() => esegui(() => annullaOrdineStaff(o.id))}>Annulla ordine</ConfermaAzione>
       {nuovo && <button type="button" className="ds-btn ds-btn--secondary" onClick={leggi}>Segna come letto</button>}
     </div>
   </article>
@@ -58,7 +59,7 @@ export function SchermoStaff({ tavoli,ordini,riepiloghi,ora }: { tavoli: TavoloS
       return <article className="ds-card staff-tavolo" key={t.id}><h3 className="heading-sm">{t.nome}</h3>{s ? <>
         <p className="display staff-codice" aria-label={`Codice ${s.codice}`}>{s.codice}</p><p>Aperto alle {new Date(s.apertaIl).toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</p>
         <p>{r?.numeroOrdini ?? 0} ordini · {formatEuro(r?.totaleCent ?? 0)}</p><div className="staff-azioni"><Link className="ds-btn ds-btn--secondary" href={`/staff/conto/${s.id}`}>Conto</Link>
-          <button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => { if (confirm(`Chiudere il tavolo ${t.nome}? I clienti non potranno più ordinare.`)) esegui(() => chiudiTavolo(s.id)) }}>Chiudi tavolo</button></div>
+          <ConfermaAzione inCorso={inCorso} domanda={`Chiudere il tavolo ${t.nome}? I clienti non potranno più ordinare.`} conferma={() => esegui(() => chiudiTavolo(s.id))}>Chiudi tavolo</ConfermaAzione></div>
       </> : <button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => esegui(() => apriTavolo(t.id))}>Apri tavolo</button>}</article>
     })}</div></section>
   </>

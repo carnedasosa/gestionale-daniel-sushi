@@ -9,3 +9,6 @@ it('normalizza nota e ignora prezzo client', () => {
 it('rifiuta tutti gli input malformati e i limiti superati', () => {
   for (const input of [null, {}, 'x', [], Array(41).fill(riga), [null], [{ ...riga, quantita: 0 }], [{ ...riga, quantita: 21 }], [{ ...riga, quantita: 1.2 }], [{ ...riga, quantita: '2' }], [{ ...riga, nota: 4 }], [{ ...riga, nota: 'x'.repeat(201) }], [{ ...riga, piattoId: 'x' }], [{ ...riga, piattoId: null }], [{ ...riga, piattoId: null, poke: [] }], [{ ...riga, piattoId: null, poke: null }], [{ ...riga, poke: { Base: ['Riso'] } }]]) expect(validaCarrello(input).ok).toBe(false)
 })
+it('rifiuta scelte poke malformate anche quando il carrello arriva dallo storage', () => {
+  for (const poke of [{ Base: 2 }, { Base: 'Riso' }, { Base: [null] }, { Base: [{}] }]) expect(validaCarrello([{ piattoId: null, quantita: 1, nota: '', poke }]).ok).toBe(false)
+})
