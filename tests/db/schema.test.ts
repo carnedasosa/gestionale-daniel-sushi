@@ -40,8 +40,20 @@ describe('schema piatti', () => {
     await expect(db.query(`insert into poke_config (id, titolo, gruppi) values (2, 'Poke', '[]')`)).rejects.toThrow()
   })
   it('ruoli solo staff o admin', async () => {
-    await db.query(`insert into profili (user_id, ruolo) values (gen_random_uuid(), 'admin')`)
-    await expect(db.query(`insert into profili (user_id, ruolo) values (gen_random_uuid(), 'cuoco')`)).rejects.toThrow()
+    const [u1, u2] = await db.query<{ id: string }>(
+      `insert into auth.users (id, email) values (gen_random_uuid(), 'a@x.it'), (gen_random_uuid(), 'b@x.it') returning id`,
+    )
+    await db.query(`insert into profili (user_id, ruolo) values ($1, 'admin')`, [u1.id])
+    await expect(db.query(`insert into profili (user_id, ruolo) values ($1, 'cuoco')`, [u2.id])).rejects.toThrow(/check/i)
+  })
+  it('un profilo richiede un utente esistente', async () => {
+    await expect(db.query(`insert into profili (user_id, ruolo) values (gen_random_uuid(), 'staff')`)).rejects.toThrow(/foreign key|violates/i)
+  })
+  it('eliminando l’utente si elimina anche il suo profilo', async () => {
+    const [u] = await db.query<{ id: string }>(`insert into auth.users (id, email) values (gen_random_uuid(), 'c@x.it') returning id`)
+    await db.query(`insert into profili (user_id, ruolo) values ($1, 'staff')`, [u.id])
+    await db.query(`delete from auth.users where id = $1`, [u.id])
+    expect(await db.query('select * from profili')).toEqual([])
   })
   it('RLS attiva: un utente autenticato non legge nulla via API', async () => {
     await inserisci('', '')

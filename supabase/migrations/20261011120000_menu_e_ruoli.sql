@@ -2,7 +2,7 @@
 -- Il browser non legge mai queste tabelle: RLS attiva e nessuna policy; il server usa il ruolo postgres.
 
 create table public.profili (
-  user_id uuid primary key,
+  user_id uuid primary key references auth.users (id) on delete cascade,
   ruolo text not null check (ruolo in ('staff', 'admin')),
   creato_il timestamptz not null default now()
 );
