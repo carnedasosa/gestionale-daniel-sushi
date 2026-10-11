@@ -1,0 +1,34 @@
+/* I token del design system puntano ai font self-hosted di next/font (--ff-*), mantenendo i fallback originali. */
+:root {
+  --font-display: var(--ff-display), "Oswald", "Arial Narrow", sans-serif;
+  --font-label: var(--ff-label), "Futura", "Century Gothic", sans-serif;
+  --font-body: var(--ff-body), system-ui, sans-serif;
+  --font-script: var(--ff-script), "Segoe Print", cursive;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--carta);
+  color: var(--inchiostro);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: block; }
+.contenitore { width: min(1120px, 100% - 32px); margin-inline: auto; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Campi di modulo condivisi tra l'accesso e i moduli del gestionale. */
+.campo { display: grid; gap: var(--sp-4); }
+.campo input:not([type=checkbox]), .campo textarea, .campo select {
+  font: inherit; padding: 12px 14px; border: 1px solid var(--inchiostro); border-radius: 8px; background: var(--bianco);
+}
+
+/* Titoli: le classi .display/.heading* vengono dai token; qui solo colore e misure fluide (come nel sito). */
+.display, .heading-lg, .heading, .heading-sm { color: var(--indaco); }
+.display { font-size: clamp(64px, 9vw, 112px); }
+.heading-lg { font-size: clamp(44px, 5.4vw, 64px); }
+
+/* Pagina 404. */
+.non-trovata { display: grid; justify-items: start; gap: var(--sp-16); padding-block: var(--sp-56); }

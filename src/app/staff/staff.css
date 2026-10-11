@@ -1,0 +1,1 @@
+.staff-pagina { display: grid; justify-items: start; gap: var(--sp-16); padding-block: var(--sp-56); }
