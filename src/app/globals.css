@@ -1,3 +1,10 @@
+/* I token del design system puntano ai font self-hosted di next/font (--ff-*), mantenendo i fallback originali. */
+:root {
+  --font-display: var(--ff-display), "Oswald", "Arial Narrow", sans-serif;
+  --font-label: var(--ff-label), "Futura", "Century Gothic", sans-serif;
+  --font-body: var(--ff-body), system-ui, sans-serif;
+  --font-script: var(--ff-script), "Segoe Print", cursive;
+}
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; }
 body {

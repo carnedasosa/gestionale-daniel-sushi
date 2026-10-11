@@ -1,7 +1,14 @@
 import type { Metadata } from 'next'
+import { Bebas_Neue, Caveat, DM_Sans, Jost } from 'next/font/google'
 import '@/styles/ds/tokens.css'
 import '@/styles/ds/bundle.css'
 import './globals.css'
+
+// Font self-hosted da next/font: il browser del cliente non contatta Google.
+const display = Bebas_Neue({ subsets: ['latin'], weight: '400', display: 'swap', variable: '--ff-display' })
+const label = Jost({ subsets: ['latin'], weight: ['400', '500'], display: 'swap', variable: '--ff-label' })
+const body = DM_Sans({ subsets: ['latin'], axes: ['opsz'], display: 'swap', variable: '--ff-body' })
+const script = Caveat({ subsets: ['latin'], weight: '600', display: 'swap', variable: '--ff-script' })
 
 export const metadata: Metadata = {
   title: "Daniel's Sushi — Ordini",
@@ -10,15 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Jost:wght@400;500&display=swap"
-        />
-      </head>
+    <html lang="it" className={`${display.variable} ${label.variable} ${body.variable} ${script.variable}`}>
       <body>{children}</body>
     </html>
   )
