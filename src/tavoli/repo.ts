@@ -1,21 +1,30 @@
 import type { Db } from '@/server/db-tipi'
 import { generaCodice } from '@/domain/codice-tavolo'
 import { generaChiaveTavolo } from '@/domain/chiave-tavolo'
-import { idValido, nomeValido, slugValido } from './validazione'
+import { idValido, nomeValido, slugValido, chiaveValida } from './validazione'
+import type { ErroriCodice } from '@/domain/limiti-tentativi'
 
-export interface Tavolo { id: string; nome: string; slug: string; posizione: number; attivo: boolean }
+export interface Tavolo { id: string; nome: string; slug: string; chiave: string; posizione: number; attivo: boolean }
 export interface SessioneAperta { id: string; tavoloId: string; codice: string; apertaIl: Date }
-export interface TavoloConSessione extends Tavolo { sessione: SessioneAperta | null }
+export interface TavoloConSessione extends Tavolo { sessione: (SessioneAperta & { tentativi: number }) | null }
 const SESSIONE = 'id, tavolo_id as "tavoloId", codice, aperta_il as "apertaIl"'
 
 export async function elencoTavoli(db: Db): Promise<TavoloConSessione[]> {
   const tavoli = await db.query<Tavolo>('select * from tavoli order by posizione,nome')
-  const sessioni = await db.query<SessioneAperta>(`select ${SESSIONE} from sessioni_tavolo where chiusa_il is null`)
+  const sessioni = await db.query<SessioneAperta & { tentativi: number }>(`select ${SESSIONE},(select count(*)::int from tentativi_codice e where e.sessione_id=sessioni_tavolo.id and e.creato_il>now()-interval '10 minutes') as tentativi from sessioni_tavolo where chiusa_il is null`)
   return tavoli.map(t => ({ ...t, sessione: sessioni.find(s => s.tavoloId === t.id) ?? null }))
 }
-export async function tavoloDaSlug(db: Db, slug: string): Promise<Tavolo | null> {
-  if (!slugValido(slug)) return null
-  return (await db.query<Tavolo>('select * from tavoli where slug=$1 and attivo', [slug]))[0] ?? null
+export async function tavoloDaChiave(db: Db, chiave: string): Promise<Tavolo | null> {
+  if (!chiaveValida(chiave)) return null
+  return (await db.query<Tavolo>('select * from tavoli where chiave=$1 and attivo', [chiave]))[0] ?? null
+}
+export async function rigeneraChiave(db: Db, id: string): Promise<Tavolo | null> {
+  if (!idValido(id)) return null
+  for (let i=0; i<10; i++) {
+    try { return (await db.query<Tavolo>('update tavoli set chiave=$2 where id=$1 and chiave<>$2 returning *',[id,generaChiaveTavolo()]))[0] ?? null }
+    catch (err) { if (err && typeof err === 'object' && 'code' in err && err.code === '23505') continue; throw err }
+  }
+  throw new Error('Impossibile generare il nuovo QR: riprova')
 }
 export async function creaTavolo(db: Db, nome: string, slug: string): Promise<Tavolo> {
   if (!nomeValido(nome) || !slugValido(slug)) throw new Error('Nome o slug del tavolo non valido')
@@ -52,19 +61,31 @@ export async function chiudiSessione(db: Db, sessioneId: string): Promise<boolea
   if (!idValido(sessioneId)) return false
   return (await db.query('update sessioni_tavolo set chiusa_il=now() where id=$1 and chiusa_il is null returning id', [sessioneId])).length === 1
 }
-export async function sessioneApertaPerId(db: Db, sessioneId: string): Promise<(SessioneAperta & { tavoloSlug: string }) | null> {
+export interface SessioneConTavolo extends SessioneAperta { tavoloChiave: string; chiusaIl: Date | null }
+export async function sessionePerId(db: Db, sessioneId: string): Promise<SessioneConTavolo | null> {
   if (!idValido(sessioneId)) return null
-  return (await db.query<SessioneAperta & { tavoloSlug: string }>(`select s.id,s.tavolo_id as "tavoloId",s.codice,s.aperta_il as "apertaIl",t.slug as "tavoloSlug"
-    from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 and s.chiusa_il is null and t.attivo`, [sessioneId]))[0] ?? null
+  return (await db.query<SessioneConTavolo>(`select s.id,s.tavolo_id as "tavoloId",s.codice,s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl",t.chiave as "tavoloChiave" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1`,[sessioneId]))[0] ?? null
 }
-export async function registraTentativoFallito(db: Db, tavoloId: string, dispositivo: string): Promise<void> {
-  if (!idValido(tavoloId) || !idValido(dispositivo)) return
-  await db.query('insert into tentativi_codice(tavolo_id,dispositivo) values ($1,$2)', [tavoloId,dispositivo])
+export async function sessioneApertaPerId(db: Db, id: string): Promise<SessioneConTavolo | null> {
+  const s = await sessionePerId(db,id)
+  return s && !s.chiusaIl ? s : null
 }
-export async function contaErrori(db: Db, tavoloId: string, dispositivo: string, minuti: number): Promise<{ dispositivo: number; tavolo: number }> {
-  if (!idValido(tavoloId) || !idValido(dispositivo) || !Number.isSafeInteger(minuti) || minuti < 1) return { dispositivo: 0, tavolo: 0 }
-  return (await db.query<{ dispositivo: number; tavolo: number }>(`select count(*)::int as tavolo,count(*) filter(where dispositivo=$2)::int as dispositivo
-    from tentativi_codice where tavolo_id=$1 and creato_il > now()-($3 * interval '1 minute')`, [tavoloId,dispositivo,minuti]))[0]
+export async function sessioneDelTavolo(db: Db, tavoloId: string): Promise<SessioneAperta | null> {
+  if (!idValido(tavoloId)) return null
+  return (await db.query<SessioneAperta>(`select ${SESSIONE} from sessioni_tavolo where tavolo_id=$1 and chiusa_il is null`,[tavoloId]))[0] ?? null
+}
+export async function registraTentativoFallito(db: Db, d: { tavoloId: string; sessioneId: string; dispositivo: string; ip: string }): Promise<void> {
+  if (!idValido(d.tavoloId) || !idValido(d.sessioneId) || !idValido(d.dispositivo) || typeof d.ip !== 'string') return
+  await db.query('insert into tentativi_codice(tavolo_id,sessione_id,dispositivo,ip) values ($1,$2,$3,$4)',[d.tavoloId,d.sessioneId,d.dispositivo,d.ip])
+}
+export async function contaErrori(db: Db, d: { sessioneId: string; dispositivo: string; ip: string; minuti: number }): Promise<ErroriCodice> {
+  if (!idValido(d.sessioneId) || !idValido(d.dispositivo) || typeof d.ip !== 'string' || !Number.isSafeInteger(d.minuti) || d.minuti<1) return { dispositivo: 0,ip: 0,sessione: 0 }
+  return (await db.query<ErroriCodice>(`select count(*)::int as sessione,count(*) filter(where dispositivo=$2)::int as dispositivo,count(*) filter(where ip=$3)::int as ip from tentativi_codice where sessione_id=$1 and creato_il>now()-($4*interval '1 minute')`,[d.sessioneId,d.dispositivo,d.ip,d.minuti]))[0]
+}
+export async function sbloccaSessione(db: Db, id: string): Promise<boolean> {
+  if (!idValido(id)) return false
+  await db.query('delete from tentativi_codice where sessione_id=$1',[id])
+  return true
 }
 export async function verificaCodice(db: Db, tavoloId: string, codice: string): Promise<SessioneAperta | null> {
   if (!idValido(tavoloId) || typeof codice !== 'string' || !/^\d{4}$/.test(codice)) return null

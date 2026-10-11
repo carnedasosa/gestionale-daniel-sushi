@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
-import { apriSessione, chiudiSessione } from '@/tavoli/repo'
+import { apriSessione, chiudiSessione, sbloccaSessione } from '@/tavoli/repo'
 import { avanzaStato, annullaOrdine, annullaRiga } from '@/tavoli/ordini-repo'
 import { idValido } from '@/tavoli/validazione'
 export interface EsitoStaff { ok: boolean; errore?: string; codice?: string }
@@ -15,13 +15,18 @@ async function operazione(fn: () => Promise<unknown>): Promise<EsitoStaff> {
   if (!risultato) return { ok: false, errore: 'Operazione non disponibile: aggiorna lo schermo.' }
   revalidatePath('/staff')
   revalidatePath('/staff/conto/[sessione]','page')
-  revalidatePath('/tavolo/[slug]','page')
+  revalidatePath('/tavolo/[chiave]','page')
   return { ok: true }
 }
 export async function apriTavolo(tavoloId: string): Promise<EsitoStaff> {
   await richiediRuolo('staff')
   if (!idValido(tavoloId)) return { ok: false, errore: 'Tavolo non valido.' }
   return operazione(() => apriSessione(db,tavoloId))
+}
+export async function sbloccaTavolo(sessioneId: string): Promise<EsitoStaff> {
+  await richiediRuolo('staff')
+  if (!idValido(sessioneId)) return { ok: false,errore: 'Sessione non valida.' }
+  return operazione(() => sbloccaSessione(db,sessioneId))
 }
 export async function chiudiTavolo(sessioneId: string): Promise<EsitoStaff> {
   await richiediRuolo('staff')

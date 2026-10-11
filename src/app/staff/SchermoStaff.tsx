@@ -8,7 +8,7 @@ import type { TavoloConSessione } from '@/tavoli/repo'
 import { DettaglioRighe } from '@/componenti/DettaglioRighe'
 import { ConfermaAzione } from '@/componenti/ConfermaAzione'
 import { SuonoTurno } from './InizioTurno'
-import { apriTavolo, chiudiTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, type EsitoStaff } from './azioni'
+import { apriTavolo, chiudiTavolo, sbloccaTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, type EsitoStaff } from './azioni'
 
 type Esegui = (azione: () => Promise<EsitoStaff>) => void
 export type TavoloStaff = Omit<TavoloConSessione,'sessione'> & { sessione: (Omit<NonNullable<TavoloConSessione['sessione']>,'apertaIl'> & { apertaIl: string }) | null }
@@ -58,6 +58,7 @@ export function SchermoStaff({ tavoli,ordini,riepiloghi,ora }: { tavoli: TavoloS
       const s = t.sessione, r = riepiloghi.find(r => r.sessioneId === s?.id)
       return <article className="ds-card staff-tavolo" key={t.id}><h3 className="heading-sm">{t.nome}</h3>{s ? <>
         <p className="display staff-codice" aria-label={`Codice ${s.codice}`}>{s.codice}</p><p>Aperto alle {new Date(s.apertaIl).toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</p>
+        {s.tentativi > 0 && <div className="staff-azioni"><p>{s.tentativi} tentativi sbagliati</p><button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => esegui(() => sbloccaTavolo(s.id))}>Sblocca</button></div>}
         <p>{r?.numeroOrdini ?? 0} ordini · {formatEuro(r?.totaleCent ?? 0)}</p><div className="staff-azioni"><Link className="ds-btn ds-btn--secondary" href={`/staff/conto/${s.id}`}>Conto</Link>
           <ConfermaAzione inCorso={inCorso} domanda={`Chiudere il tavolo ${t.nome}? I clienti non potranno più ordinare.`} conferma={() => esegui(() => chiudiTavolo(s.id))}>Chiudi tavolo</ConfermaAzione></div>
       </> : <button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => esegui(() => apriTavolo(t.id))}>Apri tavolo</button>}</article>

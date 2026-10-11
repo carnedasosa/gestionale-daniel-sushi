@@ -21,7 +21,7 @@ export function CardPiatto({ piatto: p,quantita,modifica }: { piatto: Piatto; qu
     {p.disponibile && <div className="tavolo-dish-azioni">{quantita ? <div className="tavolo-quantita"><button type="button" className="ds-btn ds-btn--secondary" aria-label={`Riduci ${p.nome}`} onClick={() => modifica(quantita-1)}>−</button><span aria-live="polite">{quantita}</span><button type="button" className="ds-btn ds-btn--secondary" aria-label={`Aumenta ${p.nome}`} disabled={quantita >= 20} onClick={() => modifica(quantita+1)}>+</button></div> : <button className="ds-btn ds-btn--secondary" type="button" onClick={() => modifica(1)}>Aggiungi<span className="visually-hidden"> {p.nome}</span></button>}</div>}
   </article>
 }
-export function MenuOrdinabile({ categorie,config,sessioneId,slug }: { categorie: CategoriaConPiatti[]; config: PokeConfig | null; sessioneId: string; slug: string }) {
+export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categorie: CategoriaConPiatti[]; config: PokeConfig | null; sessioneId: string; chiave: string }) {
   const [righe,setRighe] = useState<RigaCarrello[]>([])
   const [caricato,setCaricato] = useState(false)
   const [pokeAperta,setPokeAperta] = useState(false)
@@ -62,7 +62,7 @@ export function MenuOrdinabile({ categorie,config,sessioneId,slug }: { categorie
     invio.current = true; setErrore(null); setMessaggio(null)
     startTransition(async () => {
       try {
-        const esito = await inviaOrdine(slug,JSON.stringify(righe))
+        const esito = await inviaOrdine(chiave,JSON.stringify(righe))
         if (esito.ok) { setRighe([]); setMessaggio(`Ordine n. ${esito.numero} inviato in cucina`); router.refresh(); risolvi(true) }
         else {
           setErrore(`${esito.errore ?? 'Invio non riuscito.'}${esito.nonDisponibili?.length ? `: ${esito.nonDisponibili.join(', ')}` : ''}`)

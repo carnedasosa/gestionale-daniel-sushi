@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
-import { elencoTavoli, creaTavolo, aggiornaTavolo } from '@/tavoli/repo'
+import { elencoTavoli, creaTavolo, aggiornaTavolo, rigeneraChiave } from '@/tavoli/repo'
 import { idValido, nomeValido } from '@/tavoli/validazione'
 import { slugLibero } from '@/domain/slug-tavolo'
 export interface ValoriTavolo { nome: string; posizione: string; attivo: boolean }
@@ -10,8 +10,20 @@ export interface StatoTavolo { errore: string | null; salvato: boolean; valori: 
 function valoriForm(fd: FormData): ValoriTavolo { return { nome: typeof fd.get('nome') === 'string' ? fd.get('nome') as string : '', posizione: typeof fd.get('posizione') === 'string' ? fd.get('posizione') as string : '', attivo: fd.get('attivo') === 'on' } }
 function errore(stato: StatoTavolo,valori: ValoriTavolo,messaggio: string): StatoTavolo { return { salvato: false,errore: messaggio,valori,invii: stato.invii + 1 } }
 function successo(stato: StatoTavolo): StatoTavolo {
-  revalidatePath('/admin/tavoli'); revalidatePath('/admin/tavoli/stampa'); revalidatePath('/staff'); revalidatePath('/tavolo/[slug]','page')
+  revalidatePath('/admin/tavoli'); revalidatePath('/admin/tavoli/stampa'); revalidatePath('/staff'); revalidatePath('/tavolo/[chiave]','page')
   return { salvato: true,errore: null,valori: null,invii: stato.invii + 1 }
+}
+export async function nuovoQr(id: string): Promise<{ ok: boolean; errore?: string }> {
+  await richiediRuolo('admin')
+  if (!idValido(id)) return { ok: false,errore: 'Tavolo non valido.' }
+  try {
+    if (!await rigeneraChiave(db,id)) return { ok: false,errore: 'Tavolo non trovato.' }
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : 'errore sconosciuto')
+    return { ok: false,errore: 'Nuovo QR non riuscito, riprova.' }
+  }
+  revalidatePath('/admin/tavoli'); revalidatePath('/admin/tavoli/stampa'); revalidatePath('/tavolo/[chiave]','page')
+  return { ok: true }
 }
 export async function aggiungiTavolo(stato: StatoTavolo,fd: FormData): Promise<StatoTavolo> {
   await richiediRuolo('admin')

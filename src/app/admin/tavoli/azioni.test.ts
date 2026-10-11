@@ -1,12 +1,21 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const m = vi.hoisted(() => ({ richiediRuolo: vi.fn(), elencoTavoli: vi.fn(), creaTavolo: vi.fn(), aggiornaTavolo: vi.fn(), revalidatePath: vi.fn() }))
+const m = vi.hoisted(() => ({ richiediRuolo: vi.fn(), elencoTavoli: vi.fn(), creaTavolo: vi.fn(), aggiornaTavolo: vi.fn(), rigeneraChiave: vi.fn(), revalidatePath: vi.fn() }))
 vi.mock('@/auth/sessione', () => ({ richiediRuolo: m.richiediRuolo }))
 vi.mock('@/server/db', () => ({ db: {} }))
-vi.mock('@/tavoli/repo', () => ({ elencoTavoli: m.elencoTavoli, creaTavolo: m.creaTavolo, aggiornaTavolo: m.aggiornaTavolo }))
+vi.mock('@/tavoli/repo', () => ({ elencoTavoli: m.elencoTavoli, creaTavolo: m.creaTavolo, aggiornaTavolo: m.aggiornaTavolo, rigeneraChiave: m.rigeneraChiave }))
 vi.mock('next/cache', () => ({ revalidatePath: m.revalidatePath }))
-import { aggiungiTavolo, salvaTavolo, type StatoTavolo } from './azioni'
+import { aggiungiTavolo, salvaTavolo, nuovoQr, type StatoTavolo } from './azioni'
 const id = '11111111-1111-4111-8111-111111111111'
 const stato: StatoTavolo = { errore: null, salvato: false, valori: null, invii: 0 }
+it('nuovo QR richiede admin, valida ID e rivalida gli URL', async () => {
+  m.rigeneraChiave.mockResolvedValueOnce({ id,chiave: 'abcdefghijkl' })
+  expect(await nuovoQr(id)).toEqual({ ok: true })
+  expect(m.richiediRuolo.mock.invocationCallOrder[0]).toBeLessThan(m.rigeneraChiave.mock.invocationCallOrder[0])
+  expect(await nuovoQr('x')).toMatchObject({ ok: false })
+  expect(m.rigeneraChiave).toHaveBeenCalledTimes(1)
+  m.richiediRuolo.mockRejectedValueOnce(new Error('NEXT_REDIRECT'))
+  await expect(nuovoQr(id)).rejects.toThrow('NEXT_REDIRECT')
+})
 function fd(nome = 'Tavolo 1') { const f = new FormData(); f.set('nome',nome); f.set('posizione','0'); f.set('attivo','on'); return f }
 beforeEach(() => { vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {}); m.elencoTavoli.mockResolvedValue([]); m.creaTavolo.mockResolvedValue({ id }); m.aggiornaTavolo.mockResolvedValue({ id }) })
 it('admin prima di tutto, nomi validati e slug univoci', async () => {

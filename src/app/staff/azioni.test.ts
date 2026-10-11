@@ -1,13 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const m = vi.hoisted(() => ({ richiediRuolo: vi.fn(), apriSessione: vi.fn(), chiudiSessione: vi.fn(), avanzaStato: vi.fn(), annullaOrdine: vi.fn(), annullaRiga: vi.fn(), revalidatePath: vi.fn() }))
+const m = vi.hoisted(() => ({ richiediRuolo: vi.fn(), apriSessione: vi.fn(), chiudiSessione: vi.fn(), sbloccaSessione: vi.fn(), avanzaStato: vi.fn(), annullaOrdine: vi.fn(), annullaRiga: vi.fn(), revalidatePath: vi.fn() }))
 vi.mock('@/auth/sessione', () => ({ richiediRuolo: m.richiediRuolo }))
 vi.mock('@/server/db', () => ({ db: {} }))
-vi.mock('@/tavoli/repo', () => ({ apriSessione: m.apriSessione, chiudiSessione: m.chiudiSessione }))
+vi.mock('@/tavoli/repo', () => ({ apriSessione: m.apriSessione, chiudiSessione: m.chiudiSessione, sbloccaSessione: m.sbloccaSessione }))
 vi.mock('@/tavoli/ordini-repo', () => ({ avanzaStato: m.avanzaStato, annullaOrdine: m.annullaOrdine, annullaRiga: m.annullaRiga }))
 vi.mock('next/cache', () => ({ revalidatePath: m.revalidatePath }))
-import { apriTavolo, chiudiTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff } from './azioni'
+import { apriTavolo, chiudiTavolo, sbloccaTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff } from './azioni'
 const id = '11111111-1111-4111-8111-111111111111'
-const coppie = [[apriTavolo,m.apriSessione],[chiudiTavolo,m.chiudiSessione],[avanzaOrdine,m.avanzaStato],[annullaOrdineStaff,m.annullaOrdine],[annullaRigaStaff,m.annullaRiga]] as const
+const coppie = [[apriTavolo,m.apriSessione],[chiudiTavolo,m.chiudiSessione],[sbloccaTavolo,m.sbloccaSessione],[avanzaOrdine,m.avanzaStato],[annullaOrdineStaff,m.annullaOrdine],[annullaRigaStaff,m.annullaRiga]] as const
 beforeEach(() => { vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {}) })
 it('ogni azione verifica staff prima del repo, valida id e rivalida dopo successo', async () => {
   for (const [azione,repo] of coppie) {
