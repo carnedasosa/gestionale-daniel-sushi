@@ -74,7 +74,8 @@ export async function pulisciCookieTavolo(chiave: string): Promise<void> {
   if (!s || s.chiusaIl || s.tavoloChiave !== chiave) jar.set(nomeCookieTavolo(chiave),'',{ ...opzioniCookieTavolo(chiave),maxAge: 0 })
 }
 export interface EsitoInvio { ok: boolean; errore?: string; nonDisponibili?: string[]; nonDisponibiliIds?: string[]; numero?: number }
-export async function inviaOrdine(chiave: string, carrelloJson: string): Promise<EsitoInvio> {
+export async function inviaOrdine(chiave: string, carrelloJson: string, chiaveInvio: string): Promise<EsitoInvio> {
+  if (!idValido(chiaveInvio)) return { ok: false,errore: 'Chiave di invio non valida: ricarica il carrello e riprova.' }
   try {
     const sessione = await sessioneAutorizzata(chiave)
     if (!sessione) return { ok: false, errore: 'Il tavolo è stato chiuso: chiedi al personale' }
@@ -83,7 +84,7 @@ export async function inviaOrdine(chiave: string, carrelloJson: string): Promise
     try { input = JSON.parse(carrelloJson) } catch { return { ok: false, errore: 'Carrello non valido: ricarica la pagina e riprova.' } }
     const carrello = validaCarrello(input)
     if (!carrello.ok) return carrello
-    const esito = await creaOrdineTavolo(db,sessione.id,carrello.righe)
+    const esito = await creaOrdineTavolo(db,sessione.id,carrello.righe,chiaveInvio)
     return esito.ok ? { ok: true, numero: esito.ordine.numero } : esito
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')

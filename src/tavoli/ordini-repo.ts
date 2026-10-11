@@ -17,14 +17,24 @@ async function leggiOrdini(db: Db, condizione: string, parametri: unknown[] = []
   const righe = await db.query<RigaOrdine & { ordineId: string }>(`select ${COLONNE_RIGA},ordine_id as "ordineId" from righe_ordine where ordine_id=any($1::uuid[]) order by posizione`,[ordini.map(o => o.id)])
   return ordini.map(o => ({ ...o,righe: righe.filter(r => r.ordineId === o.id).map(r => ({ id: r.id, numero: r.numero, nome: r.nome, prezzoUnitCent: r.prezzoUnitCent, quantita: r.quantita, nota: r.nota, poke: r.poke, annullata: r.annullata })) }))
 }
-export async function creaOrdineTavolo(db: Db, sessioneId: string, input: RigaCarrello[]): Promise<EsitoCreazione> {
+async function ordineGiaInviato(db: Db,sessioneId: string,key: string): Promise<EsitoCreazione | null> {
+  const [o] = await leggiOrdini(db,'o.chiave_invio=$1',[key])
+  return o ? o.sessioneId === sessioneId ? { ok: true,ordine: o } : { ok: false,errore: 'Invio non valido: ricarica il carrello e riprova.' } : null
+}
+export async function creaOrdineTavolo(db: Db, sessioneId: string, input: RigaCarrello[], chiaveInvio: string): Promise<EsitoCreazione> {
   const chiuso = { ok: false as const, errore: 'Il tavolo è stato chiuso: chiedi al personale' }
   if (!idValido(sessioneId)) return chiuso
+  if (!idValido(chiaveInvio)) return { ok: false,errore: 'Chiave di invio non valida.' }
   const carrello = validaCarrello(input)
   if (!carrello.ok) return carrello
-  return db.transazione(async tx => {
-    const [s] = await tx.query(`select s.id from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 and s.chiusa_il is null and t.attivo for update of s`,[sessioneId])
-    if (!s) return chiuso
+  try { return await db.transazione(async tx => {
+    const esistente = await ordineGiaInviato(tx,sessioneId,chiaveInvio)
+    if (esistente) return esistente
+    const [s] = await tx.query<{ chiusaIl: Date | null }>(`select s.chiusa_il as "chiusaIl" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 and t.attivo for update of s`,[sessioneId])
+    // Un altro invio della stessa sessione può aver concluso mentre aspettavamo il lock.
+    const dopoLock = await ordineGiaInviato(tx,sessioneId,chiaveInvio)
+    if (dopoLock) return dopoLock
+    if (!s || s.chiusaIl) return chiuso
     const ids = [...new Set(carrello.righe.flatMap(r => r.piattoId ? [r.piattoId] : []))].sort()
     const piatti = await tx.query<{ id: string; numero: number | null; nome: string; prezzo_cent: number; disponibile: boolean }>('select id,numero,nome,prezzo_cent,disponibile from piatti where id=any($1::uuid[]) order by id for share',[ids])
     const nonDisponibiliIds = ids.filter(id => !piatti.find(p => p.id === id)?.disponibile)
@@ -46,10 +56,17 @@ export async function creaOrdineTavolo(db: Db, sessioneId: string, input: RigaCa
     }
     const totale = righe.reduce((s,r) => s + r.prezzoUnitCent * r.quantita,0)
     if (!Number.isSafeInteger(totale) || totale > 2147483647) return { ok: false, errore: 'Il totale dell’ordine è troppo alto.' }
-    const [ordine] = await tx.query<{ id: string }>('insert into ordini(sessione_id,totale_cent) values ($1,$2) returning id',[sessioneId,totale])
+    const [ordine] = await tx.query<{ id: string }>('insert into ordini(sessione_id,totale_cent,chiave_invio) values ($1,$2,$3) returning id',[sessioneId,totale,chiaveInvio])
     for (const [i,r] of righe.entries()) await tx.query(`insert into righe_ordine(ordine_id,piatto_id,numero,nome,prezzo_unit_cent,quantita,nota,poke,posizione) values ($1,$2,$3,$4,$5,$6,$7,$8::text::jsonb,$9)`,[ordine.id,r.piattoId,r.numero,r.nome,r.prezzoUnitCent,r.quantita,r.nota,r.poke ? JSON.stringify(r.poke) : null,i])
     return { ok: true, ordine: (await leggiOrdini(tx,'o.id=$1',[ordine.id]))[0] }
-  })
+  }) } catch (err) {
+    // Dopo il rollback possiamo rileggere anche il conflitto tra sessioni diverse.
+    if (err && typeof err === 'object' && 'code' in err && err.code === '23505') {
+      const esistente = await ordineGiaInviato(db,sessioneId,chiaveInvio)
+      if (esistente) return esistente
+    }
+    throw err
+  }
 }
 export async function ordiniDellaSessione(db: Db, sessioneId: string): Promise<Ordine[]> {
   return idValido(sessioneId) ? leggiOrdini(db,'o.sessione_id=$1',[sessioneId]) : []

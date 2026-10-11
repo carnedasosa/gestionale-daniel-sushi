@@ -5,7 +5,8 @@ import type { CategoriaConPiatti, Piatto } from '@/menu/repo'
 import type { PokeConfig } from '@/menu/importa'
 import { testoAllergeni } from '@/menu/testo-allergeni'
 import { formatEuro } from '@/domain/soldi'
-import { validaCarrello, type RigaCarrello } from '@/domain/carrello'
+import type { RigaCarrello } from '@/domain/carrello'
+import { ripristinaCarrello, aggiornaCarrello, pokeDaRicomporre, type CarrelloSalvato } from '@/domain/carrello-salvato'
 import { pokeOrdinabile, validaPoke, type SceltePoke } from '@/domain/poke'
 import { Pannello } from '@/componenti/Pannello'
 import { ComponiPoke } from './ComponiPoke'
@@ -22,7 +23,9 @@ export function CardPiatto({ piatto: p,quantita,modifica }: { piatto: Piatto; qu
   </article>
 }
 export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categorie: CategoriaConPiatti[]; config: PokeConfig | null; sessioneId: string; chiave: string }) {
-  const [righe,setRighe] = useState<RigaCarrello[]>([])
+  const [carrello,setCarrello] = useState<CarrelloSalvato>({ righe: [],chiaveInvio: null })
+  const carrelloRef = useRef(carrello)
+  const righe = carrello.righe
   const [caricato,setCaricato] = useState(false)
   const [pokeAperta,setPokeAperta] = useState(false)
   const [messaggio,setMessaggio] = useState<string | null>(null)
@@ -31,45 +34,57 @@ export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categor
   const invio = useRef(false)
   const router = useRouter()
   const piatti = categorie.flatMap(c => c.piatti)
+  const salva = (c: CarrelloSalvato) => { try { sessionStorage.setItem(`carrello_${sessioneId}`,JSON.stringify(c)) } catch { /* Funziona anche in memoria. */ } }
+  const modificaRighe = (fn: (r: RigaCarrello[]) => RigaCarrello[]) => {
+    if (invio.current || !caricato) return
+    const prossimo = aggiornaCarrello(carrelloRef.current,fn(carrelloRef.current.righe),() => crypto.randomUUID())
+    carrelloRef.current = prossimo; setCarrello(prossimo); salva(prossimo); setMessaggio(null)
+  }
   useEffect(() => {
-    let iniziali: RigaCarrello[] = []
-    try { const v = validaCarrello(JSON.parse(sessionStorage.getItem(`carrello_${sessioneId}`) ?? '[]')); if (v.ok) iniziali = v.righe } catch { /* Funziona anche solo in memoria. */ }
+    let iniziali: CarrelloSalvato = { righe: [],chiaveInvio: null }
+    try { iniziali = ripristinaCarrello(sessionStorage.getItem(`carrello_${sessioneId}`) ?? '[]',() => crypto.randomUUID()); sessionStorage.setItem(`carrello_${sessioneId}`,JSON.stringify(iniziali)) } catch { /* Funziona anche solo in memoria. */ }
+    carrelloRef.current = iniziali
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Ripristino dello stato da storage esterno dopo l'hydration.
-    setRighe(iniziali)
+    setCarrello(iniziali)
     setCaricato(true)
   },[sessioneId])
-  useEffect(() => { if (caricato) { try { sessionStorage.setItem(`carrello_${sessioneId}`,JSON.stringify(righe)) } catch { /* Storage non disponibile. */ } } },[righe,sessioneId,caricato])
+  useEffect(() => { if (!messaggio) return; const timer = setTimeout(() => setMessaggio(null),6000); return () => clearTimeout(timer) },[messaggio])
   const modificaPiatto = (id: string,q: number) => {
     if (invio.current || !caricato) return
     setMessaggio(null)
     const i = righe.findIndex(r => r.piattoId === id)
     if (i === -1 && righe.length >= 40) { setErrore('Puoi aggiungere al massimo 40 righe per ordine.'); return }
-    setRighe(r => q === 0 ? r.filter(v => v.piattoId !== id) : i === -1 ? [...r,{ piattoId: id,quantita: q,nota: '' }] : r.map((v,j) => j === i ? { ...v,quantita: q } : v))
+    modificaRighe(r => q === 0 ? r.filter(v => v.piattoId !== id) : i === -1 ? [...r,{ piattoId: id,quantita: q,nota: '' }] : r.map((v,j) => j === i ? { ...v,quantita: q } : v))
   }
   const aggiungiPoke = (poke: SceltePoke) => {
     if (invio.current || !caricato) return
     setMessaggio(null)
     if (righe.length >= 40) { setErrore('Puoi aggiungere al massimo 40 righe per ordine.'); return }
-    setRighe(r => [...r,{ piattoId: null,quantita: 1,nota: '',poke }]); setPokeAperta(false)
+    modificaRighe(r => [...r,{ piattoId: null,quantita: 1,nota: '',poke }]); setPokeAperta(false)
   }
-  const vista = righe.map(r => {
+  const invalidi = pokeDaRicomporre(righe,config)
+  const vista = righe.map((r,i) => {
     const p = piatti.find(p => p.id === r.piattoId)
     const poke = config && r.poke ? validaPoke(config,r.poke) : null
-    return { ...r,nome: r.piattoId === null ? 'Poke composta' : p?.nome ?? 'Piatto non più in menù',prezzoCent: p?.prezzoCent ?? (poke?.ok ? poke.prezzoCent : 0) }
+    return { ...r,daRicomporre: invalidi.includes(i),nome: r.piattoId === null ? 'Poke composta' : p?.nome ?? 'Piatto non più in menù',prezzoCent: p?.prezzoCent ?? (poke?.ok ? poke.prezzoCent : 0) }
   })
   const invia = () => new Promise<boolean>(risolvi => {
-    if (invio.current) { risolvi(false); return }
+    if (invio.current || !caricato || !carrelloRef.current.chiaveInvio) { risolvi(false); return }
+    if (pokeDaRicomporre(carrelloRef.current.righe,config).length) { setErrore('Questa poke va ricomposta: rimuovila e aggiungila di nuovo.'); risolvi(false); return }
     invio.current = true; setErrore(null); setMessaggio(null)
     startTransition(async () => {
       try {
-        const esito = await inviaOrdine(chiave,JSON.stringify(righe))
-        if (esito.ok) { setRighe([]); setMessaggio(`Ordine n. ${esito.numero} inviato in cucina`); router.refresh(); risolvi(true) }
+        const esito = await inviaOrdine(chiave,JSON.stringify(carrelloRef.current.righe),carrelloRef.current.chiaveInvio!)
+        if (esito.ok) { const vuoto = { righe: [],chiaveInvio: null }; carrelloRef.current = vuoto; setCarrello(vuoto); salva(vuoto); setMessaggio(`Ordine n. ${esito.numero} inviato in cucina`); router.refresh(); risolvi(true) }
         else {
           setErrore(`${esito.errore ?? 'Invio non riuscito.'}${esito.nonDisponibili?.length ? `: ${esito.nonDisponibili.join(', ')}` : ''}`)
-          if (esito.nonDisponibiliIds) setRighe(r => r.filter(v => v.piattoId === null || !esito.nonDisponibiliIds!.includes(v.piattoId)))
+          if (esito.nonDisponibiliIds) {
+            const prossimo = aggiornaCarrello(carrelloRef.current,carrelloRef.current.righe.filter(v => v.piattoId === null || !esito.nonDisponibiliIds!.includes(v.piattoId)),() => crypto.randomUUID())
+            carrelloRef.current = prossimo; setCarrello(prossimo); salva(prossimo)
+          }
           risolvi(false); router.refresh()
         }
-      } catch { setErrore('Invio non riuscito: controlla la connessione e riprova.'); risolvi(false) }
+      } catch { setErrore('Non siamo sicuri che l’ordine sia arrivato. Riprova: se era già arrivato non verrà duplicato.'); risolvi(false) }
       finally { invio.current = false }
     })
   })
@@ -80,6 +95,6 @@ export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categor
       {c.id === 'poke-bowl' && config && pokeOrdinabile(config) && <div className="ds-card tavolo-poke-card"><h3 className="heading-sm">Componi la tua poke</h3><p>Da {formatEuro(config.prezzoBaseCent!)}, con ingredienti a tua scelta.</p><button className="ds-btn ds-btn--secondary" type="button" onClick={() => setPokeAperta(true)}>Componi la tua poke</button></div>}
     </section>)}
     {config && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi la tua poke"><ComponiPoke config={config} aggiungi={aggiungiPoke} /></Pannello>}
-    <Carrello righe={vista} modifica={(i,q) => setRighe(r => q === 0 ? r.filter((_,j) => j !== i) : r.map((v,j) => j === i ? { ...v,quantita: q } : v))} nota={(i,nota) => setRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={invia} inCorso={inCorso} errore={errore} />
+    <Carrello righe={vista} modifica={(i,q) => modificaRighe(r => q === 0 ? r.filter((_,j) => j !== i) : r.map((v,j) => j === i ? { ...v,quantita: q } : v))} nota={(i,nota) => modificaRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={invia} inCorso={inCorso || !caricato} errore={errore} />
   </>
 }

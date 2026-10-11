@@ -8,6 +8,13 @@ vi.mock('next/navigation', () => ({ redirect: m.redirect }))
 import { entraAlTavolo, inviaOrdine, leggiOrdinatoFinora } from './azioni'
 const id = '11111111-1111-4111-8111-111111111111'
 const sessione = '22222222-2222-4222-8222-222222222222'
+const keyInvio = '33333333-3333-4333-8333-333333333333'
+it('rifiuta chiave di invio assente, null o malformata senza creare ordini', async () => {
+  m.creaOrdineTavolo.mockResolvedValue({ ok: true,ordine: { numero: 1 } })
+  const json = JSON.stringify([{ piattoId: id,quantita: 1,nota: '' }])
+  for (const key of [undefined,null,'x']) expect((await inviaOrdine('abcdefghijkl',json,key as string)).ok).toBe(false)
+  expect(m.creaOrdineTavolo).not.toHaveBeenCalled()
+})
 function fd(codice = '1234') { const f = new FormData(); f.set('codice',codice); return f }
 beforeEach(() => {
   vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {})
@@ -20,20 +27,20 @@ beforeEach(() => {
 })
 it('invio: cookie mancante, sessione di altro tavolo, JSON rotto e carrello invalido', async () => {
   m.get.mockReturnValueOnce(undefined)
-  expect((await inviaOrdine('abcdefghijkl','[]')).errore).toContain('chiuso')
+  expect((await inviaOrdine('abcdefghijkl','[]',keyInvio)).errore).toContain('chiuso')
   m.sessioneApertaPerId.mockResolvedValueOnce({ id: sessione, tavoloChiave: 'mnopqrstuvwx' })
-  expect((await inviaOrdine('abcdefghijkl','[]')).errore).toContain('chiuso')
-  expect((await inviaOrdine('abcdefghijkl','{')).ok).toBe(false)
-  expect((await inviaOrdine('abcdefghijkl','[]')).ok).toBe(false)
+  expect((await inviaOrdine('abcdefghijkl','[]',keyInvio)).errore).toContain('chiuso')
+  expect((await inviaOrdine('abcdefghijkl','{',keyInvio)).ok).toBe(false)
+  expect((await inviaOrdine('abcdefghijkl','[]',keyInvio)).ok).toBe(false)
   expect(m.creaOrdineTavolo).not.toHaveBeenCalled()
 })
 it('invio valido restituisce numero e rifiuto mantiene i nomi esauriti', async () => {
   const json = JSON.stringify([{ piattoId: id, quantita: 1, nota: '', prezzoCent: 1 }])
   m.creaOrdineTavolo.mockResolvedValueOnce({ ok: true, ordine: { numero: 42 } })
-  expect(await inviaOrdine('abcdefghijkl',json)).toEqual({ ok: true, numero: 42 })
+  expect(await inviaOrdine('abcdefghijkl',json,keyInvio)).toEqual({ ok: true, numero: 42 })
   expect(m.creaOrdineTavolo.mock.calls[0][2][0]).not.toHaveProperty('prezzoCent')
   m.creaOrdineTavolo.mockResolvedValueOnce({ ok: false, errore: 'Esauriti', nonDisponibili: ['Salmone'] })
-  expect(await inviaOrdine('abcdefghijkl',json)).toMatchObject({ ok: false, nonDisponibili: ['Salmone'] })
+  expect(await inviaOrdine('abcdefghijkl',json,keyInvio)).toMatchObject({ ok: false, nonDisponibili: ['Salmone'] })
 })
 it('legge solo gli ordini della sessione autorizzata e serializza le date', async () => {
   m.ordiniDellaSessione.mockResolvedValueOnce([{ numero: 1, creatoIl: new Date('2026-10-11T12:00:00Z') }])

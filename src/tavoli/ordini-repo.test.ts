@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, expect, it } from 'vitest'
+import { randomUUID } from 'node:crypto'
+import type { Db } from '@/server/db-tipi'
+import type { RigaCarrello } from '@/domain/carrello'
 import { creaDbDiTest } from '../../tests/db/pglite'
 import { apriSessione, creaTavolo, chiudiSessione } from './repo'
-import { annullaOrdine, annullaRiga, avanzaStato, contoSessione, creaOrdineTavolo, ordiniAttivi, ordiniDellaSessione, riepiloghiTavoli } from './ordini-repo'
+import { annullaOrdine, annullaRiga, avanzaStato, contoSessione, creaOrdineTavolo as creaOrdine, ordiniAttivi, ordiniDellaSessione, riepiloghiTavoli } from './ordini-repo'
 import { leggiPokeConfig, salvaPokeConfig } from './poke-repo'
 import { validaCarrello } from '@/domain/carrello'
 let ambiente: Awaited<ReturnType<typeof creaDbDiTest>>, sessione: string, piatto: string
@@ -13,6 +16,20 @@ beforeEach(async () => {
 })
 afterEach(async () => { await ambiente.pg.close() })
 const righe = () => [{ piattoId: piatto, quantita: 2, nota: 'senza sesamo' }]
+const creaOrdineTavolo = (db: Db,s: string,r: RigaCarrello[],key = randomUUID()) => creaOrdine(db,s,r,key)
+it('ripete lo stesso invio senza duplicati, anche dopo chiusura, e non accetta chiavi di altre sessioni', async () => {
+  const { db } = ambiente
+  const key = randomUUID()
+  const a = await creaOrdineTavolo(db,sessione,righe(),key)
+  const b = await creaOrdineTavolo(db,sessione,righe(),key)
+  expect(a).toMatchObject({ ok: true }); expect(b).toEqual(a)
+  expect(await db.query('select * from ordini')).toHaveLength(1)
+  await chiudiSessione(db,sessione)
+  expect(await creaOrdineTavolo(db,sessione,righe(),key)).toEqual(a)
+  const t = await creaTavolo(db,'Altro','altro'); const altra = await apriSessione(db,t.id)
+  expect(await creaOrdineTavolo(db,altra.id,righe(),key)).toMatchObject({ ok: false })
+  expect(await db.query('select * from ordini')).toHaveLength(1)
+})
 it('salva prezzi dal DB e copie storiche ignorando prezzo client', async () => {
   const { db } = ambiente
   const v = validaCarrello([{ ...righe()[0], prezzoCent: 1 }]); if (!v.ok) throw new Error(v.errore)

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { formatEuro } from '@/domain/soldi'
 import type { RigaCarrello } from '@/domain/carrello'
 import { Pannello } from '@/componenti/Pannello'
-export interface RigaVista extends RigaCarrello { nome: string; prezzoCent: number }
+export interface RigaVista extends RigaCarrello { nome: string; prezzoCent: number; daRicomporre?: boolean }
 export function Carrello({ righe,modifica,nota,invia,inCorso,errore }: { righe: RigaVista[]; modifica: (i: number,q: number) => void; nota: (i: number,testo: string) => void; invia: () => Promise<boolean>; inCorso: boolean; errore: string | null }) {
   const [aperto,setAperto] = useState(false)
   const totale = righe.reduce((s,r) => s + r.prezzoCent * r.quantita,0)
@@ -14,6 +14,7 @@ export function Carrello({ righe,modifica,nota,invia,inCorso,errore }: { righe: 
       {!righe.length && <p>Il carrello è vuoto. Scegli i piatti dal menù.</p>}
       {righe.map((r,i) => <div key={`${r.piattoId}-${i}`} className="tavolo-carrello-riga">
         <h3>{r.nome} · {formatEuro(r.prezzoCent * r.quantita)}</h3>
+        {r.daRicomporre && <p role="alert">Questa poke va ricomposta: rimuovila e aggiungila di nuovo.</p>}
         {r.poke && <p>{Object.entries(r.poke).filter(([,v]) => v.length).map(([g,v]) => `${g}: ${v.join(', ')}`).join(' · ')}</p>}
         <div className="tavolo-quantita"><button type="button" className="ds-btn ds-btn--secondary" aria-label={`Riduci ${r.nome}`} disabled={inCorso} onClick={() => modifica(i,r.quantita-1)}>−</button><span>{r.quantita}</span><button type="button" className="ds-btn ds-btn--secondary" aria-label={`Aumenta ${r.nome}`} disabled={inCorso || r.quantita >= 20} onClick={() => modifica(i,r.quantita+1)}>+</button>
           <button type="button" className="ds-btn ds-btn--secondary" disabled={inCorso} onClick={() => modifica(i,0)}>Rimuovi</button></div>
@@ -21,7 +22,7 @@ export function Carrello({ righe,modifica,nota,invia,inCorso,errore }: { righe: 
       </div>)}
       <p>Totale stimato: <strong>{formatEuro(totale)}</strong>. Il prezzo viene verificato all’invio.</p>
       {errore && <p role="alert">{errore}</p>}
-      <button type="button" className="ds-btn ds-btn--primary" disabled={inCorso || !righe.length} onClick={async () => { if (await invia()) setAperto(false) }}>{inCorso ? 'Invio…' : 'Invia ordine'}</button>
+      <button type="button" className="ds-btn ds-btn--primary" disabled={inCorso || !righe.length || righe.some(r => r.daRicomporre)} onClick={async () => { if (await invia()) setAperto(false) }}>{inCorso ? 'Invio…' : 'Invia ordine'}</button>
     </Pannello>
   </>
 }

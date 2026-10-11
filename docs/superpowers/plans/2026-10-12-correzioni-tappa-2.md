@@ -76,13 +76,13 @@ create unique index ordini_chiave_invio_unica on public.ordini (chiave_invio) wh
 
 **Modifica:** `src/tavoli/ordini-repo.ts` (+test), `src/app/tavolo/[chiave]/azioni.ts` (+test), `MenuOrdinabile.tsx`/`Carrello.tsx`, `src/domain/carrello.ts` se serve.
 
-- [ ] Client: genera `chiaveInvio = crypto.randomUUID()` quando il carrello cambia (aggiunta/rimozione/quantità/nota) e la salva insieme al carrello in `sessionStorage`; ogni tentativo d'invio dello **stesso** carrello riusa la stessa chiave; dopo un invio riuscito il carrello si svuota e la chiave si scarta.
-- [ ] `inviaOrdine(chiave, carrelloJson, chiaveInvio)`: valida UUID; `creaOrdineTavolo(db, sessioneId, righe, chiaveInvio)`: dentro la transazione, se esiste già un ordine con quella `chiave_invio` **della stessa sessione** restituisce `ok: true` con quell'ordine (senza crearne un altro); se appartiene a un'altra sessione → errore generico. Gestisci anche la violazione dell'indice unico (23505) rileggendo l'ordine.
-- [ ] Messaggio d'errore di rete sul client: «Non siamo sicuri che l'ordine sia arrivato. Riprova: se era già arrivato non verrà duplicato.»
-- [ ] M14: prima dell'invio e a ogni refresh, rivalida sul client le righe poke con `validaPoke` e la `config` aggiornata; le righe non più valide si evidenziano («Questa poke va ricomposta») e bloccano l'invio finché non vengono tolte o rifatte; il server resta l'autorità.
-- [ ] M8: il messaggio «Ordine n. X inviato in cucina» sparisce da solo dopo 6 secondi (e resta annunciato con `role="status"`).
-- [ ] Test repo: stessa chiave due volte → un solo ordine, stesso numero restituito; chiave usata da un'altra sessione → errore, nessun ordine; chiave `null`/assente non ammessa dall'azione.
-- [ ] Verifica, commit.
+- [x] Client: genera `chiaveInvio = crypto.randomUUID()` quando il carrello cambia (aggiunta/rimozione/quantità/nota) e la salva insieme al carrello in `sessionStorage`; ogni tentativo d'invio dello **stesso** carrello riusa la stessa chiave; dopo un invio riuscito il carrello si svuota e la chiave si scarta.
+- [x] `inviaOrdine(chiave, carrelloJson, chiaveInvio)`: valida UUID; `creaOrdineTavolo(db, sessioneId, righe, chiaveInvio)`: dentro la transazione, se esiste già un ordine con quella `chiave_invio` **della stessa sessione** restituisce `ok: true` con quell'ordine (senza crearne un altro); se appartiene a un'altra sessione → errore generico. Gestisci anche la violazione dell'indice unico (23505) rileggendo l'ordine.
+- [x] Messaggio d'errore di rete sul client: «Non siamo sicuri che l'ordine sia arrivato. Riprova: se era già arrivato non verrà duplicato.»
+- [x] M14: prima dell'invio e a ogni refresh, rivalida sul client le righe poke con `validaPoke` e la `config` aggiornata; le righe non più valide si evidenziano («Questa poke va ricomposta») e bloccano l'invio finché non vengono tolte o rifatte; il server resta l'autorità.
+- [x] M8: il messaggio «Ordine n. X inviato in cucina» sparisce da solo dopo 6 secondi (e resta annunciato con `role="status"`).
+- [x] Test repo: stessa chiave due volte → un solo ordine, stesso numero restituito; chiave usata da un'altra sessione → errore, nessun ordine; chiave `null`/assente non ammessa dall'azione.
+- [x] Verifica, commit.
 
 ### Task 5: Chiusura tavolo, cucina e conto (I1, I2, M1–M6, M12)
 
