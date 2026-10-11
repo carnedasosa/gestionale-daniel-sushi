@@ -25,11 +25,12 @@ export function MenuCliente({ categorie }: { categorie: CategoriaConPiatti[] }) 
                 <h3 className="dish__name">{p.nome}</h3>
                 <span className="dish__price">{formatEuro(p.prezzoCent)}</span>
                 {p.descrizione && <p className="dish__desc">{p.descrizione}</p>}
-                {(p.piccante || p.vegetariano || p.dellaCasa) && (
+                {(p.piccante || p.vegetariano || p.dellaCasa || !p.disponibile) && (
                   <div className="dish__tags">
                     {p.dellaCasa && <span className="ds-badge ds-badge--new">Della casa</span>}
                     {p.piccante && <span className="ds-badge ds-badge--spicy">Piccante</span>}
                     {p.vegetariano && <span className="ds-badge ds-badge--veg">Vegetariano</span>}
+                    {!p.disponibile && <span className="ds-badge">Esaurito</span>}
                   </div>
                 )}
                 <p className="dish__allergeni">{testoAllergeni(p)}</p>

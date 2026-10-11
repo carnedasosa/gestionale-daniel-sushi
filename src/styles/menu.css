@@ -15,7 +15,6 @@
 .dish__tags { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: var(--sp-8); padding-top: var(--sp-4); }
 
 .dish__allergeni { grid-column: 2 / 4; margin: 0; font-size: 13px; color: var(--inchiostro-tenue); }
-.dish--esaurito { opacity: .55; }
-.dish--esaurito .dish__price::after { content: ' · esaurito'; font-weight: 400; }
+.dish--esaurito .dish__num, .dish--esaurito .dish__name, .dish--esaurito .dish__price { color: var(--inchiostro-tenue); }
 .menu-nav { position: sticky; top: 0; z-index: 2; background: var(--carta); padding-block: var(--sp-16); }
 .intestazione { display: flex; align-items: center; gap: var(--sp-16); padding-block: var(--sp-16); }
