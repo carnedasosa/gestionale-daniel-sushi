@@ -214,10 +214,10 @@ export async function salvaPokeConfig(db: Db, c: PokeConfig): Promise<void>   //
 ```
 Messaggi: «Scegli almeno {min} in {gruppo}», «Al massimo {max} in {gruppo}», «Scelta non valida in {gruppo}», «La poke composta non è ancora disponibile».
 
-- [ ] Test dominio: config di prova (Base 1/1/1, Proteine 1/3/2, Salse 0/3/2, base 900, extra 100): scelta minima valida → 900; 3 proteine → 1000; base mancante → errore min; voce inventata → errore; doppione → errore; gruppo sconosciuto → errore; `scelte` non oggetto / `null` / array → errore; config con prezzo null → `pokeOrdinabile` false.
-- [ ] Test repo su PGlite con seed (`creaDbDiTest({ seed: true })`): legge 5 gruppi e prezzo null; salva prezzi e regole e rilegge.
-- [ ] Admin `/admin/poke` (`richiediRuolo('admin')` in pagina e azione): per ogni gruppo campi numerici min/max/inclusi; campi prezzo base e prezzo extra (input testo, parsati con `parseEuro`); validazione: 0 ≤ min ≤ max ≤ numero voci, 0 ≤ inclusi ≤ max, prezzi obbligatori; il modulo conserva i valori dopo un errore (stesso schema `valori`/`invii` di `src/app/admin/menu/azioni.ts`); messaggio «Salvato.». Le voci dei gruppi in questa tappa non si modificano (si mostrano in sola lettura). Test delle azioni con mock come `src/app/admin/menu/azioni.test.ts`.
-- [ ] Verifica, commit.
+- [x] Test dominio: config di prova (Base 1/1/1, Proteine 1/3/2, Salse 0/3/2, base 900, extra 100): scelta minima valida → 900; 3 proteine → 1000; base mancante → errore min; voce inventata → errore; doppione → errore; gruppo sconosciuto → errore; `scelte` non oggetto / `null` / array → errore; config con prezzo null → `pokeOrdinabile` false.
+- [x] Test repo su PGlite con seed (`creaDbDiTest({ seed: true })`): legge 5 gruppi e prezzo null; salva prezzi e regole e rilegge.
+- [x] Admin `/admin/poke` (`richiediRuolo('admin')` in pagina e azione): per ogni gruppo campi numerici min/max/inclusi; campi prezzo base e prezzo extra (input testo, parsati con `parseEuro`); validazione: 0 ≤ min ≤ max ≤ numero voci, 0 ≤ inclusi ≤ max, prezzi obbligatori; il modulo conserva i valori dopo un errore (stesso schema `valori`/`invii` di `src/app/admin/menu/azioni.ts`); messaggio «Salvato.». Le voci dei gruppi in questa tappa non si modificano (si mostrano in sola lettura). Test delle azioni con mock come `src/app/admin/menu/azioni.test.ts`.
+- [x] Verifica, commit.
 
 ### Task 4: Accesso al tavolo con il codice
 
