@@ -48,7 +48,6 @@ export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categor
     setCarrello(iniziali)
     setCaricato(true)
   },[sessioneId])
-  useEffect(() => { if (!messaggio) return; const timer = setTimeout(() => setMessaggio(null),6000); return () => clearTimeout(timer) },[messaggio])
   const modificaPiatto = (id: string,q: number) => {
     if (invio.current || !caricato) return
     setMessaggio(null)
@@ -89,12 +88,12 @@ export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categor
     })
   })
   return <>
-    {messaggio && <p role="status" className="tavolo-avviso">{messaggio}</p>}{errore && <p role="alert" className="tavolo-avviso">{errore}</p>}
+    {messaggio && <div className="tavolo-avviso"><p role="status">{messaggio}</p><button type="button" className="ds-btn ds-btn--secondary" onClick={() => setMessaggio(null)}>Fine</button></div>}{errore && <p role="alert" className="tavolo-avviso">{errore}</p>}
     <nav className="menu-nav" aria-label="Categorie del menù"><div className="ds-cats">{categorie.map(c => <a key={c.id} className="ds-chip" href={`#${c.id}`}>{c.nome}</a>)}</div></nav>
     {categorie.map(c => <section key={c.id} id={c.id} className="menu-cat" aria-labelledby={`${c.id}-titolo`}><div className="menu-cat__head"><h2 id={`${c.id}-titolo`}>{c.nome}</h2>{c.pezzi && <span className="menu-cat__note">{c.pezzi}</span>}</div><div className="dishes">{c.piatti.map(p => <CardPiatto key={p.id} piatto={p} quantita={righe.find(r => r.piattoId === p.id)?.quantita ?? 0} modifica={q => modificaPiatto(p.id,q)} />)}</div>
       {c.id === 'poke-bowl' && config && pokeOrdinabile(config) && <div className="ds-card tavolo-poke-card"><h3 className="heading-sm">Componi la tua poke</h3><p>Da {formatEuro(config.prezzoBaseCent!)}, con ingredienti a tua scelta.</p><button className="ds-btn ds-btn--secondary" type="button" onClick={() => setPokeAperta(true)}>Componi la tua poke</button></div>}
     </section>)}
-    {config && pokeOrdinabile(config) && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi la tua poke"><ComponiPoke config={config} aggiungi={aggiungiPoke} /></Pannello>}
+    {config && pokeOrdinabile(config) && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi poke"><ComponiPoke config={config} aggiungi={aggiungiPoke} /></Pannello>}
     <Carrello righe={vista} modifica={(i,q) => modificaRighe(r => q === 0 ? r.filter((_,j) => j !== i) : r.map((v,j) => j === i ? { ...v,quantita: q } : v))} nota={(i,nota) => modificaRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={invia} inCorso={inCorso || !caricato} errore={errore} />
   </>
 }

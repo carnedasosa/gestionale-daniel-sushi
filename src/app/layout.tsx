@@ -1,14 +1,18 @@
-import type { Metadata } from 'next'
-import { Bebas_Neue, Caveat, DM_Sans, Jost } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
 import '@/styles/ds/tokens.css'
 import '@/styles/ds/bundle.css'
 import './globals.css'
 
-// Font self-hosted da next/font: il browser del cliente non contatta Google.
-const display = Bebas_Neue({ subsets: ['latin'], weight: '400', display: 'swap', variable: '--ff-display' })
-const label = Jost({ subsets: ['latin'], weight: ['400', '500'], display: 'swap', variable: '--ff-label' })
-const body = DM_Sans({ subsets: ['latin'], axes: ['opsz'], display: 'swap', variable: '--ff-body' })
-const script = Caveat({ subsets: ['latin'], weight: '600', display: 'swap', variable: '--ff-script' })
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f2f2f7' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+  ],
+}
 
 export const metadata: Metadata = {
   title: "Daniel's Sushi — Ordini",
@@ -17,7 +21,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it" className={`${display.variable} ${label.variable} ${body.variable} ${script.variable}`}>
+    <html lang="it">
       <body>{children}</body>
     </html>
   )

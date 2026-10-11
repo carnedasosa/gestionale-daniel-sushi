@@ -1,4 +1,4 @@
-.tavolo-pagina { padding-block: var(--sp-16) var(--sp-128); }
+.tavolo-pagina { padding-top: var(--sp-16); padding-bottom: calc(12rem + env(safe-area-inset-bottom)); }
 .tavolo-codice { display: grid; gap: var(--sp-16); padding: var(--sp-24); max-width: 480px; }
 .tavolo-codice input { min-width: 0; width: 100%; }
 .tavolo-dish-azioni { grid-column: 2 / 4; padding-top: var(--sp-12); }
@@ -16,6 +16,13 @@
 .tavolo-ordinato { margin-top: var(--sp-48); display: grid; gap: var(--sp-16); }
 .tavolo-righe { padding-left: var(--sp-24); display: grid; gap: var(--sp-16); }
 .tavolo-nota, .tavolo-avviso { border-left: var(--sp-4) solid var(--arancio); padding-left: var(--sp-12); overflow-wrap: anywhere; }
-.tavolo-avviso[role="status"] { position: fixed; bottom: 88px; left: var(--sp-16); right: var(--sp-16); z-index: 4; margin: 0 auto; max-width: 640px; padding: var(--sp-16); background: var(--carta); border: 1px solid var(--filetto); border-left: var(--sp-4) solid var(--arancio); border-radius: var(--radius-card); }
 .tavolo-pagina h1, .tavolo-pagina h3, .tavolo-righe li { overflow-wrap: anywhere; }
 @media (max-width: 480px) { .tavolo-pannello { padding: var(--sp-16); } .tavolo-pagina .dish { grid-template-columns: 24px minmax(0, 1fr) auto; } }
+
+.tavolo-carrello-barra { background: var(--vetro); backdrop-filter: blur(16px); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+.tavolo-carrello-barra .ds-btn { background: var(--indaco); color: var(--on-indaco); }
+.tavolo-pannello textarea { color: var(--inchiostro); background: var(--bianco); min-height: 88px; padding: 12px; border: 1px solid var(--filetto); border-radius: var(--radius-input); }
+/* Lo stato resta nel flusso: leggibile senza coprire menu e carrello. */
+.tavolo-avviso { margin-block: 16px; padding: 16px; background: var(--bianco); border-radius: var(--radius-card); }
+@media (max-width: 40rem) { .tavolo-pagina .dish { grid-template-columns: 2em minmax(0, 1fr); } .tavolo-dish-azioni { grid-column: 2; } }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .tavolo-carrello-barra { background: var(--bianco); backdrop-filter: none; } }

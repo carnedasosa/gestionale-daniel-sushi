@@ -17,7 +17,7 @@ export function ModuloAccesso({ next, erroreIniziale }: { next: string; erroreIn
         <input name="password" type="password" autoComplete="current-password" required />
       </label>
       {stato.errore && <p role="alert" className="accesso__errore">{stato.errore}</p>}
-      <button className="ds-btn ds-btn--primary" disabled={inCorso}>{inCorso ? 'Accesso…' : 'Entra'}</button>
+      <button className="ds-btn ds-btn--primary" aria-busy={inCorso} disabled={inCorso}>{inCorso ? 'Accesso in corso…' : 'Entra'}</button>
     </form>
   )
 }

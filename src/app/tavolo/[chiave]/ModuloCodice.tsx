@@ -11,6 +11,6 @@ export function ModuloCodice({ chiave,pulisci = false,chiuso = false }: { chiave
     <p>Inserisci il codice che ti ha dato il cameriere</p>
     <label className="campo">Codice del tavolo<input name="codice" inputMode="numeric" autoComplete="one-time-code" maxLength={4} pattern="\d{4}" required /></label>
     {stato.errore && <p role="alert">{stato.errore}</p>}
-    <button className="ds-btn ds-btn--primary" disabled={inCorso}>{inCorso ? 'Verifica…' : 'Entra al tavolo'}</button>
+    <button className="ds-btn ds-btn--primary" aria-busy={inCorso} disabled={inCorso}>{inCorso ? 'Verifica in corso…' : 'Entra al tavolo'}</button>
   </form>
 }

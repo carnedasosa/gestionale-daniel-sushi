@@ -1,3 +1,5 @@
 .accesso-pagina { display: grid; justify-items: center; gap: var(--sp-16); padding-block: var(--sp-56); }
 .accesso { display: grid; gap: var(--sp-16); width: min(400px, 100%); padding: var(--sp-24); }
-.accesso__errore { margin: 0; color: var(--arancio-ink); font-weight: 700; }
+.accesso__errore { margin: 0; color: var(--distruttivo); font-weight: 700; }
+
+.accesso-pagina h1 { text-align: center; }

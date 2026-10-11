@@ -9,7 +9,7 @@ export function Pannello({ aperto,chiudi,titolo,children }: { aperto: boolean; c
     if (!aperto && elemento.open) elemento.close()
   },[aperto])
   return <dialog ref={dialog} className="tavolo-pannello" aria-labelledby={id} onCancel={chiudi} onClose={chiudi}>
-    <div className="tavolo-pannello-testa"><h2 id={id} className="heading-sm">{titolo}</h2><button className="ds-btn ds-btn--secondary" type="button" onClick={chiudi}>Chiudi</button></div>
+    <div className="tavolo-pannello-testa"><h2 id={id} className="heading-sm">{titolo}</h2><button className="pannello-chiudi" type="button" onClick={chiudi} aria-label="Chiudi"><span aria-hidden="true">×</span></button></div>
     {children}
   </dialog>
 }

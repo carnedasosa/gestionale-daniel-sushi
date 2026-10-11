@@ -22,6 +22,6 @@ export function ModuloTavolo({ tavolo,url }: { tavolo?: Tavolo; url?: string }) 
     <label className="campo">Nome<input name="nome" required maxLength={40} defaultValue={v.nome} /></label>
     {tavolo && <><label className="campo">Posizione<input type="number" name="posizione" min={0} step={1} required defaultValue={v.posizione} /></label><label className="admin-tavolo-check"><input type="checkbox" name="attivo" defaultChecked={v.attivo} />Attivo</label></>}
     {stato.errore && <p role="alert">{stato.errore}</p>}{stato.salvato && <p role="status">Salvato.</p>}
-    <button className={`ds-btn ${tavolo ? 'ds-btn--secondary' : 'ds-btn--primary'}`} disabled={inCorso}>{inCorso ? 'Salvataggio…' : tavolo ? 'Salva tavolo' : 'Aggiungi tavolo'}</button>
+    <button className={`ds-btn ${tavolo ? 'ds-btn--secondary' : 'ds-btn--primary'}`} aria-busy={inCorso} disabled={inCorso}>{inCorso ? 'Salvataggio in corso…' : tavolo ? 'Salva tavolo' : 'Aggiungi tavolo'}</button>
   </form>
 }

@@ -1,40 +1,29 @@
-/* Daniel's Sushi — token del design system «Carta e indaco».
-   Derivato dal riferimento Pa'lais (riferimenti/palais-DESIGN.md), adattato al locale.
-   Sorgente: tokens.json. Tema unico chiaro: la carta crema è parte dell'identità. */
-
+/* HIG per il web: colori semantici, font di sistema e scala relativa. */
 :root {
-  color-scheme: light;
-
-  /* Superfici */
-  --carta: #FBF9F6;          /* fondo pagina: carta crema */
-  --bianco: #FFFFFF;         /* card e pannelli sopra la carta */
-
-  /* Inchiostri */
-  --indaco: #234386;         /* unico colore freddo: titoli, link, nav, bottone pieno, fasce scure */
-  --on-indaco: #FFFFFF;
-  --indaco-scuro: #1B356B;  /* solo stato hover del bottone pieno */
-  --inchiostro: #000000;     /* testo corrente e filetti netti */
-  --inchiostro-tenue: #5C5A55; /* descrizioni e note — 6.5:1 su carta */
-  --filetto: #E2D9CA;        /* separatori sottili delle liste */
-
-  /* Accenti caldi — solo forme organiche, illustrazioni e bordi */
-  --arancio: #ED7328;        /* blob, bordo del bottone secondario, fascia arancio */
-  --arancio-ink: #BC5110;    /* arancio quando è testo — 4.6:1 su carta */
-  --miele: #FFC400;          /* solo blob */
-  --salvia: #A2D3A6;         /* solo blob */
-  --salvia-ink: #3A6640;     /* testo del badge Vegetariano — 6.3:1 su carta */
-  --sabbia: #D2B68C;         /* dettagli decorativi */
-  --cielo: #6AA8DC;          /* illustrazioni a tratto, mai testo */
-
+  color-scheme: light dark;
+  --carta: #f2f2f7;
+  --bianco: #ffffff;
+  --indaco: #234386;
+  --on-indaco: #ffffff;
+  --indaco-scuro: #1b356b;
+  --inchiostro: #1c1c1e;
+  --inchiostro-tenue: #595960;
+  --filetto: #d1d1d6;
+  --arancio: #c55300;
+  --arancio-ink: #a84300;
+  --salvia-ink: #246b38;
+  --distruttivo: #b42332;
+  --secondario: #e8edf7;
+  --vetro: rgb(242 242 247 / 94%);
+  --miele: #ffc400;
+  --salvia: #a2d3a6;
+  --sabbia: #d2b68c;
+  --cielo: #6aa8dc;
   --focus: var(--indaco);
-
-  /* Tipografia (Google Fonts, licenza OFL) */
-  --font-display: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;   /* titoli maiuscoli condensati */
-  --font-label: "Jost", "Futura", "Century Gothic", sans-serif;          /* etichette e nav, molto spaziate */
-  --font-body: "DM Sans", system-ui, sans-serif;                          /* testo e interfaccia */
-  --font-script: "Caveat", "Segoe Print", cursive;                        /* solo frasi d'emozione */
-
-  /* Spaziatura: unità 4px */
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-display: var(--font-body);
+  --font-label: var(--font-body);
+  --font-script: var(--font-body);
   --sp-4: 4px;
   --sp-8: 8px;
   --sp-12: 12px;
@@ -47,40 +36,55 @@
   --sp-64: 64px;
   --sp-80: 80px;
   --sp-128: 128px;
-
-  /* Forma */
-  --radius-card: 8px;
-  --radius-input: 8px;
-  --radius-tag: 16px;
-  --radius-btn: 32px;
-
-  /* Elevazione: solo le card hanno ombra, morbida e asimmetrica */
-  --ombra-card: rgba(0, 0, 0, 0.16) -14px 10px 49px 0px;
-  --ombra-hover: rgba(0, 0, 0, 0.05) 0px 20px 27px 0px;
-
-  /* Layout */
-  --container: 1200px;
+  --radius-card: 20px;
+  --radius-input: 12px;
+  --radius-tag: 12px;
+  --radius-btn: 14px;
+  --ombra-card: 0 2px 8px rgb(0 0 0 / 4%);
+  --ombra-hover: 0 4px 12px rgb(0 0 0 / 8%);
+  --container: 1120px;
   --measure: 60ch;
   --tap: 44px;
-
-  /* Movimento */
   --dur-fast: 120ms;
   --dur-base: 200ms;
-  --dur-slow: 420ms;
-  --dur-blob: 900ms;
-  --stagger: 70ms;
-  --ease-out: cubic-bezier(.2, .7, .2, 1);
-  --ease-in-out: cubic-bezier(.45, 0, .25, 1);
+  --dur-slow: 300ms;
+  --ease-out: ease-out;
 }
-
-/* Scala tipografica */
-.display    { font-family: var(--font-display); font-weight: 400; font-size: 88px; line-height: .86; letter-spacing: .03em; text-transform: uppercase; }
-.heading-lg { font-family: var(--font-display); font-weight: 400; font-size: 56px; line-height: .95; letter-spacing: .031em; text-transform: uppercase; }
-.heading    { font-family: var(--font-display); font-weight: 400; font-size: 46px; line-height: 1; letter-spacing: .043em; text-transform: uppercase; }
-.heading-sm { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: .95; letter-spacing: .043em; text-transform: uppercase; }
-.script     { font-family: var(--font-script); font-weight: 600; font-size: 34px; line-height: 1.15; }
-.eyebrow    { font-family: var(--font-label); font-weight: 500; font-size: 13px; line-height: 1.6; letter-spacing: .2em; text-transform: uppercase; }
-.label      { font-family: var(--font-label); font-weight: 500; font-size: 14px; line-height: 1.4; letter-spacing: .12em; text-transform: uppercase; }
-.body       { font-family: var(--font-body); font-weight: 400; font-size: 16px; line-height: 1.6; }
-.body-sm    { font-family: var(--font-body); font-weight: 400; font-size: 14px; line-height: 1.65; }
-.caption    { font-family: var(--font-label); font-weight: 500; font-size: 12px; line-height: 1.6; letter-spacing: .14em; text-transform: uppercase; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --carta: #000000;
+    --bianco: #1c1c1e;
+    --indaco: #a8c7ff;
+    --on-indaco: #102449;
+    --indaco-scuro: #c6daff;
+    --inchiostro: #f2f2f7;
+    --inchiostro-tenue: #b5b5bd;
+    --filetto: #48484a;
+    --arancio: #ffa056;
+    --arancio-ink: #ffb77e;
+    --salvia-ink: #8bdfa1;
+    --distruttivo: #ff8b94;
+    --secondario: #263247;
+    --vetro: rgb(28 28 30 / 94%);
+    --ombra-card: none;
+  }
+}
+.display, .heading-lg, .heading, .heading-sm { font-family: var(--font-display); font-weight: 700; color: var(--inchiostro); overflow-wrap: anywhere; }
+.display { font-size: 2.125rem; line-height: 1.21; }
+.heading-lg { font-size: 1.75rem; line-height: 1.22; }
+.heading { font-size: 1.375rem; line-height: 1.28; }
+.heading-sm { font-size: 1.25rem; line-height: 1.25; }
+.script { font: 500 1.25rem/1.4 var(--font-body); }
+.eyebrow, .label { font: 600 .9375rem/1.35 var(--font-label); }
+.body { font: 400 1.0625rem/1.45 var(--font-body); }
+.body-sm { font: 400 .9375rem/1.4 var(--font-body); }
+.caption { font: 500 .8125rem/1.4 var(--font-body); }
+@media (prefers-contrast: more) {
+  :root { --filetto: #76767c; --inchiostro-tenue: #3a3a3c; }
+}
+@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+  :root { --filetto: #a1a1a6; --inchiostro-tenue: #e5e5ea; }
+}
+@media print {
+  :root { color-scheme: light; --carta: #fff; --bianco: #fff; --inchiostro: #000; --inchiostro-tenue: #333; --indaco: #234386; --on-indaco: #fff; --filetto: #aaa; }
+}
