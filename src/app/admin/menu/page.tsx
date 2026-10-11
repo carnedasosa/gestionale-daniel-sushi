@@ -1,0 +1,59 @@
+import Link from 'next/link'
+import { db } from '@/server/db'
+import { contaAllergeniDaConfermare, leggiMenu } from '@/menu/repo'
+import { formatEuro } from '@/domain/soldi'
+import { cambiaDisponibilita } from './azioni'
+
+export default async function AdminMenu({ searchParams }: { searchParams: Promise<{ filtro?: string }> }) {
+  const { filtro } = await searchParams
+  const soloDaConfermare = filtro === 'allergeni'
+  const [menu, daConfermare] = await Promise.all([leggiMenu(db), contaAllergeniDaConfermare(db)])
+
+  return (
+    <>
+      <h1 className="heading">Menù</h1>
+      {daConfermare > 0 && (
+        <div className="avviso" role="status">
+          <strong>{daConfermare} piatti</strong> hanno gli allergeni da confermare. Senza allergeni confermati gli ordini da casa non possono partire.{' '}
+          {soloDaConfermare
+            ? <Link className="ds-link" href="/admin/menu">Mostra tutti</Link>
+            : <Link className="ds-link" href="/admin/menu?filtro=allergeni">Mostra solo questi</Link>}
+        </div>
+      )}
+      {menu.map((c) => {
+        const piatti = soloDaConfermare ? c.piatti.filter((p) => !p.allergeniConfermati) : c.piatti
+        if (piatti.length === 0) return null
+        return (
+          <section key={c.id}>
+            <h2 className="heading-sm">{c.nome}</h2>
+            <div className="tabella-scroll" role="region" aria-label={`Piatti: ${c.nome}`} tabIndex={0}>
+              <table className="tabella-piatti">
+                <thead>
+                  <tr><th className="num">N.</th><th>Piatto</th><th>Prezzo</th><th>Allergeni</th><th>Disponibile</th><th><span className="visually-hidden">Azioni</span></th></tr>
+                </thead>
+                <tbody>
+                  {piatti.map((p) => (
+                    <tr key={p.id}>
+                      <td className="num">{p.numero ?? '—'}</td>
+                      <td>{p.nome}</td>
+                      <td>{formatEuro(p.prezzoCent)}</td>
+                      <td className={p.allergeniConfermati ? '' : 'stato-allergeni--no'}>{p.allergeniConfermati ? 'Confermati' : 'Da confermare'}</td>
+                      <td>
+                        <form action={cambiaDisponibilita.bind(null, p.id, !p.disponibile)}>
+                          <button className="ds-btn ds-btn--secondary" aria-label={`${p.nome}: ${p.disponibile ? 'segna esaurito' : 'rimetti disponibile'}`}>
+                            {p.disponibile ? 'Sì' : 'Esaurito'}
+                          </button>
+                        </form>
+                      </td>
+                      <td><Link className="ds-link" href={`/admin/menu/${p.id}`}>Modifica</Link></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )
+      })}
+    </>
+  )
+}
