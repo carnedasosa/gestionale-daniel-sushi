@@ -114,10 +114,10 @@ create unique index ordini_chiave_invio_unica on public.ordini (chiave_invio) wh
 
 ### Task 7: Irrobustimento poke e pulizie (M7, M10, M15)
 
-- [ ] M15: `leggiPokeConfig` valida la forma letta (`gruppi` array di oggetti con `nome`, `voci` string[], `min`/`max`/`inclusi` interi); se non valida logga `console.error('poke_config non valida')` e restituisce `null`. `MenuOrdinabile` monta `ComponiPoke` **solo** se `pokeOrdinabile(config)`. Test con una riga `gruppi` salvata come stringa JSON (`'"[]"'::jsonb`) → `null` e pagina che non si rompe.
-- [ ] M7: rimuovi l'azione server esportata e non usata `leggiOrdinatoFinora` (o usala davvero); nessuna azione server inutilizzata deve restare esportata.
-- [ ] M10: i test «concorrenti» su PGlite non esercitano la concorrenza reale (PGlite serializza le transazioni): rinominali in modo onesto (es. «due inserimenti in sequenza non violano…») e aggiungi un commento che spiega il limite; la garanzia reale resta negli indici unici e nei `for update`.
-- [ ] Verifica, commit.
+- [x] M15: `leggiPokeConfig` valida la forma letta (`gruppi` array di oggetti con `nome`, `voci` string[], `min`/`max`/`inclusi` interi); se non valida logga `console.error('poke_config non valida')` e restituisce `null`. `MenuOrdinabile` monta `ComponiPoke` **solo** se `pokeOrdinabile(config)`. Test con una riga `gruppi` salvata come stringa JSON (`'"[]"'::jsonb`) → `null` e pagina che non si rompe.
+- [x] M7: rimuovi l'azione server esportata e non usata `leggiOrdinatoFinora` (o usala davvero); nessuna azione server inutilizzata deve restare esportata.
+- [x] M10: i test «concorrenti» su PGlite non esercitano la concorrenza reale (PGlite serializza le transazioni): rinominali in modo onesto (es. «due inserimenti in sequenza non violano…») e aggiungi un commento che spiega il limite; la garanzia reale resta negli indici unici e nei `for update`.
+- [x] Verifica, commit.
 
 ### Task 8: Database reale, prova nel browser, consegna
 

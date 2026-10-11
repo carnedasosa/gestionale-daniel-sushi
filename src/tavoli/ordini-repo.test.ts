@@ -155,10 +155,13 @@ it('identifica per ID il solo esaurito anche se due piatti hanno lo stesso nome'
   })
   expect(await db.query('select * from ordini')).toEqual([])
 })
-it('annullamenti di righe concorrenti mantengono il totale corretto', async () => {
+it('annullamenti di righe in sequenza mantengono il totale e annullano l’ordine vuoto', async () => {
   const { db } = ambiente
   const e = await creaOrdineTavolo(db,sessione,[...righe(),...righe()]); if (!e.ok) throw new Error(e.errore)
-  const risultati = await Promise.all(e.ordine.righe.map(r => annullaRiga(db,r.id)))
+  // PGlite serializza le transazioni; la concorrenza reale dipende dai lock SQL.
+  const risultati = []
+  for (const r of e.ordine.righe) risultati.push(await annullaRiga(db,r.id))
   expect(risultati).toEqual([true,true])
   expect((await ordiniDellaSessione(db,sessione))[0].totaleCent).toBe(0)
+  expect((await ordiniDellaSessione(db,sessione))[0].stato).toBe('annullato')
 })

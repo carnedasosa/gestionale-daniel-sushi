@@ -66,10 +66,12 @@ it('le nuove tabelle hanno RLS e nessun privilegio API', async () => {
     expect(r).toEqual({ rls: true, permesso: false })
   }
 })
-it('aperture concorrenti producono una sola sessione per tavolo e codici distinti', async () => {
+it('due aperture in sequenza riusano una sola sessione e mantengono codici distinti', async () => {
   const { db } = ambiente
   const a = await creaTavolo(db,'A','a'), b = await creaTavolo(db,'B','b')
-  const [s1,s2] = await Promise.all([apriSessione(db,a.id),apriSessione(db,a.id)])
+  // PGlite serializza le transazioni: questo test non prova la concorrenza reale.
+  // Su Postgres la garanzia resta negli indici unici e nei lock FOR UPDATE.
+  const s1 = await apriSessione(db,a.id), s2 = await apriSessione(db,a.id)
   expect(s1.id).toBe(s2.id)
   const s3 = await apriSessione(db,b.id)
   expect(s3.codice).not.toBe(s1.codice)

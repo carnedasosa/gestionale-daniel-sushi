@@ -1,11 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const m = vi.hoisted(() => ({ tavoloDaChiave: vi.fn(), sessioneDelTavolo: vi.fn(), contaErrori: vi.fn(), verificaCodice: vi.fn(), registraTentativoFallito: vi.fn(), sessioneApertaPerId: vi.fn(), creaOrdineTavolo: vi.fn(), ordiniDellaSessione: vi.fn(), query: vi.fn(), get: vi.fn(), set: vi.fn(), redirect: vi.fn() }))
+const m = vi.hoisted(() => ({ tavoloDaChiave: vi.fn(), sessioneDelTavolo: vi.fn(), contaErrori: vi.fn(), verificaCodice: vi.fn(), registraTentativoFallito: vi.fn(), sessioneApertaPerId: vi.fn(), creaOrdineTavolo: vi.fn(), query: vi.fn(), get: vi.fn(), set: vi.fn(), redirect: vi.fn() }))
 vi.mock('@/server/db', () => { const db = { query: m.query, transazione: async (fn: (tx: unknown) => unknown) => fn(db) }; return { db } })
 vi.mock('@/tavoli/repo', () => ({ tavoloDaChiave: m.tavoloDaChiave, sessioneDelTavolo: m.sessioneDelTavolo, contaErrori: m.contaErrori, verificaCodice: m.verificaCodice, registraTentativoFallito: m.registraTentativoFallito, sessioneApertaPerId: m.sessioneApertaPerId }))
-vi.mock('@/tavoli/ordini-repo', () => ({ creaOrdineTavolo: m.creaOrdineTavolo, ordiniDellaSessione: m.ordiniDellaSessione }))
+vi.mock('@/tavoli/ordini-repo', () => ({ creaOrdineTavolo: m.creaOrdineTavolo }))
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: m.get, set: m.set }), headers: async () => new Headers({ 'x-forwarded-for': '192.0.2.1' }) }))
 vi.mock('next/navigation', () => ({ redirect: m.redirect }))
-import { entraAlTavolo, inviaOrdine, leggiOrdinatoFinora } from './azioni'
+import { entraAlTavolo, inviaOrdine } from './azioni'
 const id = '11111111-1111-4111-8111-111111111111'
 const sessione = '22222222-2222-4222-8222-222222222222'
 const keyInvio = '33333333-3333-4333-8333-333333333333'
@@ -41,12 +41,6 @@ it('invio valido restituisce numero e rifiuto mantiene i nomi esauriti', async (
   expect(m.creaOrdineTavolo.mock.calls[0][2][0]).not.toHaveProperty('prezzoCent')
   m.creaOrdineTavolo.mockResolvedValueOnce({ ok: false, errore: 'Esauriti', nonDisponibili: ['Salmone'] })
   expect(await inviaOrdine('abcdefghijkl',json,keyInvio)).toMatchObject({ ok: false, nonDisponibili: ['Salmone'] })
-})
-it('legge solo gli ordini della sessione autorizzata e serializza le date', async () => {
-  m.ordiniDellaSessione.mockResolvedValueOnce([{ numero: 1, creatoIl: new Date('2026-10-11T12:00:00Z') }])
-  expect(await leggiOrdinatoFinora('abcdefghijkl')).toEqual([{ numero: 1, creatoIl: '2026-10-11T12:00:00.000Z' }])
-  m.sessioneApertaPerId.mockResolvedValueOnce(null)
-  expect(await leggiOrdinatoFinora('abcdefghijkl')).toEqual([])
 })
 it('tavolo assente o chiuso non accetta codice', async () => {
   m.tavoloDaChiave.mockResolvedValueOnce(null)

@@ -8,7 +8,7 @@ import { normalizzaCodice } from '@/domain/codice-tavolo'
 import { bloccato, FINESTRA_MINUTI } from '@/domain/limiti-tentativi'
 import { tavoloDaChiave, sessioneDelTavolo, contaErrori, registraTentativoFallito, verificaCodice, sessioneApertaPerId, sessionePerId } from '@/tavoli/repo'
 import { ipDaHeaders } from '@/domain/ip-client'
-import { creaOrdineTavolo, ordiniDellaSessione, type OrdineClient } from '@/tavoli/ordini-repo'
+import { creaOrdineTavolo } from '@/tavoli/ordini-repo'
 import { validaCarrello } from '@/domain/carrello'
 import { COOKIE_DISPOSITIVO, OPZIONI_COOKIE, nomeCookieTavolo, opzioniCookieTavolo } from '@/tavoli/cookie'
 import { idValido, chiaveValida } from '@/tavoli/validazione'
@@ -89,15 +89,5 @@ export async function inviaOrdine(chiave: string, carrelloJson: string, chiaveIn
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')
     return { ok: false, errore: 'Invio non riuscito: controlla la connessione e riprova.' }
-  }
-}
-export async function leggiOrdinatoFinora(chiave: string): Promise<OrdineClient[]> {
-  try {
-    const sessione = await sessioneAutorizzata(chiave)
-    if (!sessione) return []
-    return (await ordiniDellaSessione(db,sessione.id)).map(o => ({ ...o,creatoIl: o.creatoIl.toISOString() }))
-  } catch (err) {
-    console.error(err instanceof Error ? err.message : 'errore sconosciuto')
-    return []
   }
 }
