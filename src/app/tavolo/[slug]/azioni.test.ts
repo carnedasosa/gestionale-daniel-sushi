@@ -1,10 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const m = vi.hoisted(() => ({ tavoloDaSlug: vi.fn(), elencoTavoli: vi.fn(), contaErrori: vi.fn(), verificaCodice: vi.fn(), registraTentativoFallito: vi.fn(), get: vi.fn(), set: vi.fn(), redirect: vi.fn() }))
-vi.mock('@/server/db', () => ({ db: {} }))
-vi.mock('@/tavoli/repo', () => ({ tavoloDaSlug: m.tavoloDaSlug, elencoTavoli: m.elencoTavoli, contaErrori: m.contaErrori, verificaCodice: m.verificaCodice, registraTentativoFallito: m.registraTentativoFallito }))
+const m = vi.hoisted(() => ({ tavoloDaSlug: vi.fn(), elencoTavoli: vi.fn(), contaErrori: vi.fn(), verificaCodice: vi.fn(), registraTentativoFallito: vi.fn(), sessioneApertaPerId: vi.fn(), creaOrdineTavolo: vi.fn(), ordiniDellaSessione: vi.fn(), query: vi.fn(), get: vi.fn(), set: vi.fn(), redirect: vi.fn() }))
+vi.mock('@/server/db', () => { const db = { query: m.query, transazione: async (fn: (tx: unknown) => unknown) => fn(db) }; return { db } })
+vi.mock('@/tavoli/repo', () => ({ tavoloDaSlug: m.tavoloDaSlug, elencoTavoli: m.elencoTavoli, contaErrori: m.contaErrori, verificaCodice: m.verificaCodice, registraTentativoFallito: m.registraTentativoFallito, sessioneApertaPerId: m.sessioneApertaPerId }))
+vi.mock('@/tavoli/ordini-repo', () => ({ creaOrdineTavolo: m.creaOrdineTavolo, ordiniDellaSessione: m.ordiniDellaSessione }))
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: m.get, set: m.set }) }))
 vi.mock('next/navigation', () => ({ redirect: m.redirect }))
-import { entraAlTavolo } from './azioni'
+import { entraAlTavolo, inviaOrdine, leggiOrdinatoFinora } from './azioni'
 const id = '11111111-1111-4111-8111-111111111111'
 const sessione = '22222222-2222-4222-8222-222222222222'
 function fd(codice = '1234') { const f = new FormData(); f.set('codice',codice); return f }
@@ -15,6 +16,30 @@ beforeEach(() => {
   m.get.mockReturnValue({ value: id }); m.contaErrori.mockResolvedValue({ dispositivo: 0, tavolo: 0 })
   m.verificaCodice.mockResolvedValue(null)
   m.redirect.mockImplementation(() => { throw new Error('NEXT_REDIRECT') })
+  m.sessioneApertaPerId.mockResolvedValue({ id: sessione, tavoloSlug: 'uno', tavoloId: id })
+})
+it('invio: cookie mancante, sessione di altro tavolo, JSON rotto e carrello invalido', async () => {
+  m.get.mockReturnValueOnce(undefined)
+  expect((await inviaOrdine('uno','[]')).errore).toContain('chiuso')
+  m.sessioneApertaPerId.mockResolvedValueOnce({ id: sessione, tavoloSlug: 'due' })
+  expect((await inviaOrdine('uno','[]')).errore).toContain('chiuso')
+  expect((await inviaOrdine('uno','{')).ok).toBe(false)
+  expect((await inviaOrdine('uno','[]')).ok).toBe(false)
+  expect(m.creaOrdineTavolo).not.toHaveBeenCalled()
+})
+it('invio valido restituisce numero e rifiuto mantiene i nomi esauriti', async () => {
+  const json = JSON.stringify([{ piattoId: id, quantita: 1, nota: '', prezzoCent: 1 }])
+  m.creaOrdineTavolo.mockResolvedValueOnce({ ok: true, ordine: { numero: 42 } })
+  expect(await inviaOrdine('uno',json)).toEqual({ ok: true, numero: 42 })
+  expect(m.creaOrdineTavolo.mock.calls[0][2][0]).not.toHaveProperty('prezzoCent')
+  m.creaOrdineTavolo.mockResolvedValueOnce({ ok: false, errore: 'Esauriti', nonDisponibili: ['Salmone'] })
+  expect(await inviaOrdine('uno',json)).toMatchObject({ ok: false, nonDisponibili: ['Salmone'] })
+})
+it('legge solo gli ordini della sessione autorizzata e serializza le date', async () => {
+  m.ordiniDellaSessione.mockResolvedValueOnce([{ numero: 1, creatoIl: new Date('2026-10-11T12:00:00Z') }])
+  expect(await leggiOrdinatoFinora('uno')).toEqual([{ numero: 1, creatoIl: '2026-10-11T12:00:00.000Z' }])
+  m.sessioneApertaPerId.mockResolvedValueOnce(null)
+  expect(await leggiOrdinatoFinora('uno')).toEqual([])
 })
 it('tavolo assente o chiuso non accetta codice', async () => {
   m.tavoloDaSlug.mockResolvedValueOnce(null)

@@ -50,3 +50,14 @@ it('le nuove tabelle hanno RLS e nessun privilegio API', async () => {
     expect(r).toEqual({ rls: true, permesso: false })
   }
 })
+it('aperture concorrenti producono una sola sessione per tavolo e codici distinti', async () => {
+  const { db } = ambiente
+  const a = await creaTavolo(db,'A','a'), b = await creaTavolo(db,'B','b')
+  const [s1,s2] = await Promise.all([apriSessione(db,a.id),apriSessione(db,a.id)])
+  expect(s1.id).toBe(s2.id)
+  const s3 = await apriSessione(db,b.id)
+  expect(s3.codice).not.toBe(s1.codice)
+  await chiudiSessione(db,s1.id)
+  const codici = [s1.codice,'9876','8765']
+  expect((await apriSessione(db,a.id,() => codici.shift()!)).codice).not.toBe(s1.codice)
+})

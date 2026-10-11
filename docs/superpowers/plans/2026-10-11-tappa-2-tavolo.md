@@ -267,9 +267,9 @@ export async function contoSessione(db: Db, sessioneId: string): Promise<Conto |
 
 `inviaOrdine(slug, carrelloJson: string)`: legge cookie → sessione aperta dello stesso tavolo (altrimenti errore tavolo chiuso); `JSON.parse` protetto; `validaCarrello`; `creaOrdineTavolo`; restituisce `{ ok, errore?, nonDisponibili?, numero? }`. `leggiOrdinatoFinora(slug)`: ordini della sessione del cookie (o `[]`).
 
-- [ ] Test carrello (input malformati di ogni tipo). Test repo PGlite con seed + un tavolo e una sessione: ordine valido (totale corretto, copie di nome/prezzo); **prezzo nel carrello ignorato** (il tipo non lo prevede: verifica che un campo `prezzoCent` extra nel JSON non cambi nulla); piatto esaurito → nessun ordine creato, `nonDisponibili` con il nome; sessione chiusa → errore e nessun ordine; poke con prezzo null → errore; poke valida → riga «Poke composta» con prezzo calcolato; `annullaRiga` ricalcola il totale; `avanzaStato` fino a `servito` poi `null`; `contoSessione` raggruppa due ordini con lo stesso piatto ed esclude righe/ordini annullati.
-- [ ] Test azione `inviaOrdine` con mock (cookie mancante, JSON rotto, carrello non valido, esito ok).
-- [ ] Verifica, commit.
+- [x] Test carrello (input malformati di ogni tipo). Test repo PGlite con seed + un tavolo e una sessione: ordine valido (totale corretto, copie di nome/prezzo); **prezzo nel carrello ignorato** (il tipo non lo prevede: verifica che un campo `prezzoCent` extra nel JSON non cambi nulla); piatto esaurito → nessun ordine creato, `nonDisponibili` con il nome; sessione chiusa → errore e nessun ordine; poke con prezzo null → errore; poke valida → riga «Poke composta» con prezzo calcolato; `annullaRiga` ricalcola il totale; `avanzaStato` fino a `servito` poi `null`; `contoSessione` raggruppa due ordini con lo stesso piatto ed esclude righe/ordini annullati.
+- [x] Test azione `inviaOrdine` con mock (cookie mancante, JSON rotto, carrello non valido, esito ok).
+- [x] Verifica, commit.
 
 ### Task 6: Pagina tavolo — menù ordinabile, carrello, poke, ordinato finora
 
