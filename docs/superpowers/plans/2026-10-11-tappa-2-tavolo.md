@@ -286,8 +286,8 @@ export async function contoSessione(db: Db, sessioneId: string): Promise<Conto |
 - Se durante il refresh la sessione risulta chiusa, la pagina mostra «Il tavolo è chiuso, grazie per essere stati da noi!» e il carrello non è più inviabile.
 - 375 px: barra carrello e pannello senza scroll orizzontale; target touch ≥ 44 px.
 
-- [ ] Typecheck/build; test di render (`renderToStaticMarkup`) di `OrdinatoFinora` (stati, riga annullata barrata, totale) e della card piatto esaurito senza bottone «Aggiungi».
-- [ ] Verifica, commit.
+- [x] Typecheck/build; test di render (`renderToStaticMarkup`) di `OrdinatoFinora` (stati, riga annullata barrata, totale) e della card piatto esaurito senza bottone «Aggiungi».
+- [x] Verifica, commit.
 
 ### Task 7: Schermo staff
 
