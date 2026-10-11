@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import '@/styles/ds/cupertino.css'
 import '@/styles/ds/tokens.css'
 import '@/styles/ds/bundle.css'
 import './globals.css'

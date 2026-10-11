@@ -11,7 +11,7 @@
 .staff-nota p { margin-block: var(--sp-4); }
 .staff-codice { margin-block: var(--sp-24); font-variant-numeric: tabular-nums; }
 .staff-conto { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.staff-conto th, .staff-conto td { padding: var(--sp-8); border-bottom: 1px solid var(--filetto); text-align: left; overflow-wrap: anywhere; }
+.staff-conto th, .staff-conto td { padding: var(--sp-8); border-bottom: var(--hairline) solid var(--filetto); text-align: left; overflow-wrap: anywhere; }
 .staff-conto th:first-child { width: 12%; }
 .staff-conto-poke { color: var(--inchiostro-tenue); font-size: .8125rem; }
 .staff-conto-poke p { margin-block: var(--sp-4); }

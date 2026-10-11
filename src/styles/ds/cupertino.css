@@ -1,0 +1,126 @@
+/* Cupertino v1 — token adottati dal riferimento fornito dall'utente.
+ * https://claude.ai/artifact/KnWaph6vBnjs2FNkfNsPoD
+ * App web: superfici iOS, controlli touch su tutti i viewport.
+ */
+:root {
+  --bg-base: #ffffff;
+  --bg-base-secondary: #f2f2f7;
+  --bg-base-tertiary: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-elevated-secondary: #f2f2f7;
+  --bg-elevated-tertiary: #ffffff;
+  --bg-grouped: #f2f2f7;
+  --bg-grouped-secondary: #ffffff;
+  --bg-grouped-tertiary: #f2f2f7;
+  --bg-grouped-elevated: #f2f2f7;
+  --bg-grouped-elevated-secondary: #ffffff;
+  --label: #000000;
+  --label-secondary: rgb(60 60 67 / 60%);
+  --label-tertiary: rgb(60 60 67 / 30%);
+  --label-quaternary: rgb(60 60 67 / 18%);
+  --text-secondary: #6e6e73;
+  --fill: rgb(120 120 128 / 20%);
+  --fill-secondary: rgb(120 120 128 / 16%);
+  --fill-tertiary: rgb(118 118 128 / 12%);
+  --fill-quaternary: rgb(116 116 128 / 8%);
+  --separator: rgb(60 60 67 / 29%);
+  --separator-opaque: #c6c6c8;
+  --gray-5: #e5e5ea;
+  --red-a11y: #e9152d;
+  --orange-a11y: #c55300;
+  --green-a11y: #008932;
+  --blue-a11y: #1e6ef4;
+  --accent: #1e6ef4;
+  --on-accent: #ffffff;
+  --accent-text: var(--blue-a11y);
+  --focus-ring: var(--blue-a11y);
+  --material-regular: rgb(255 255 255 / 72%);
+  --material-thick: rgb(255 255 255 / 86%);
+  --material-bar: rgb(250 250 252 / 80%);
+  --glass: rgb(255 255 255 / 52%);
+  --scrim: rgb(0 0 0 / 20%);
+  --backdrop-regular: saturate(180%) blur(30px);
+  --backdrop-thick: saturate(180%) blur(40px);
+  --backdrop-bar: saturate(180%) blur(20px);
+  --backdrop-glass: saturate(160%) blur(12px);
+  --shadow-glass-rim: inset 0 .5px 0 rgb(255 255 255 / 90%), inset 0 0 0 .5px rgb(255 255 255 / 45%), 0 0 0 .5px rgb(0 0 0 / 6%), 0 8px 32px rgb(0 0 0 / 10%);
+  --shadow-material-edge: inset 0 0 0 .5px rgb(0 0 0 / 8%);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-cell: 26px;
+  --radius-window: 26px;
+  --radius-xl: 28px;
+  --radius-sheet: 38px;
+  --radius-capsule: 999px;
+  --hairline: .5px;
+  --stroke-1: 1px;
+  --focus-width: 3px;
+  --touch-ios: 44px;
+  --row-ios: 44px;
+  --font-text: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-title: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  /* 16px fallback root; rem scales with user text size, including Safari Dynamic Type. */
+  --ios-large-title: 2.125rem;
+  --ios-title-1: 1.75rem;
+  --ios-title-2: 1.375rem;
+  --ios-title-3: 1.25rem;
+  --ios-body: 1.0625rem;
+  --ios-subhead: .9375rem;
+  --ios-footnote: .8125rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-base: #000000;
+    --bg-base-secondary: #1c1c1e;
+    --bg-base-tertiary: #2c2c2e;
+    --bg-elevated: #1c1c1e;
+    --bg-elevated-secondary: #2c2c2e;
+    --bg-elevated-tertiary: #3a3a3c;
+    --bg-grouped: #000000;
+    --bg-grouped-secondary: #1c1c1e;
+    --bg-grouped-tertiary: #2c2c2e;
+    --bg-grouped-elevated: #1c1c1e;
+    --bg-grouped-elevated-secondary: #2c2c2e;
+    --label: #ffffff;
+    --label-secondary: rgb(235 235 245 / 60%);
+    --label-tertiary: rgb(235 235 245 / 30%);
+    --label-quaternary: rgb(235 235 245 / 16%);
+    --text-secondary: rgb(235 235 245 / 60%);
+    --fill: rgb(120 120 128 / 36%);
+    --fill-secondary: rgb(120 120 128 / 32%);
+    --fill-tertiary: rgb(118 118 128 / 24%);
+    --fill-quaternary: rgb(118 118 128 / 18%);
+    --separator: rgb(84 84 88 / 60%);
+    --separator-opaque: #38383a;
+    --gray-5: #2c2c2e;
+    --red-a11y: #ff6165;
+    --orange-a11y: #ffa056;
+    --green-a11y: #4ad968;
+    --blue-a11y: #5cb8ff;
+    --material-regular: rgb(28 28 30 / 72%);
+    --material-thick: rgb(28 28 30 / 86%);
+    --material-bar: rgb(22 22 23 / 80%);
+    --glass: rgb(44 44 46 / 52%);
+    --scrim: rgb(0 0 0 / 48%);
+    --shadow-glass-rim: inset 0 .5px 0 rgb(255 255 255 / 22%), inset 0 0 0 .5px rgb(255 255 255 / 10%), 0 0 0 .5px rgb(0 0 0 / 50%), 0 8px 32px rgb(0 0 0 / 45%);
+    --shadow-material-edge: inset 0 0 0 .5px rgb(255 255 255 / 10%);
+  }
+}
+@media (prefers-contrast: more) {
+  :root { --separator: var(--separator-opaque); --text-secondary: #3a3a3c; }
+}
+@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+  :root { --text-secondary: #e5e5ea; }
+}
