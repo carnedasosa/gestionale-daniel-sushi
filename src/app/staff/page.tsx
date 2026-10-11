@@ -10,12 +10,15 @@ import './staff.css'
 
 export default async function AreaStaff() {
   await richiediRuolo('staff')
-  const [tavoli,ordini,riepiloghi,conti] = await Promise.all([elencoTavoli(db),ordiniAttivi(db),riepiloghiTavoli(db),contiRecenti(db)])
+  let dati = null
+  try { dati = await Promise.all([elencoTavoli(db),ordiniAttivi(db),riepiloghiTavoli(db),contiRecenti(db)]) }
+  catch (err) { console.error(err instanceof Error ? err.message : 'errore sconosciuto') }
+  const ora = new Date().toISOString()
   return (
     <main className="contenitore staff-pagina">
       <header className="staff-barra"><h1 className="heading">Area staff</h1><form action={esci}><button className="ds-btn ds-btn--secondary">Esci</button></form></header>
-      <AggiornamentoAutomatico ogniSecondi={5} />
-      <InizioTurno><SchermoStaff ora={new Date().toISOString()} tavoli={tavoli.map(t => ({ ...t,sessione: t.sessione ? { ...t.sessione,apertaIl: t.sessione.apertaIl.toISOString() } : null }))} ordini={ordini.map(o => ({ ...o,creatoIl: o.creatoIl.toISOString() }))} riepiloghi={riepiloghi} contiRecenti={conti.map(c => ({ ...c,chiusaIl: c.chiusaIl.toISOString() }))} /></InizioTurno>
+      <AggiornamentoAutomatico ogniSecondi={5} ultimoAggiornamento={dati ? ora : undefined} />
+      {dati ? <InizioTurno><SchermoStaff ora={ora} tavoli={dati[0].map(t => ({ ...t,sessione: t.sessione ? { ...t.sessione,apertaIl: t.sessione.apertaIl.toISOString() } : null }))} ordini={dati[1].map(o => ({ ...o,creatoIl: o.creatoIl.toISOString() }))} riepiloghi={dati[2]} contiRecenti={dati[3].map(c => ({ ...c,chiusaIl: c.chiusaIl.toISOString() }))} /></InizioTurno> : <p role="status" className="staff-nota">Database non raggiungibile, riprovo da solo…</p>}
     </main>
   )
 }

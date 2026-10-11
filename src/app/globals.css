@@ -34,6 +34,7 @@ img { max-width: 100%; height: auto; display: block; }
 .non-trovata { display: grid; justify-items: start; gap: var(--sp-16); padding-block: var(--sp-56); }
 
 /* Dialoghi condivisi tra tavolo e staff. */
+.tavolo-connessione { padding: var(--sp-16); border-left: var(--sp-4) solid var(--arancio); background: var(--bianco); overflow-wrap: anywhere; }
 .tavolo-pannello { width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 32px); padding: var(--sp-24); border: 1px solid var(--filetto); border-radius: var(--radius-card); background: var(--carta); color: var(--inchiostro); }
 .tavolo-pannello::backdrop { background: var(--inchiostro); opacity: .5; }
 .tavolo-pannello-testa { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-16); }

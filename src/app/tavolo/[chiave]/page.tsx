@@ -27,7 +27,7 @@ export default async function TavoloPage({ params }: { params: Promise<{ chiave:
   const dati = autorizzata && sessione ? await Promise.all([leggiMenu(db),leggiPokeConfig(db),ordiniDellaSessione(db,sessione.id)]) : null
   return <main className="contenitore tavolo-pagina">
     <header className="intestazione"><Image src="/logo.png" alt="Daniel's Sushi" width={64} height={64} priority /><h1 className="heading">{tavolo.nome}</h1></header>
-    <AggiornamentoAutomatico ogniSecondi={10} />
+    <AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={new Date().toISOString()} />
     {dati && sessione ? <><MenuOrdinabile key={sessione.id} categorie={dati[0]} config={dati[1]} sessioneId={sessione.id} chiave={chiave} /><OrdinatoFinora ordini={dati[2].map(o => ({ ...o,creatoIl: o.creatoIl.toISOString() }))} /></> : <>
       <ModuloCodice chiave={chiave} pulisci={accesso.pulisci} chiuso={accesso.chiuso} />
     </>}

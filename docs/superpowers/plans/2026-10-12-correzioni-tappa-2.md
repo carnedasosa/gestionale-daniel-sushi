@@ -105,12 +105,12 @@ create unique index ordini_chiave_invio_unica on public.ordini (chiave_invio) wh
 
 **Modifica:** `src/componenti/AggiornamentoAutomatico.tsx`, `src/app/staff/page.tsx`, `src/app/staff/error.tsx`, `src/app/tavolo/[chiave]/error.tsx`, eventuale nuova route `src/app/stato/route.ts`.
 
-- [ ] Aggiungi una route leggera `GET /stato` (route handler, `export const dynamic = 'force-dynamic'` se serve secondo le docs) che risponde `204` senza toccare il DB; `AggiornamentoAutomatico` prima di ogni `router.refresh()` fa `fetch('/stato', { cache: 'no-store' })` con timeout 4 s (`AbortController`): se fallisce **non** chiama `router.refresh()` (evita il ripiego di Next su una navigazione completa) e mostra il banner «Connessione assente: i dati potrebbero non essere aggiornati» con l'ora dell'ultimo aggiornamento riuscito; appena torna la connessione fa subito un refresh e toglie il banner. Mantieni pausa/ripresa su `visibilitychange`.
-- [ ] `src/app/staff/page.tsx`: le letture dal DB sono in `try/catch` (non attorno a `richiediRuolo`); se falliscono la pagina rende comunque `AggiornamentoAutomatico`, l'intestazione e il banner «Database non raggiungibile, riprovo da solo…» invece di lanciare l'errore.
-- [ ] `error.tsx` di staff e tavolo: oltre a «Riprova», ritentano da soli con `retry()` ogni 10 secondi (mostrando «Nuovo tentativo tra N s»).
-- [ ] `InizioTurno`: se l'`AudioContext` è stato chiuso o sospeso (rimontaggio dopo errore), mostra un bottone «Riattiva suono» ben visibile invece di restare muto in silenzio.
-- [ ] Test unitari della logica di stato del componente estratta in una funzione pura (es. `prossimoStatoConnessione(stato, esitoFetch, ora)`); typecheck e build.
-- [ ] Verifica, commit.
+- [x] Aggiungi una route leggera `GET /stato` (route handler, `export const dynamic = 'force-dynamic'` se serve secondo le docs) che risponde `204` senza toccare il DB; `AggiornamentoAutomatico` prima di ogni `router.refresh()` fa `fetch('/stato', { cache: 'no-store' })` con timeout 4 s (`AbortController`): se fallisce **non** chiama `router.refresh()` (evita il ripiego di Next su una navigazione completa) e mostra il banner «Connessione assente: i dati potrebbero non essere aggiornati» con l'ora dell'ultimo aggiornamento riuscito; appena torna la connessione fa subito un refresh e toglie il banner. Mantieni pausa/ripresa su `visibilitychange`.
+- [x] `src/app/staff/page.tsx`: le letture dal DB sono in `try/catch` (non attorno a `richiediRuolo`); se falliscono la pagina rende comunque `AggiornamentoAutomatico`, l'intestazione e il banner «Database non raggiungibile, riprovo da solo…» invece di lanciare l'errore.
+- [x] `error.tsx` di staff e tavolo: oltre a «Riprova», ritentano da soli con `retry()` ogni 10 secondi (mostrando «Nuovo tentativo tra N s»).
+- [x] `InizioTurno`: se l'`AudioContext` è stato chiuso o sospeso (rimontaggio dopo errore), mostra un bottone «Riattiva suono» ben visibile invece di restare muto in silenzio.
+- [x] Test unitari della logica di stato del componente estratta in una funzione pura (es. `prossimoStatoConnessione(stato, esitoFetch, ora)`); typecheck e build.
+- [x] Verifica, commit.
 
 ### Task 7: Irrobustimento poke e pulizie (M7, M10, M15)
 
