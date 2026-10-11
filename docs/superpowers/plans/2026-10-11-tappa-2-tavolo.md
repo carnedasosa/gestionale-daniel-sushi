@@ -312,8 +312,8 @@ export async function contoSessione(db: Db, sessioneId: string): Promise<Conto |
 **Comportamento:**
 - `/admin/tavoli` (`richiediRuolo('admin')`): elenco tavoli con nome, slug, attivo, posizione; modulo «Aggiungi tavolo» (nome; slug generato dal nome: minuscole, accenti tolti, spazi → `-`, solo `[a-z0-9-]`, univoco aggiungendo `-2`, `-3`; funzione pura `slugDaNome` con test); modifica nome/posizione/attivo. Un tavolo con sessione aperta non si disattiva («Chiudi prima il tavolo dallo schermo staff»).
 - `/admin/tavoli/stampa`: una card per tavolo attivo con nome grande, QR (SVG generato lato server con `QRCode.toString(url, { type: 'svg', margin: 1 })`) dell'URL assoluto `https://<host>/tavolo/<slug>` e la scritta «Inquadra per ordinare · il codice te lo dà il cameriere». Host: variabile opzionale `APP_URL` (documentala in `.env.example` e README); se manca, ricava origin da `headers()` (`x-forwarded-proto` + `host`). Layout di stampa A4, 4 card per pagina, `@media print` senza barra admin.
-- [ ] Test `slugDaNome` e azioni (ruolo admin, validazioni: nome 1–40 caratteri).
-- [ ] Verifica, commit.
+- [x] Test `slugDaNome` e azioni (ruolo admin, validazioni: nome 1–40 caratteri).
+- [x] Verifica, commit.
 
 ### Task 9: Rifiniture trasversali
 
