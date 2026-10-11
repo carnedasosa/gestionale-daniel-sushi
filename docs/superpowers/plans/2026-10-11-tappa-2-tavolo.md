@@ -104,8 +104,8 @@ export const LIMITE_DISPOSITIVO = 5, LIMITE_TAVOLO = 30, FINESTRA_MINUTI = 10
 export function bloccato(erroriDispositivo: number, erroriTavolo: number): boolean  // >= limite su uno dei due
 ```
 
-- [ ] Test (fallire prima): con `rand` che restituisce in sequenza `0, 0, 4, 2` (una cifra per chiamata, `rand(10)`) → `'0042'`; 1000 chiamate reali tutte `/^\d{4}$/`. `normalizzaCodice(' 12 34 ')` → `'1234'`; `'123'`, `'12345'`, `'abcd'`, `''` → `null`. Transizioni e `puoAnnullare` per ogni stato; `bloccato(4, 29)` false, `bloccato(5,0)` true, `bloccato(0,30)` true.
-- [ ] Implementa, test verdi, commit.
+- [x] Test (fallire prima): con `rand` che restituisce in sequenza `0, 0, 4, 2` (una cifra per chiamata, `rand(10)`) → `'0042'`; 1000 chiamate reali tutte `/^\d{4}$/`. `normalizzaCodice(' 12 34 ')` → `'1234'`; `'123'`, `'12345'`, `'abcd'`, `''` → `null`. Transizioni e `puoAnnullare` per ogni stato; `bloccato(4, 29)` false, `bloccato(5,0)` true, `bloccato(0,30)` true.
+- [x] Implementa, test verdi, commit.
 
 ### Task 2: Migrazione tavoli, sessioni, tentativi, ordini + repo tavoli
 
@@ -191,8 +191,8 @@ export async function registraTentativoFallito(db: Db, tavoloId: string, disposi
 export async function contaErrori(db: Db, tavoloId: string, dispositivo: string, minuti: number): Promise<{ dispositivo: number; tavolo: number }>
 export async function verificaCodice(db: Db, tavoloId: string, codice: string): Promise<SessioneAperta | null>  // sessione aperta del tavolo con quel codice
 ```
-- [ ] Test PGlite (fallire prima): crea tavolo; slug duplicato rifiutato; `apriSessione` due volte → stessa sessione; `genera` che restituisce sempre `'1234'` su due tavoli → il secondo ritenta: con `genera` sequenza `['1234','1234','5678']` il secondo tavolo ottiene `'5678'`; chiusa la prima sessione, `'1234'` torna disponibile; `verificaCodice` giusto/sbagliato/su tavolo chiuso; `contaErrori` conta solo gli ultimi N minuti (inserisci un tentativo con `creato_il = now() - interval '11 minutes'` via SQL); id/slug malformati → `null`/`false` senza eccezioni; una seconda sessione aperta sullo stesso tavolo via INSERT diretto viene rifiutata dall'indice.
-- [ ] Implementa (UUID regex come `src/menu/repo.ts`; `count(*)::int`), test verdi, commit.
+- [x] Test PGlite (fallire prima): crea tavolo; slug duplicato rifiutato; `apriSessione` due volte → stessa sessione; `genera` che restituisce sempre `'1234'` su due tavoli → il secondo ritenta: con `genera` sequenza `['1234','1234','5678']` il secondo tavolo ottiene `'5678'`; chiusa la prima sessione, `'1234'` torna disponibile; `verificaCodice` giusto/sbagliato/su tavolo chiuso; `contaErrori` conta solo gli ultimi N minuti (inserisci un tentativo con `creato_il = now() - interval '11 minutes'` via SQL); id/slug malformati → `null`/`false` senza eccezioni; una seconda sessione aperta sullo stesso tavolo via INSERT diretto viene rifiutata dall'indice.
+- [x] Implementa (UUID regex come `src/menu/repo.ts`; `count(*)::int`), test verdi, commit.
 
 ### Task 3: Poke composta — dominio, repo, admin
 
