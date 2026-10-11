@@ -317,11 +317,11 @@ export async function contoSessione(db: Db, sessioneId: string): Promise<Conto |
 
 ### Task 9: Rifiniture trasversali
 
-- [ ] `src/app/admin/layout.tsx`: link «Tavoli», «Poke», «Schermo staff».
-- [ ] `src/app/staff` e `src/app/tavolo/[slug]`: `error.tsx` in italiano (come `src/app/admin/error.tsx`, con `retry`).
-- [ ] README: sezioni «Tavoli e QR», «Schermo staff», «Ordini al tavolo», variabile `APP_URL`.
-- [ ] `docs/superpowers/specs/…`: nessuna modifica, salvo correggere §7 se qualcosa è cambiato (annotalo).
-- [ ] Verifica completa, commit.
+- [x] `src/app/admin/layout.tsx`: link «Tavoli», «Poke», «Schermo staff».
+- [x] `src/app/staff` e `src/app/tavolo/[slug]`: `error.tsx` in italiano (come `src/app/admin/error.tsx`, con `retry`).
+- [x] README: sezioni «Tavoli e QR», «Schermo staff», «Ordini al tavolo», variabile `APP_URL`.
+- [x] `docs/superpowers/specs/…`: nessuna modifica, salvo correggere §7 se qualcosa è cambiato (annotalo).
+- [x] Verifica completa, commit.
 
 ### Task 10: Applicare la migrazione e prova nel browser
 
