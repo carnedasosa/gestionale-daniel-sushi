@@ -121,9 +121,9 @@ create unique index ordini_chiave_invio_unica on public.ordini (chiave_invio) wh
 
 ### Task 8: Database reale, prova nel browser, consegna
 
-- [ ] **Chiedi all'utente** prima di applicare `20261012180000_correzioni_tavolo.sql` al progetto Supabase `daniel-sushi` (ref `rxsywhdznaugfhmsdjsa`). Dopo: advisor di sicurezza (atteso solo «RLS enabled, no policy»), `select id, chiave from tavoli` per confermare le chiavi.
-- [ ] **Chiedi all'utente** se chiudere la sessione di prova rimasta aperta (stato verificato sopra).
-- [ ] Prova nel browser (l'utente fa da sé i login; per il cliente usa una scheda senza cookie di login):
+- [x] **Chiedi all'utente** prima di applicare `20261012180000_correzioni_tavolo.sql` al progetto Supabase `daniel-sushi` (ref `rxsywhdznaugfhmsdjsa`). Dopo: advisor di sicurezza (atteso solo «RLS enabled, no policy»), `select id, chiave from tavoli` per confermare le chiavi. Consenso ricevuto e migrazione applicata; chiavi valide, RLS e privilegi verificati. Advisor: nessun errore, informazioni RLS senza policy e un avviso Auth preesistente sulla protezione delle password compromesse.
+- [x] **Chiedi all'utente** se chiudere la sessione di prova rimasta aperta (stato verificato sopra). Alla verifica dell'11/10 era già chiusa: nessuna chiusura aggiuntiva necessaria; conservata la sessione storica.
+- [x] Prova nel browser (l'utente fa da sé i login; per il cliente usa una scheda senza cookie di login):
   1. Admin tavoli: URL con chiave, «Nuovo QR» cambia l'URL e il vecchio dà 404; pagina stampa con avviso `APP_URL` se assente.
   2. Cliente: vecchio URL `/tavolo/tavolo-1` → 404; nuovo URL → codice → menù.
   3. 5 codici sbagliati → blocco; da staff «Sblocca» → si entra; chiudere e riaprire il tavolo azzera i tentativi.
@@ -132,5 +132,7 @@ create unique index ordini_chiave_invio_unica on public.ordini (chiave_invio) wh
   6. Conto: annulla una voce di un ordine servito → totale ricalcolato; poke con scelte visibili.
   7. Schermo staff: con la rete disattivata compare il banner con l'ora dell'ultimo aggiornamento, nessuna pagina di errore del browser; riattivata la rete si riallinea da solo.
   8. Tutte le pagine toccate a 375 px senza scroll orizzontale; CSS caricato.
-- [ ] Pulisci i dati di prova **chiedendo prima all'utente**.
+
+  Esiti e immagini in `docs/verifiche/correzioni-tappa-2/README.md`. Perdita di risposta e indisponibilità simulate con proxy locale temporaneo; viewport effettivo di 375 px tramite iframe, poiché l'override del browser non applicava le dimensioni. Rilevato e corretto un problema reale del pooler con letture parallele: connessione riservata per lettura, rilascio garantito; 80 letture reali e una transazione corrette. Suite ampliata a 173 test.
+- [x] Pulisci i dati di prova **chiedendo prima all'utente**. Consenso separato ricevuto: eliminati due ordini (tre righe), due sessioni e un tentativo della prova; prezzi poke ripristinati a null. Conservati tavoli, nuove chiavi QR e sessione storica precedente. SQL e schermo staff verificati dopo la pulizia.
 - [ ] `npm test && npm run typecheck && npm run lint && npm run build` verdi senza flag; push del branch `correzioni-tappa-2` e PR verso `main` in italiano.
