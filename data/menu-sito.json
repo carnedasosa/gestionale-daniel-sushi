@@ -1,0 +1,246 @@
+{
+  "fonte": "Design.html (prototipo del menù), dati da menu.pdf. Nomi dei piatti come nel prototipo; prezzi in euro.",
+  "nota": "Per gli allergeni chiedere l'apposito menù al personale",
+  "categorie": [
+    {
+      "id": "tartare",
+      "nome": "Tartare",
+      "voci": [
+        { "num": 1, "nome": "Salmone", "prezzo": 6, "desc": "Tartare condita dallo Chef" },
+        { "num": 2, "nome": "Tonno", "prezzo": 8, "desc": "Tartare condita dallo Chef" },
+        { "num": 3, "nome": "Mini Salmone", "prezzo": 4, "desc": "Tartare con pasta Kataifi" },
+        { "num": 4, "nome": "Mini Tonno", "prezzo": 6, "desc": "Tartare con granella di pistacchio" }
+      ]
+    },
+    {
+      "id": "sashimi",
+      "nome": "Sashimi",
+      "pezzi": "5 pz.",
+      "voci": [
+        { "num": 5, "nome": "Salmone", "prezzo": 5, "desc": "Filetti di pesce crudo" },
+        { "num": 6, "nome": "Tonno", "prezzo": 7, "desc": "Filetti di pesce crudo" }
+      ]
+    },
+    {
+      "id": "starter",
+      "nome": "Starter",
+      "voci": [
+        { "num": 44, "nome": "Alga wakame", "prezzo": 4, "veg": true },
+        { "num": 45, "nome": "Edamame", "prezzo": 3, "veg": true },
+        { "num": 92, "nome": "Crispy Rice Salmone", "prezzo": 6, "desc": "Tegolino di riso sushi croccante con esterno di salmone marinato e mayo piccante · 2 pz.", "piccante": true },
+        { "num": 101, "nome": "Involtini Primavera Vegetariani", "prezzo": 3, "desc": "4 pz.", "veg": true },
+        { "num": 46, "nome": "Gamberi in tempura", "prezzo": 3, "desc": "2 pz." },
+        { "num": 47, "nome": "Gambero in crosta di pistacchio", "prezzo": 3, "desc": "2 pz." },
+        { "num": 48, "nome": "Gambero in crosta di mandorla", "prezzo": 3, "desc": "2 pz." },
+        { "num": 81, "nome": "Involtini Panko & Salm", "prezzo": 3, "desc": "Gambero al panko avvolto da salmone scottato, Philadelphia, salsa teriyaki e semi di sesamo · 2 pz." },
+        { "num": 110, "nome": "Tamago Crispy", "prezzo": 4, "desc": "Uovo in tempura dal cuore morbido con mayo giapponese" },
+        { "num": 111, "nome": "Patatine fritte", "prezzo": 3 },
+        { "num": 112, "nome": "Cotoletta in tempura", "prezzo": 8, "desc": "Con patatine fritte" },
+        { "num": 113, "nome": "Kakuni", "prezzo": 10, "desc": "Pancia di maiale cbt caramellizzata & riso bianco" },
+        { "num": 114, "nome": "Takoyaki", "prezzo": 5, "desc": "Polpette sferiche giapponesi al polpo · 4 pz." },
+        { "num": 116, "nome": "Bao Pulled Pork", "prezzo": 5, "desc": "Panini asiatici ripieni di pulled pork · 2 pz." },
+        { "num": 117, "nome": "Bao Gambero in Tempura", "prezzo": 5, "desc": "Panini asiatici ripieni di gamberi in tempura · 2 pz." }
+      ]
+    },
+    {
+      "id": "sushi-gio",
+      "nome": "Sushi Gio",
+      "pezzi": "2 pz.",
+      "voci": [
+        { "num": 7, "nome": "Gio salmone", "prezzo": 3, "desc": "Riso avvolto da salmone con tartare & pasta Kataifi" },
+        { "num": 8, "nome": "Gio Maguro", "prezzo": 4, "desc": "Riso avvolto da tonno con tartare & pasta Kataifi" },
+        { "num": 9, "nome": "Philadelphia Gio", "prezzo": 2.5, "desc": "Riso avvolto da salmone con philadelphia" },
+        { "num": 10, "nome": "Gio Tonno & Scampi", "prezzo": 4, "desc": "Riso avvolto da tonno con tartare di scampo & teriyaki" },
+        { "num": 11, "nome": "Gio Salm & Gambero", "prezzo": 4, "desc": "Riso avvolto da salmone con tartare di gambero rosso & teriyaki" },
+        { "num": 12, "nome": "Gio Flame Salm & Scampo", "prezzo": 4, "desc": "Riso avvolto da salmone scottato con tartare di scampo, filangé di mandorla & teriyaki" },
+        { "num": 13, "nome": "Gio Flame Salm & Shrimp", "prezzo": 4, "desc": "Riso avvolto da salmone scottato con tartare di gambero rosso, vellutata di pistacchio & granella" },
+        { "num": 82, "nome": "Gio Full immersion", "prezzo": 3, "desc": "Riso avvolto da salmone, tartare di salmone, salsa spicy marinata", "piccante": true },
+        { "num": 83, "nome": "Gio fresh & salm", "prezzo": 3, "desc": "Riso avvolto da salmone scottato, philadelphia & granella di pistacchio" },
+        { "num": 84, "nome": "Gio fresh & Tuna", "prezzo": 3, "desc": "Riso avvolto da tonno scottato, philadelphia & granella di pistacchio" }
+      ]
+    },
+    {
+      "id": "hosomaki",
+      "nome": "Hosomaki",
+      "pezzi": "6 pz.",
+      "voci": [
+        { "num": 14, "nome": "Salmone", "prezzo": 4, "desc": "Riso con alga all'esterno" },
+        { "num": 15, "nome": "Tonno", "prezzo": 5, "desc": "Riso con alga all'esterno" },
+        { "num": 16, "nome": "Gambero in tempura", "prezzo": 4, "desc": "Riso con alga all'esterno" },
+        { "num": 17, "nome": "Scampo", "prezzo": 6, "desc": "Riso con alga all'esterno" },
+        { "num": 18, "nome": "Gambero rosso", "prezzo": 6, "desc": "Riso con alga all'esterno" },
+        { "num": 19, "nome": "Hosomaki fritto", "prezzo": 6, "desc": "Maki fritto con salmone all'interno ed esterno di philadelphia & frutta di stagione" },
+        { "num": 91, "nome": "Maki fritto", "prezzo": 6, "desc": "Hosomaki fritto con interno di salmone ed esterno di granella croccante, salsa al pistacchio & teriyaki" }
+      ]
+    },
+    {
+      "id": "nigiri",
+      "nome": "Nigiri",
+      "pezzi": "2 pz.",
+      "voci": [
+        { "num": 20, "nome": "Salmone", "prezzo": 2, "desc": "Riso coperto da fettina di salmone" },
+        { "num": 21, "nome": "Tonno", "prezzo": 3, "desc": "Riso coperto da fettina di tonno" },
+        { "num": 22, "nome": "Salmone scottato", "prezzo": 3, "desc": "Riso coperto da fettina di salmone scottato" },
+        { "num": 23, "nome": "Tonno scottato", "prezzo": 3, "desc": "Riso coperto da fettina di tonno scottato" },
+        { "num": 24, "nome": "Tartare Scampo", "prezzo": 4, "desc": "Riso coperto da tartare di scampo e mandorla" },
+        { "num": 25, "nome": "Tartare Gambero rosso", "prezzo": 4, "desc": "Riso coperto da tartare di gambero rosso e granella di pistacchio" },
+        { "num": 97, "nome": "White", "prezzo": 3, "desc": "Riso coperto da fettina di pesce bianco e semi di sesamo" }
+      ]
+    },
+    {
+      "id": "triangolini",
+      "nome": "Triangolini",
+      "pezzi": "4 pz.",
+      "voci": [
+        { "num": 93, "nome": "SalmThree", "prezzo": 6, "desc": "Triangolino di sushi con interno di salmone & mayo, esterno di semi di sesamo, mayo piccante & teriyaki", "piccante": true },
+        { "num": 94, "nome": "TonnFive", "prezzo": 6, "desc": "Triangolino di sushi con interno di tonno & mayo, esterno di semi di sesamo, mayo piccante & teriyaki", "piccante": true },
+        { "num": 95, "nome": "GamberEight", "prezzo": 6, "desc": "Triangolino di sushi con interno di gambero in tempura & mayo, esterno di semi di sesamo, mayo piccante & teriyaki", "piccante": true }
+      ]
+    },
+    {
+      "id": "uramaki",
+      "nome": "Uramaki",
+      "pezzi": "8 pz.",
+      "voci": [
+        { "num": 26, "nome": "Salmone roll", "prezzo": 6, "desc": "Con salmone, alga, avocado e philadelphia" },
+        { "num": 27, "nome": "Tonno roll", "prezzo": 8, "desc": "Con tonno, alga, avocado e philadelphia" },
+        { "num": 28, "nome": "Gambero in tempura", "prezzo": 6, "desc": "Roll con gambero, alga, avocado e philadelphia" }
+      ]
+    },
+    {
+      "id": "special-roll",
+      "nome": "Special roll",
+      "pezzi": "8 pz.",
+      "voci": [
+        { "num": 29, "nome": "Sake roll", "prezzo": 10, "desc": "Interno di salmone, philadelphia e avocado, esterno di salmone scottato, pasta Kataifi & teriyaki" },
+        { "num": 30, "nome": "Maguro roll", "prezzo": 12, "desc": "Interno di tonno, philadelphia e avocado, esterno di tonno, pasta Kataifi & teriyaki" },
+        { "num": 31, "nome": "Shrimp roll", "prezzo": 12, "desc": "Interno di gambero in tempura e avocado, esterno di tonno, teriyaki & vellutata di pistacchio" },
+        { "num": 32, "nome": "Daniel's roll", "prezzo": 14, "desc": "Interno di salmone e avocado, esterno di tartare di gambero rosso & vellutata di pistacchio", "casa": true },
+        { "num": 33, "nome": "Spicy Maguro roll", "prezzo": 10, "desc": "Interno di tonno e philadelphia, esterno di tonno, teriyaki & salsa spicy", "piccante": true },
+        { "num": 34, "nome": "Salm & Ph roll", "prezzo": 8, "desc": "Interno di salmone e philadelphia, esterno di salmone" },
+        { "num": 35, "nome": "Tiger Flame roll", "prezzo": 12, "desc": "Interno di gambero in tempura, esterno di salmone scottato, pasta Kataifi & teriyaki" },
+        { "num": 36, "nome": "Maguro Ph roll", "prezzo": 10, "desc": "Interno di tonno e philadelphia, esterno di tonno" },
+        { "num": 37, "nome": "Spicy Salm roll", "prezzo": 8, "desc": "Interno di salmone e philadelphia, esterno di salmone, teriyaki & salsa spicy", "piccante": true },
+        { "num": 38, "nome": "Prawn & Tuna", "prezzo": 14, "desc": "Interno di tonno e avocado, esterno di tartare di scampo & filangé di mandorla" },
+        { "num": 39, "nome": "Mango roll", "prezzo": 14, "desc": "Interno di tonno e mango, esterno di tonno, chutney di mango & teriyaki" },
+        { "num": 40, "nome": "Mediterraneo roll", "prezzo": 12, "desc": "Interno di salmone e formaggio francese, esterno di salmone, menta & olio extravergine" },
+        { "num": 41, "nome": "Apulia roll", "prezzo": 14, "desc": "Interno di salmone e avocado, esterno di stracciatella, gambero rosso & granella di pistacchio", "casa": true },
+        { "num": 52, "nome": "Crab & Salm roll", "prezzo": 8, "desc": "Interno di polpa di granchio e avocado, esterno di salmone, teriyaki e olio extravergine" },
+        { "num": 53, "nome": "Crab & Flame Salm roll", "prezzo": 10, "desc": "Interno di polpa di granchio, philadelphia e avocado, esterno di salmone scottato, teriyaki e pasta Kataifi" },
+        { "num": 54, "nome": "Tuna & Crab roll", "prezzo": 10, "desc": "Interno di polpa di granchio e philadelphia, esterno di tonno, teriyaki e semi di sesamo" },
+        { "num": 55, "nome": "Fried onion & Crab roll", "prezzo": 10, "desc": "Interno di polpa di granchio e avocado, esterno di salmone, teriyaki e cipolla fritta" },
+        { "num": 56, "nome": "Rainbow roll", "prezzo": 10, "desc": "Interno di salmone e avocado, esterno di tonno, spigola, salmone e teriyaki" },
+        { "num": 57, "nome": "Lime & Bass roll", "prezzo": 10, "desc": "Interno di salmone e avocado, esterno di salmone, teriyaki, lime e tobiko" },
+        { "num": 58, "nome": "Fried onion & Salm roll", "prezzo": 10, "desc": "Interno di salmone e philadelphia, esterno di salmone, teriyaki e cipolla fritta" },
+        { "num": 66, "nome": "Mango & Tuna roll", "prezzo": 12, "desc": "Interno di tonno e mango, esterno di salmone, teriyaki, chutney di mango e mandorle" },
+        { "num": 67, "nome": "PistacchioLovers roll", "prezzo": 12, "desc": "Interno di gambero in tempura e avocado, esterno di salmone, vellutata di pistacchio, teriyaki e granella di pistacchio" },
+        { "num": 68, "nome": "Salmon Fuji roll", "prezzo": 12, "desc": "Interno di gambero in tempura, esterno di alternanza tra salmone crudo & scottato, philadelphia e tobiko" },
+        { "num": 69, "nome": "Daiquiri roll", "prezzo": 12, "desc": "Interno di salmone e mango, esterno di salmone, lime e semi di sesamo" },
+        { "num": 70, "nome": "Truffle & Co. roll", "prezzo": 12, "desc": "Interno di gambero in tempura e avocado, esterno di salmone scottato, mayo al tartufo e crumble di anacardi" },
+        { "num": 71, "nome": "Paradise roll", "prezzo": 12, "desc": "Interno di gambero in tempura e avocado, esterno di tonno, teriyaki e pasta Kataifi" },
+        { "num": 72, "nome": "GamberOne", "prezzo": 12, "desc": "Interno di gambero, esterno di tonno, teriyaki, crema avocado e kataifi" },
+        { "num": 73, "nome": "GamberTwo", "prezzo": 12, "desc": "Interno di gambero, esterno di salmone, teriyaki, crema avocado e kataifi" },
+        { "num": 76, "nome": "GamberThree", "prezzo": 12, "desc": "Interno di gambero in tempura e cetriolo, esterno di salmone scottato, chutney al mango, teriyaki, granella e vellutata di pistacchio" },
+        { "num": 77, "nome": "GamberFour", "prezzo": 8, "desc": "Interno di gambero e cetriolo, esterno di salmone, mayo alla barbabietola e semi di sesamo" },
+        { "num": 78, "nome": "TonnTwo", "prezzo": 10, "desc": "Interno di tonno e cetriolo, esterno di tonno, semi di sesamo e mayo alla barbabietola" },
+        { "num": 79, "nome": "SalmTwo", "prezzo": 8, "desc": "Interno di salmone, cetriolo, semi di sesamo e mayo alla barbabietola" },
+        { "num": 85, "nome": "TonnThree", "prezzo": 12, "desc": "Interno di tonno, esterno di tonno, salsa teriyaki al lime e cipolla croccante" },
+        { "num": 86, "nome": "TonnFour", "prezzo": 10, "desc": "Interno di tonno & avocado, esterno di tonno, salsa allo zafferano & tobiko" },
+        { "num": 87, "nome": "SalmTwo", "prezzo": 8, "desc": "Interno di salmone & avocado, esterno di salmone, salsa allo zafferano & tobiko" },
+        { "num": 89, "nome": "GamberSix", "prezzo": 12, "desc": "Interno di gambero in tempura, esterno di salmone scottato, salsa teriyaki & mandorla" },
+        { "num": 90, "nome": "GamberSeven", "prezzo": 8, "desc": "Interno di gambero in tempura, esterno di salmone, salsa allo zafferano & tobiko" },
+        { "num": 98, "nome": "WhiteOne", "prezzo": 10, "desc": "Interno di salmone & avocado, esterno di pesce bianco, salsa teriyaki & semi di sesamo" },
+        { "num": 99, "nome": "WhiteTwo", "prezzo": 12, "desc": "Interno di pesce bianco & avocado, esterno di pesce bianco, salsa teriyaki, lime & tobiko" },
+        { "num": 100, "nome": "WhiteThree", "prezzo": 12, "desc": "Interno di pesce bianco & avocado, esterno di pesce bianco, salsa teriyaki, vellutata di arancia & tobiko" }
+      ]
+    },
+    {
+      "id": "poke-bowl",
+      "nome": "Poke bowl",
+      "voci": [
+        { "num": 60, "nome": "Philadelphia's poke", "prezzo": 10.5, "desc": "Riso bianco, salmone, tonno, zucchine, mais, carote, salsa di soia, mayo piccante, philadelphia e filangé di mandorla" },
+        { "num": 61, "nome": "Daniel's poke", "prezzo": 10.5, "desc": "Riso bianco, gamberi in tempura, salmone scottato, avocado, zucchine, vellutata di pistacchio, teriyaki & granella di pistacchio", "casa": true },
+        { "num": 62, "nome": "Maglielano's poke", "prezzo": 11, "desc": "Riso bianco, salmone scottato, tonno, avocado, mais, carote, salsa di soia, teriyaki, mayo al tartufo, stracciatella e anacardi" },
+        { "num": 63, "nome": "Colorful's poke", "prezzo": 10.5, "desc": "Riso bianco, salmone, tonno, avocado, mango, salsa di soia, teriyaki, chutney di mango e semi di sesamo" },
+        { "num": 64, "nome": "Aman's poke", "prezzo": 12, "desc": "Riso bianco, salmone, tonno, edamame, alga wakame, salsa unagi, semi di sesamo e cipolla fritta" },
+        { "num": 65, "nome": "Sunflower's poke", "prezzo": 11, "desc": "Riso bianco, salmone, gambero in tempura, carote, pomodorini, teriyaki, sweet chili, semi di sesamo, zucca, girasole e lino" },
+        { "num": 80, "nome": "Voglia's poke", "prezzo": 11, "desc": "Riso bianco, teriyaki, salsa di soia, mayo alla barbabietola, crema di avocado, cetriolo, pomodorini, salmone, tonno, philadelphia e semi di sesamo" }
+      ],
+      "componi": {
+        "titolo": "Componi la tua Poke",
+        "gruppi": [
+          { "nome": "Base", "voci": [ "Riso bianco", "Riso Venere", "Insalata iceberg" ] },
+          { "nome": "Proteine", "voci": [ "Salmone crudo", "Salmone scottato", "Tonno crudo", "Tonno scottato", "Gamberi al vapore", "Gamberi in tempura", "Pollo piastrato", "Pollo in tempura", "Pesce bianco", "Tofu", "Formaggio feta" ] },
+          { "nome": "Condimenti", "voci": [ "Alga wakame", "Edamame", "Cetrioli", "Mango", "Carote", "Zucchine", "Mais", "Avocado", "Pomodorini", "Olive denocciolate", "Zenzero" ] },
+          { "nome": "Salse", "voci": [ "Teriyaki", "Soia", "Mayo piccante", "Mayo", "Vellutata al pistacchio", "Chutney al mango", "Crema di avocado", "Sweet chilli", "Mayo al tartufo", "Salsa barbabietola", "Mayo allo zafferano", "Salsa al lime" ] },
+          { "nome": "Topping", "voci": [ "Cipolla fritta", "Granella pistacchio", "Filangé mandorla", "Kataifi", "Anacardi", "Sesamo", "Philadelphia senza lattosio", "Stracciatella", "Tempura flakes", "Chips di patata dolce" ] }
+        ]
+      }
+    },
+    {
+      "id": "box",
+      "nome": "Box",
+      "voci": [
+        { "num": 42, "nome": "Crazy sushi", "prezzo": 28, "desc": "4 pz. Nigiri, 4 pz. Sushi Gio, 8 pz. Hosomaki, 8 pz. Special roll" },
+        { "num": 43, "nome": "Maglielano box", "prezzo": 50, "desc": "8 pz. Nigiri, 8 pz. Sushi Gio, 8 pz. Hosomaki, 24 pz. Special roll" },
+        { "num": 49, "nome": "Daniel's sushi small box", "prezzo": 20, "desc": "4 pz. Sushi Gio (9), 2 pz. Nigiri (20), 8 pz. Uramaki (26), 8 pz. Uramaki (28), 2 pz. Starter (46) · 24 pz." },
+        { "num": 50, "nome": "Daniel's sushi medium box", "prezzo": 30, "desc": "5 pz. Sashimi (5), 2 pz. Sushi Gio (9), 2 pz. Nigiri (20), 8 pz. Uramaki (26), 8 pz. Special roll a scelta dello chef, 8 pz. Hosomaki (19), 2 pz. Starter (46) · 35 pz." },
+        { "num": 51, "nome": "Daniel's sushi large box", "prezzo": 50, "desc": "5 pz. Sashimi (5), 4 pz. Nigiri (20), 2 pz. Nigiri (21), 8 pz. Uramaki (26), 24 pz. Special roll a scelta dello chef, 8 pz. Hosomaki (19), 4 pz. Starter (46) · 55 pz." }
+      ]
+    },
+    {
+      "id": "primi",
+      "nome": "Primi",
+      "voci": [
+        { "num": 102, "nome": "Gyoza", "prezzo": 5, "desc": "Ravioli giapponesi dal ripieno di carne di maiale & verza · 4 pz." },
+        { "num": 115, "nome": "Gyoza Vegetariani", "prezzo": 5, "desc": "Ravioli giapponesi dal ripieno di verdure · 4 pz.", "veg": true },
+        { "num": 103, "nome": "Noodles di Verdure", "prezzo": 10, "desc": "Udon noodles saltati con verdure, tofu & sriracha", "piccante": true, "veg": true },
+        { "num": 104, "nome": "Noodles di Carne", "prezzo": 10, "desc": "Udon noodles saltati con verdure, carne di maiale & sriracha", "piccante": true },
+        { "num": 105, "nome": "Noodles di gamberi", "prezzo": 10, "desc": "Udon noodles saltati con verdure & gamberi", "piccante": true },
+        { "num": 106, "nome": "Spaghetti di riso di Verdure", "prezzo": 10, "desc": "Spaghetti di riso saltati con verdure, tofu & sriracha", "piccante": true, "veg": true },
+        { "num": 107, "nome": "Spaghetti di riso di Carne", "prezzo": 10, "desc": "Spaghetti di riso saltati con verdure, carne di maiale & sriracha", "piccante": true },
+        { "num": 108, "nome": "Spaghetti di riso di gamberi", "prezzo": 10, "desc": "Spaghetti di riso saltati con verdure & gamberi", "piccante": true },
+        { "num": 109, "nome": "Ramen", "prezzo": 10, "desc": "Noodles, brodo di manzo, mais, alga, cipollotto, pancia di maiale cbt, uovo sodo marinato", "piccante": true }
+      ]
+    },
+    {
+      "id": "dessert",
+      "nome": "Dessert",
+      "voci": [
+        { "nome": "Sorbetto al limone", "prezzo": 3 },
+        { "nome": "Sorbetto alla mela verde", "prezzo": 3 },
+        { "nome": "Soufflé al cioccolato", "prezzo": 5 },
+        { "nome": "Soufflé al cioccolato bianco", "prezzo": 5 },
+        { "nome": "Torta ai 3 cioccolati", "prezzo": 4 },
+        { "nome": "Torta Kinder", "prezzo": 4 },
+        { "nome": "Torta al pistacchio", "prezzo": 4 },
+        { "nome": "Torta al mango", "prezzo": 4 },
+        { "nome": "Cheesecake ai frutti di bosco", "prezzo": 4 },
+        { "nome": "Tiramisù", "prezzo": 5 },
+        { "nome": "Bomboniere", "prezzo": 5 },
+        { "nome": "Tartufo nero", "prezzo": 4 },
+        { "nome": "Tartufo bianco", "prezzo": 4 }
+      ]
+    },
+    {
+      "id": "beverage",
+      "nome": "Beverage",
+      "voci": [
+        { "nome": "Acqua naturale", "prezzo": 2.5 },
+        { "nome": "Acqua frizzante", "prezzo": 2.5 },
+        { "nome": "Acqua naturale 0,5 L", "prezzo": 1 },
+        { "nome": "Coca Cola", "prezzo": 2 },
+        { "nome": "Coca Cola Zero", "prezzo": 2 },
+        { "nome": "Fanta", "prezzo": 2 },
+        { "nome": "Thè pesca", "prezzo": 2 },
+        { "nome": "Thè limone", "prezzo": 2 },
+        { "nome": "Birra Lemon", "prezzo": 2 },
+        { "nome": "Birra Zero", "prezzo": 3, "desc": "Analcolica" },
+        { "nome": "Birra Corona", "prezzo": 3 },
+        { "nome": "Birra Asahi", "prezzo": 3 },
+        { "nome": "Birra Heineken", "prezzo": 3 },
+        { "nome": "Birra Igea", "prezzo": 4, "desc": "Senza glutine" }
+      ]
+    }
+  ]
+}
