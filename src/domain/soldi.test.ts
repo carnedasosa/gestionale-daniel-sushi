@@ -16,19 +16,19 @@ describe('euroInCentesimi', () => {
 describe('parseEuro', () => {
   it.each([
     ['10', 1000], ['10,5', 1050], ['10,50', 1050], ['10.50', 1050],
-    ['€ 10,50', 1050], ['10,50 €', 1050], [' 3 ', 300], ['0', 0], ['0,05', 5],
+    ['€ 10,50', 1050], ['10,50 €', 1050], ['10,50\u00a0€', 1050], ['€10', 1000], [' 3 ', 300], ['0', 0], ['0,05', 5],
   ])('accetta %j', (testo, atteso) => {
     expect(parseEuro(testo)).toBe(atteso)
   })
-  it.each(['', '  ', 'abc', '-3', '1,234', '10,5,0', '1.000,00', '10 50', '1e3'])('rifiuta %j', (testo) => {
+  it.each(['', '  ', 'abc', '-3', '1,234', '10,5,0', '1.000,00', '10 50', '1e3', '1€50', '10€50'])('rifiuta %j', (testo) => {
     expect(parseEuro(testo)).toBeNull()
   })
 })
 
 describe('formatEuro', () => {
   it('usa la virgola e lo spazio indivisibile prima di €', () => {
-    expect(formatEuro(1050)).toBe('10,50 €')
-    expect(formatEuro(0)).toBe('0,00 €')
-    expect(formatEuro(5)).toBe('0,05 €')
+    expect(formatEuro(1050)).toBe('10,50\u00a0€')
+    expect(formatEuro(0)).toBe('0,00\u00a0€')
+    expect(formatEuro(5)).toBe('0,05\u00a0€')
   })
 })

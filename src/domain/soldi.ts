@@ -6,11 +6,14 @@ export function euroInCentesimi(euro: number): Centesimi {
   return cent
 }
 
-// Accetta «10», «10,5», «10,50», «10.50», con o senza «€» e spazi. Niente migliaia né negativi.
+// Accetta «10», «10,5», «10,50», «10.50», con «€» solo all'inizio o alla fine (spazi, anche indivisibili, ammessi).
+// Niente migliaia né negativi.
 const FORMATO_EURO = /^(\d{1,4})(?:[.,](\d{1,2}))?$/
 
 export function parseEuro(testo: string): Centesimi | null {
-  const pulito = testo.replace(/€/g, '').trim()
+  let pulito = testo.trim()
+  if (pulito.startsWith('€')) pulito = pulito.slice(1).trim()
+  else if (pulito.endsWith('€')) pulito = pulito.slice(0, -1).trim()
   const m = FORMATO_EURO.exec(pulito)
   if (!m) return null
   const interi = Number(m[1])
@@ -21,5 +24,5 @@ export function parseEuro(testo: string): Centesimi | null {
 export function formatEuro(cent: Centesimi): string {
   const euro = Math.trunc(cent / 100)
   const resto = String(Math.abs(cent % 100)).padStart(2, '0')
-  return `${euro},${resto} €`
+  return `${euro},${resto}\u00a0€`
 }

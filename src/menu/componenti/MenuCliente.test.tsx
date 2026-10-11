@@ -50,7 +50,7 @@ describe('MenuCliente', () => {
   })
 
   it('mostra il prezzo con spazio non separabile prima di €', () => {
-    expect(html).toContain('10,50 €')
+    expect(html).toContain('10,50\u00a0€')
   })
 
   it('ha il link del chip verso la categoria', () => {
