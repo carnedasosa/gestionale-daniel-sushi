@@ -55,8 +55,8 @@ create unique index ordini_chiave_invio_unica on public.ordini (chiave_invio) wh
 ```
 (`gen_random_uuid()` è casuale crittograficamente in Postgres ≥ 13 ed è disponibile anche in PGlite. I nuovi tavoli ricevono la chiave dall'applicazione, Task 3.)
 
-- [ ] Test PGlite: dopo tutte le migrazioni, un tavolo creato prima della nuova migrazione (inseriscilo applicando le migrazioni una alla volta, oppure verifica l'`update` con una riga inserita prima di eseguire il file) ha una chiave valida; chiave duplicata rifiutata; due ordini con la stessa `chiave_invio` rifiutati, con `null` ammessi più volte.
-- [ ] Commit.
+- [x] Test PGlite: dopo tutte le migrazioni, un tavolo creato prima della nuova migrazione (inseriscilo applicando le migrazioni una alla volta, oppure verifica l'`update` con una riga inserita prima di eseguire il file) ha una chiave valida; chiave duplicata rifiutata; due ordini con la stessa `chiave_invio` rifiutati, con `null` ammessi più volte.
+- [x] Commit. Anticipata la generazione della chiave in `creaTavolo`, necessaria al nuovo NOT NULL. Backfill uniforme su 36 simboli (~62 bit), invece delle 12 cifre hex dell'esempio (48 bit). Verifica completa: 152 test, typecheck, lint e build senza env.
 
 ### Task 3: URL del tavolo con chiave e limite ai tentativi corretto (I4, M13)
 

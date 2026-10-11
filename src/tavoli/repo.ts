@@ -1,5 +1,6 @@
 import type { Db } from '@/server/db-tipi'
 import { generaCodice } from '@/domain/codice-tavolo'
+import { generaChiaveTavolo } from '@/domain/chiave-tavolo'
 import { idValido, nomeValido, slugValido } from './validazione'
 
 export interface Tavolo { id: string; nome: string; slug: string; posizione: number; attivo: boolean }
@@ -18,7 +19,7 @@ export async function tavoloDaSlug(db: Db, slug: string): Promise<Tavolo | null>
 }
 export async function creaTavolo(db: Db, nome: string, slug: string): Promise<Tavolo> {
   if (!nomeValido(nome) || !slugValido(slug)) throw new Error('Nome o slug del tavolo non valido')
-  return (await db.query<Tavolo>('insert into tavoli(nome,slug) values ($1,$2) returning *', [nome.trim(), slug]))[0]
+  return (await db.query<Tavolo>('insert into tavoli(nome,slug,chiave) values ($1,$2,$3) returning *', [nome.trim(), slug,generaChiaveTavolo()]))[0]
 }
 export async function aggiornaTavolo(db: Db, id: string, d: { nome: string; attivo: boolean; posizione: number }): Promise<Tavolo | null> {
   if (!idValido(id) || !nomeValido(d.nome) || typeof d.attivo !== 'boolean' || !Number.isSafeInteger(d.posizione)) return null
