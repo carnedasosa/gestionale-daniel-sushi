@@ -18,3 +18,9 @@ body {
 img { max-width: 100%; height: auto; display: block; }
 .contenitore { width: min(1120px, 100% - 32px); margin-inline: auto; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Campi di modulo condivisi tra l'accesso e i moduli del gestionale. */
+.campo { display: grid; gap: var(--sp-4); }
+.campo input, .campo textarea, .campo select {
+  font: inherit; padding: 12px 14px; border: 1px solid var(--inchiostro); border-radius: 8px; background: var(--bianco);
+}
