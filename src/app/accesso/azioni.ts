@@ -20,7 +20,7 @@ export async function entra(_stato: StatoAccesso, formData: FormData): Promise<S
 
   const ruolo = await leggiRuolo(db, data.user.id)
   if (!ruolo) {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
     return { errore: 'Account senza permessi: chiedi all’amministratore di abilitarlo.' }
   }
   redirect(destinazioneDopoLogin(next, ruolo))
@@ -28,6 +28,6 @@ export async function entra(_stato: StatoAccesso, formData: FormData): Promise<S
 
 export async function esci(): Promise<void> {
   const supabase = await createClient()
-  await supabase.auth.signOut()
+  await supabase.auth.signOut({ scope: 'local' })
   redirect('/accesso')
 }
