@@ -54,6 +54,12 @@ export async function ordiniDellaSessione(db: Db, sessioneId: string): Promise<O
   return idValido(sessioneId) ? leggiOrdini(db,'o.sessione_id=$1',[sessioneId]) : []
 }
 export async function ordiniAttivi(db: Db): Promise<Ordine[]> { return leggiOrdini(db,"s.chiusa_il is null and o.stato in ('inviato','in_preparazione')") }
+export interface RiepilogoTavolo { sessioneId: string; numeroOrdini: number; totaleCent: number }
+export async function riepiloghiTavoli(db: Db): Promise<RiepilogoTavolo[]> {
+  return db.query<RiepilogoTavolo>(`select s.id as "sessioneId",count(o.id)::int as "numeroOrdini",
+    coalesce(sum(case when o.stato <> 'annullato' then o.totale_cent else 0 end),0)::float8 as "totaleCent"
+    from sessioni_tavolo s left join ordini o on o.sessione_id=s.id where s.chiusa_il is null group by s.id`)
+}
 export async function avanzaStato(db: Db, ordineId: string): Promise<Ordine | null> {
   if (!idValido(ordineId)) return null
   return db.transazione(async tx => {

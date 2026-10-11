@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { creaDbDiTest } from '../../tests/db/pglite'
 import { apriSessione, creaTavolo, chiudiSessione } from './repo'
-import { annullaOrdine, annullaRiga, avanzaStato, contoSessione, creaOrdineTavolo, ordiniAttivi, ordiniDellaSessione } from './ordini-repo'
+import { annullaOrdine, annullaRiga, avanzaStato, contoSessione, creaOrdineTavolo, ordiniAttivi, ordiniDellaSessione, riepiloghiTavoli } from './ordini-repo'
 import { leggiPokeConfig, salvaPokeConfig } from './poke-repo'
 import { validaCarrello } from '@/domain/carrello'
 let ambiente: Awaited<ReturnType<typeof creaDbDiTest>>, sessione: string, piatto: string
@@ -69,4 +69,11 @@ it('effettua rollback se la scrittura di una riga fallisce', async () => {
   await db.query('create trigger rifiuta before insert on righe_ordine for each row execute function rifiuta_riga()')
   await expect(creaOrdineTavolo(db,sessione,righe())).rejects.toThrow('errore simulato')
   expect(await db.query('select * from ordini')).toEqual([])
+})
+it('riepiloghi staff: numero ordini e totale senza annullati', async () => {
+  const { db } = ambiente
+  const a = await creaOrdineTavolo(db,sessione,righe()), b = await creaOrdineTavolo(db,sessione,righe())
+  if (!a.ok || !b.ok) throw new Error('creazione')
+  await annullaOrdine(db,a.ordine.id)
+  expect(await riepiloghiTavoli(db)).toEqual([{ sessioneId: sessione, numeroOrdini: 2, totaleCent: 1200 }])
 })

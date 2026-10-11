@@ -1,1 +1,17 @@
-.staff-pagina { display: grid; justify-items: start; gap: var(--sp-16); padding-block: var(--sp-56); }
+.staff-pagina { display: grid; gap: var(--sp-24); padding-block: var(--sp-24); }
+.staff-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-16); }
+.staff-colonne { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--sp-24); }
+.staff-tavoli { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,280px),1fr)); gap: var(--sp-24); }
+.staff-ordine, .staff-tavolo { padding: var(--sp-24); margin-bottom: var(--sp-16); overflow-wrap: anywhere; }
+.staff-ordine--nuovo { border: var(--sp-4) solid var(--arancio); }
+.staff-azioni { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.staff-azioni .ds-btn { min-height: var(--tap); }
+.staff-righe { padding-left: var(--sp-24); display: grid; gap: var(--sp-16); }
+.staff-nota { border-left: var(--sp-4) solid var(--arancio); padding-left: var(--sp-12); color: var(--inchiostro); }
+.staff-nota p { margin-block: var(--sp-4); }
+.staff-codice { margin-block: var(--sp-24); font-variant-numeric: tabular-nums; }
+.staff-conto { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.staff-conto th, .staff-conto td { padding: var(--sp-8); border-bottom: 1px solid var(--filetto); text-align: left; overflow-wrap: anywhere; }
+.staff-conto th:first-child { width: 12%; }
+@media (max-width: 640px) { .staff-colonne { grid-template-columns: minmax(0,1fr); } .staff-ordine, .staff-tavolo { padding: var(--sp-16); } .staff-conto { font-size: 14px; } .staff-conto th, .staff-conto td { padding: var(--sp-4); } }
+@media print { .staff-navigazione, .staff-barra { display: none; } .staff-conto tr { break-inside: avoid; } }

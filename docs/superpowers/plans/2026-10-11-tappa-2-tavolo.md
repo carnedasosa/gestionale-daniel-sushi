@@ -301,9 +301,9 @@ export async function contoSessione(db: Db, sessioneId: string): Promise<Conto |
 - **Conto** `/staff/conto/[sessione]`: `richiediRuolo('staff')`; `contoSessione` (404 se id non valido); tabella voci (n., piatto, quantità, importo) e totale grande; nota «Da battere in cassa: questo non è uno scontrino fiscale.»; link «Torna allo schermo»; stampabile (`@media print` nasconde la navigazione).
 - **Azioni** (`'use server'`, `richiediRuolo('staff')` per prima): `apriTavolo(tavoloId)`, `chiudiTavolo(sessioneId)`, `avanzaOrdine(ordineId)`, `annullaOrdineStaff(ordineId)`, `annullaRigaStaff(rigaId)`. Validano gli id; errori DB catturati (solo attorno al DB) con messaggio «Operazione non riuscita, riprova.» restituito al client; `revalidatePath('/staff')` dopo ogni modifica.
 
-- [ ] Test azioni con mock (ruolo chiamato prima di tutto e i suoi errori propagati; id non validi rifiutati senza toccare il repo; errore DB → messaggio).
-- [ ] Test render di una card ordine (nota e poke visibili, riga annullata barrata).
-- [ ] Verifica, commit.
+- [x] Test azioni con mock (ruolo chiamato prima di tutto e i suoi errori propagati; id non validi rifiutati senza toccare il repo; errore DB → messaggio).
+- [x] Test render di una card ordine (nota e poke visibili, riga annullata barrata).
+- [x] Verifica, commit.
 
 ### Task 8: Admin tavoli e stampa dei QR
 
