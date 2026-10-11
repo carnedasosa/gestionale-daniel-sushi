@@ -1,0 +1,49 @@
+import { beforeEach, expect, it, vi } from 'vitest'
+const m = vi.hoisted(() => ({ tavoloDaSlug: vi.fn(), elencoTavoli: vi.fn(), contaErrori: vi.fn(), verificaCodice: vi.fn(), registraTentativoFallito: vi.fn(), get: vi.fn(), set: vi.fn(), redirect: vi.fn() }))
+vi.mock('@/server/db', () => ({ db: {} }))
+vi.mock('@/tavoli/repo', () => ({ tavoloDaSlug: m.tavoloDaSlug, elencoTavoli: m.elencoTavoli, contaErrori: m.contaErrori, verificaCodice: m.verificaCodice, registraTentativoFallito: m.registraTentativoFallito }))
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: m.get, set: m.set }) }))
+vi.mock('next/navigation', () => ({ redirect: m.redirect }))
+import { entraAlTavolo } from './azioni'
+const id = '11111111-1111-4111-8111-111111111111'
+const sessione = '22222222-2222-4222-8222-222222222222'
+function fd(codice = '1234') { const f = new FormData(); f.set('codice',codice); return f }
+beforeEach(() => {
+  vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {})
+  m.tavoloDaSlug.mockResolvedValue({ id, slug: 'uno' })
+  m.elencoTavoli.mockResolvedValue([{ id, sessione: { id: sessione } }])
+  m.get.mockReturnValue({ value: id }); m.contaErrori.mockResolvedValue({ dispositivo: 0, tavolo: 0 })
+  m.verificaCodice.mockResolvedValue(null)
+  m.redirect.mockImplementation(() => { throw new Error('NEXT_REDIRECT') })
+})
+it('tavolo assente o chiuso non accetta codice', async () => {
+  m.tavoloDaSlug.mockResolvedValueOnce(null)
+  expect((await entraAlTavolo('uno',{ errore: null },fd())).errore).toBe('Tavolo non trovato')
+  m.elencoTavoli.mockResolvedValueOnce([{ id, sessione: null }])
+  expect((await entraAlTavolo('uno',{ errore: null },fd())).errore).toContain('non è ancora aperto')
+})
+it('blocca anche il codice giusto dopo cinque errori o trenta per tavolo', async () => {
+  for (const errori of [{ dispositivo: 5, tavolo: 5 }, { dispositivo: 0, tavolo: 30 }]) {
+    m.contaErrori.mockResolvedValueOnce(errori)
+    expect((await entraAlTavolo('uno',{ errore: null },fd())).errore).toContain('Troppi tentativi')
+  }
+  expect(m.verificaCodice).not.toHaveBeenCalled(); expect(m.redirect).not.toHaveBeenCalled()
+})
+it('registra errore per codice malformato e sbagliato', async () => {
+  for (const codice of ['abcd','0000']) expect((await entraAlTavolo('uno',{ errore: null },fd(codice))).errore).toBe('Codice non corretto')
+  expect(m.registraTentativoFallito).toHaveBeenCalledTimes(2)
+  expect(m.redirect).not.toHaveBeenCalled()
+})
+it('normalizza, imposta cookie protetto e propaga redirect solo col codice corretto', async () => {
+  m.verificaCodice.mockResolvedValueOnce({ id: sessione })
+  await expect(entraAlTavolo('uno',{ errore: null },fd(' 12 34 '))).rejects.toThrow('NEXT_REDIRECT')
+  expect(m.verificaCodice).toHaveBeenCalledWith(expect.anything(),id,'1234')
+  expect(m.set).toHaveBeenCalledWith('ds_tavolo_uno',sessione,expect.objectContaining({ httpOnly: true, path: '/tavolo/uno', maxAge: 43200 }))
+})
+it('genera un dispositivo se il cookie manca e restituisce errori DB italiani', async () => {
+  m.get.mockReturnValueOnce(undefined)
+  await entraAlTavolo('uno',{ errore: null },fd())
+  expect(m.set).toHaveBeenCalledWith('ds_dispositivo',expect.stringMatching(/^[0-9a-f-]{36}$/),expect.objectContaining({ httpOnly: true }))
+  m.tavoloDaSlug.mockRejectedValueOnce(new Error('connessione'))
+  expect((await entraAlTavolo('uno',{ errore: null },fd())).errore).toContain('riprova')
+})

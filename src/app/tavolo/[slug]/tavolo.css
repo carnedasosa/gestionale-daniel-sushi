@@ -1,0 +1,3 @@
+.tavolo-pagina { padding-block: var(--sp-16) var(--sp-128); }
+.tavolo-codice { display: grid; gap: var(--sp-16); padding: var(--sp-24); max-width: 480px; }
+.tavolo-codice input { min-width: 0; width: 100%; }

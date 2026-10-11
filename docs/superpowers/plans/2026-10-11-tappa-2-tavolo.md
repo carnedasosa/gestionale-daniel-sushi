@@ -230,8 +230,8 @@ Messaggi: «Scegli almeno {min} in {gruppo}», «Al massimo {max} in {gruppo}»,
 - `page.tsx` (server, `await connection()` non serve se leggi cookies/params): risolve tavolo da slug (404 se assente); se il cookie punta a una sessione aperta **dello stesso tavolo** mostra il menù ordinabile (Task 6); altrimenti `ModuloCodice` (input `inputMode="numeric"`, `autoComplete="one-time-code"`, maxLength 4, pattern `\d{4}`, testo «Inserisci il codice che ti ha dato il cameriere»). Cookie con sessione chiusa → mostra «Il tavolo è chiuso, grazie per essere stati da noi!» e il modulo del codice.
 - Le pagine tavolo usano il layout radice e lo stile del sito (logo + nome del tavolo in alto), non il layout `(cliente)`.
 
-- [ ] Test azioni (mock di repo/cookies/redirect): ogni ramo sopra; il blocco vince sul codice giusto; il redirect avviene solo col codice giusto; codice `' 12 34 '` normalizzato.
-- [ ] Verifica, commit.
+- [x] Test azioni (mock di repo/cookies/redirect): ogni ramo sopra; il blocco vince sul codice giusto; il redirect avviene solo col codice giusto; codice `' 12 34 '` normalizzato.
+- [x] Verifica, commit.
 
 ### Task 5: Ordini — repo e invio dal tavolo
 
