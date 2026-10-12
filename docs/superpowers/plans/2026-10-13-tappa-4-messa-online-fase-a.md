@@ -86,10 +86,10 @@ Casi che i test automatici non coprono e che un revisore (o la Parte 2) deve gua
 
 ### Task 0: Preparazione
 
-- [ ] **Step 1:** `git status` deve essere pulito. Poi `git checkout tappa-4-online`. Se il branch è anche su GitHub, esegui `git pull`.
-- [ ] **Step 2:** `git log --oneline -4` deve mostrare in cima il commit del piano, poi `Spec tappa 4: team Vercel già su Pro` (`c62ae5f`), `Spec della tappa 4: messa online in due fasi` (`54dbe81`) e `6f82aec`. Se ci sono altri commit che toccano file di questo piano, **fermati** e chiedi.
-- [ ] **Step 3:** `npm ci` e poi `npm test` → atteso **62 file, 285 test passati**. Se no, fermati.
-- [ ] **Step 4 (sola lettura):** controlla che l'utente di prova sia configurato, senza stampare i valori:
+- [x] **Step 1:** `git status` deve essere pulito. Poi `git checkout tappa-4-online`. Se il branch è anche su GitHub, esegui `git pull`.
+- [x] **Step 2:** `git log --oneline -4` deve mostrare in cima il commit del piano, poi `Spec tappa 4: team Vercel già su Pro` (`c62ae5f`), `Spec della tappa 4: messa online in due fasi` (`54dbe81`) e `6f82aec`. Se ci sono altri commit che toccano file di questo piano, **fermati** e chiedi.
+- [x] **Step 3:** `npm ci` e poi `npm test` → atteso **62 file, 285 test passati**. Se no, fermati.
+- [x] **Step 4 (sola lettura):** controlla che l'utente di prova sia configurato, senza stampare i valori:
 
 ```bash
 grep -c "^E2E_EMAIL=.\+" .env.local
@@ -109,7 +109,7 @@ Atteso: `1` e `1`. Se no, **fermati** e chiedi all'utente di aggiungerli (vedi `
 **Interfacce:**
 - Produce: `opzioniTls(url: string): false | ConnectionOptions` (da `node:tls`) e `CA_SUPABASE_2021: string`.
 
-- [ ] **Step 1: test che falliscono.** **Crea** `src/server/tls-db.test.ts`:
+- [x] **Step 1: test che falliscono.** **Crea** `src/server/tls-db.test.ts`:
 
 ```ts
 import { X509Certificate } from 'node:crypto'
@@ -149,9 +149,9 @@ describe('CA di Supabase', () => {
 })
 ```
 
-- [ ] **Step 2:** `npx vitest run src/server/tls-db.test.ts` → atteso **FAIL**: `Failed to resolve import "./ca-supabase"` (o `./tls-db`).
+- [x] **Step 2:** `npx vitest run src/server/tls-db.test.ts` → atteso **FAIL**: `Failed to resolve import "./ca-supabase"` (o `./tls-db`).
 
-- [ ] **Step 3:** **Crea** `src/server/ca-supabase.ts` (il certificato va copiato carattere per carattere):
+- [x] **Step 3:** **Crea** `src/server/ca-supabase.ts` (il certificato va copiato carattere per carattere):
 
 ```ts
 // Certificato pubblico «Supabase Root 2021 CA» (prod-ca-2021.crt, Supabase → Database → SSL Configuration).
@@ -183,7 +183,7 @@ o/bKiIz+Fq8=
 `
 ```
 
-- [ ] **Step 4:** **Crea** `src/server/tls-db.ts`:
+- [x] **Step 4:** **Crea** `src/server/tls-db.ts`:
 
 ```ts
 import type { ConnectionOptions } from 'node:tls'
@@ -204,9 +204,9 @@ export function opzioniTls(url: string): false | ConnectionOptions {
 }
 ```
 
-- [ ] **Step 5:** `npx vitest run src/server/tls-db.test.ts` → atteso **5 test passati**. Se fallisce il test dell'impronta, il certificato è stato copiato male: ricopialo.
+- [x] **Step 5:** `npx vitest run src/server/tls-db.test.ts` → atteso **5 test passati**. Se fallisce il test dell'impronta, il certificato è stato copiato male: ricopialo.
 
-- [ ] **Step 6: test del pool.** In `src/server/db.test.ts` (modifica 1 di 3) **sostituisci**:
+- [x] **Step 6: test del pool.** In `src/server/db.test.ts` (modifica 1 di 3) **sostituisci**:
 
 ```ts
 import { afterEach, expect, it, vi } from 'vitest'
@@ -250,9 +250,9 @@ it('in locale il pool non usa TLS; un URL con sslmode non crea il pool', async (
 })
 ```
 
-- [ ] **Step 7:** `npx vitest run src/server/db.test.ts` → atteso **FAIL** su 2 test (il pool non riceve ancora `ssl`), 1 passato.
+- [x] **Step 7:** `npx vitest run src/server/db.test.ts` → atteso **FAIL** su 2 test (il pool non riceve ancora `ssl`), 1 passato.
 
-- [ ] **Step 8:** In `src/server/db.ts` (modifica 1 di 2) **sostituisci**:
+- [x] **Step 8:** In `src/server/db.ts` (modifica 1 di 2) **sostituisci**:
 
 ```ts
 import { adattaPool, OPZIONI_POOL } from './db-adapter'
@@ -277,7 +277,7 @@ con:
     pool = new pg.Pool({ connectionString: url, ...OPZIONI_POOL, ssl: opzioniTls(url) })
 ```
 
-- [ ] **Step 9:** In `scripts/assegna-ruolo.ts` (modifica 1 di 2) **sostituisci**:
+- [x] **Step 9:** In `scripts/assegna-ruolo.ts` (modifica 1 di 2) **sostituisci**:
 
 ```ts
 import { adattaPool, OPZIONI_POOL } from '../src/server/db-adapter'
@@ -302,7 +302,7 @@ con:
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ...OPZIONI_POOL, max: 1, ssl: opzioniTls(process.env.DATABASE_URL) })
 ```
 
-- [ ] **Step 10:** In `scripts/verifica-poke-postgres.ts` (modifica 1 di 2) **sostituisci**:
+- [x] **Step 10:** In `scripts/verifica-poke-postgres.ts` (modifica 1 di 2) **sostituisci**:
 
 ```ts
 import { adattaPool, OPZIONI_POOL } from '../src/server/db-adapter'
@@ -327,9 +327,9 @@ con:
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL!, ...OPZIONI_POOL, max: 1, ssl: opzioniTls(process.env.DATABASE_URL!) })
 ```
 
-- [ ] **Step 11:** `npx vitest run src/server` → atteso **3 file, 13 test passati**. Poi `npm run typecheck` e `npm run lint` senza errori.
+- [x] **Step 11:** `npx vitest run src/server` → atteso **3 file, 13 test passati**. Poi `npm run typecheck` e `npm run lint` senza errori.
 
-- [ ] **Step 12 (sola lettura sul DB reale):** prova la connessione cifrata. Legge solo un conteggio, non stampa la `DATABASE_URL`:
+- [x] **Step 12 (sola lettura sul DB reale):** prova la connessione cifrata. Legge solo un conteggio, non stampa la `DATABASE_URL`:
 
 ```bash
 npx tsx --env-file=.env.local --eval "import pg from 'pg'; import { opzioniTls } from './src/server/tls-db'; const url = process.env.DATABASE_URL!; const c = new pg.Client({ connectionString: url, ssl: opzioniTls(url) }); c.connect().then(async () => { console.log('TLS verificato:', (c as any).connection.stream.authorized, '| ordini:', (await c.query('select count(*)::int as n from ordini')).rows[0].n); await c.end() }).catch(e => { console.error('ERRORE', e.message); process.exit(1) })"
@@ -337,7 +337,7 @@ npx tsx --env-file=.env.local --eval "import pg from 'pg'; import { opzioniTls }
 
 Atteso: `TLS verificato: true | ordini: 3` (il numero può essere diverso se nel frattempo il locale ha usato l'app). Se compare `ERRORE`, **fermati** e riporta il messaggio.
 
-- [ ] **Step 13: commit.**
+- [x] **Step 13: commit.**
 
 ```bash
 git add src/server/ca-supabase.ts src/server/tls-db.ts src/server/tls-db.test.ts src/server/db.ts src/server/db.test.ts scripts/assegna-ruolo.ts scripts/verifica-poke-postgres.ts
@@ -352,7 +352,7 @@ git commit -m "Connessione al database cifrata con la CA di Supabase e certifica
 - Crea: `tests/vercel-config.test.ts`
 - Modifica: `vercel.json`
 
-- [ ] **Step 1:** **Crea** `tests/vercel-config.test.ts`:
+- [x] **Step 1:** **Crea** `tests/vercel-config.test.ts`:
 
 ```ts
 import { readFileSync } from 'node:fs'
@@ -366,9 +366,9 @@ it('vercel.json: regione fra1 e cron di anonimizzazione', () => {
 })
 ```
 
-- [ ] **Step 2:** `npx vitest run tests/vercel-config.test.ts` → atteso **FAIL**: `expected undefined to deeply equal [ 'fra1' ]`.
+- [x] **Step 2:** `npx vitest run tests/vercel-config.test.ts` → atteso **FAIL**: `expected undefined to deeply equal [ 'fra1' ]`.
 
-- [ ] **Step 3:** **Sostituisci tutto il contenuto** di `vercel.json` con:
+- [x] **Step 3:** **Sostituisci tutto il contenuto** di `vercel.json` con:
 
 ```json
 {
@@ -378,9 +378,9 @@ it('vercel.json: regione fra1 e cron di anonimizzazione', () => {
 }
 ```
 
-- [ ] **Step 4:** `npx vitest run tests/vercel-config.test.ts` → atteso **1 test passato**.
+- [x] **Step 4:** `npx vitest run tests/vercel-config.test.ts` → atteso **1 test passato**.
 
-- [ ] **Step 5: commit.**
+- [x] **Step 5: commit.**
 
 ```bash
 git add vercel.json tests/vercel-config.test.ts
@@ -399,7 +399,7 @@ git commit -m "Vercel: funzioni a Francoforte, accanto al database"
 - Consuma: `STUB_SUPABASE` da `tests/db/pglite.ts` (diventa esportato in questo task).
 - Produce: `PORTA_DB`, `PORTA_APP`, `URL_DB`, `TAVOLO_E2E` (`e2e/dati.ts`); `avviaServerPglite(db, porta)` (`e2e/server-pglite.ts`); `apriSchermoStaff(browser)`, `apriTelefono(browser)`, `cardOrdine(staff, titolo)`, `oraDiRoma()`, `sposta(ora, minuti)` (`e2e/aiuti.ts`), usati anche dal Task 4.
 
-- [ ] **Step 1: dipendenza.** Esattamente:
+- [x] **Step 1: dipendenza.** Esattamente:
 
 ```bash
 npm install --save-dev --save-exact --no-audit --no-fund @playwright/test@1.63.0
@@ -407,9 +407,9 @@ npm install --save-dev --save-exact --no-audit --no-fund @playwright/test@1.63.0
 
 In `package.json` deve comparire `"@playwright/test": "1.63.0"` tra le `devDependencies` (senza `^`). Nessun'altra dipendenza deve cambiare: controlla con `git diff package.json`.
 
-- [ ] **Step 2: browser.** `npx playwright install chromium` (scarica Chromium per Playwright, circa 115 MB, nella cartella utente `ms-playwright`).
+- [x] **Step 2: browser.** `npx playwright install chromium` (scarica Chromium per Playwright, circa 115 MB, nella cartella utente `ms-playwright`).
 
-- [ ] **Step 3:** In `package.json` **sostituisci**:
+- [x] **Step 3:** In `package.json` **sostituisci**:
 
 ```json
     "test:watch": "vitest",
@@ -422,7 +422,7 @@ con:
     "e2e": "playwright test",
 ```
 
-- [ ] **Step 4:** In `.gitignore` **sostituisci**:
+- [x] **Step 4:** In `.gitignore` **sostituisci**:
 
 ```
 # testing
@@ -438,7 +438,7 @@ con:
 /test-results
 ```
 
-- [ ] **Step 5:** In `tests/db/pglite.ts` **sostituisci**:
+- [x] **Step 5:** In `tests/db/pglite.ts` **sostituisci**:
 
 ```ts
 const STUB_SUPABASE = `
@@ -450,7 +450,7 @@ con:
 export const STUB_SUPABASE = `
 ```
 
-- [ ] **Step 6:** **Crea** `e2e/dati.ts`:
+- [x] **Step 6:** **Crea** `e2e/dati.ts`:
 
 ```ts
 // Valori condivisi fra il database di prova, la configurazione di Playwright e i test.
@@ -460,7 +460,7 @@ export const URL_DB = `postgresql://postgres@127.0.0.1:${PORTA_DB}/postgres`
 export const TAVOLO_E2E = { nome: 'Tavolo prova',slug: 'tavolo-prova',chiave: 'provae2e0001' }
 ```
 
-- [ ] **Step 7:** **Crea** `e2e/server-pglite.ts`:
+- [x] **Step 7:** **Crea** `e2e/server-pglite.ts`:
 
 ```ts
 import { createServer, type Server, type Socket } from 'node:net'
@@ -541,7 +541,7 @@ export function avviaServerPglite(db: PGlite, porta: number): Promise<Server> {
 }
 ```
 
-- [ ] **Step 8:** **Crea** `e2e/db-locale.ts`:
+- [x] **Step 8:** **Crea** `e2e/db-locale.ts`:
 
 ```ts
 // Database finto per le prove end-to-end: PGlite in memoria con migrazioni, seed e dati di prova,
@@ -593,7 +593,7 @@ async function avvia() {
 avvia().catch(err => { console.error(err instanceof Error ? err.message : err); process.exit(1) })
 ```
 
-- [ ] **Step 9:** **Crea** `e2e/aiuti.ts`:
+- [x] **Step 9:** **Crea** `e2e/aiuti.ts`:
 
 ```ts
 import { expect, type Browser, type Page } from '@playwright/test'
@@ -637,7 +637,7 @@ export function sposta(ora: string, minuti: number): string {
 }
 ```
 
-- [ ] **Step 10:** **Crea** `playwright.config.ts`:
+- [x] **Step 10:** **Crea** `playwright.config.ts`:
 
 ```ts
 import { defineConfig, devices } from '@playwright/test'
@@ -666,7 +666,7 @@ export default defineConfig({
 })
 ```
 
-- [ ] **Step 11:** **Crea** `e2e/tavolo.spec.ts`:
+- [x] **Step 11:** **Crea** `e2e/tavolo.spec.ts`:
 
 ```ts
 import { expect, test } from '@playwright/test'
@@ -734,9 +734,9 @@ test('tavolo: QR, codice, ordini da due telefoni, cucina e chiusura del conto', 
 })
 ```
 
-- [ ] **Step 12:** `npm run typecheck`, `npm run lint` e `npm test` → senza errori; atteso **64 file, 292 test passati** (Vitest non esegue i file `e2e/`).
+- [x] **Step 12:** `npm run typecheck`, `npm run lint` e `npm test` → senza errori; atteso **64 file, 292 test passati** (Vitest non esegue i file `e2e/`).
 
-- [ ] **Step 13: prova nel browser.** Porte 3100 e 55432 libere, nessun `next dev` acceso. Poi:
+- [x] **Step 13: prova nel browser.** Porte 3100 e 55432 libere, nessun `next dev` acceso. Poi:
 
 ```bash
 npm run e2e
@@ -751,7 +751,7 @@ Prima compare `Database di prova pronto su 127.0.0.1:55432`, poi la build (1–2
 
 Se fallisce, **fermati** e riporta l'output e il file `test-results/**/error-context.md`. Con `E2E_DEBUG=1 npm run e2e` il database finto stampa le interrogazioni: allega le ultime 30 righe che iniziano con `[db]`.
 
-- [ ] **Step 14: commit.** `git status` non deve mostrare `test-results/` né `playwright-report/`.
+- [x] **Step 14: commit.** `git status` non deve mostrare `test-results/` né `playwright-report/`.
 
 ```bash
 git add package.json package-lock.json .gitignore tests/db/pglite.ts playwright.config.ts e2e/dati.ts e2e/server-pglite.ts e2e/db-locale.ts e2e/aiuti.ts e2e/tavolo.spec.ts
@@ -768,7 +768,7 @@ git commit -m "Prove end-to-end: database finto, Playwright e percorso del tavol
 **Interfacce:**
 - Consuma: `apriSchermoStaff`, `apriTelefono`, `cardOrdine`, `oraDiRoma`, `sposta` da `e2e/aiuti.ts` (Task 3).
 
-- [ ] **Step 1:** **Crea** `e2e/casa.spec.ts`:
+- [x] **Step 1:** **Crea** `e2e/casa.spec.ts`:
 
 ```ts
 import { expect, test } from '@playwright/test'
@@ -824,9 +824,9 @@ test('da casa: ordine a domicilio, accettato +15’, seguito dal cliente fino al
 })
 ```
 
-- [ ] **Step 2:** `npm run typecheck` e `npm run lint` senza errori.
+- [x] **Step 2:** `npm run typecheck` e `npm run lint` senza errori.
 
-- [ ] **Step 3:** `npm run e2e` → atteso:
+- [x] **Step 3:** `npm run e2e` → atteso:
 
 ```
   ok 1 [chromium] › e2e\casa.spec.ts:4:5 › da casa: ordine a domicilio, accettato +15’, seguito dal cliente fino alla consegna
@@ -836,7 +836,7 @@ test('da casa: ordine a domicilio, accettato +15’, seguito dal cliente fino al
 
 Dopo le 23:00 di Roma la prova da casa risulta **skipped** con il motivo «Dopo le 23:00…»: in quel caso rilancia il comando dopo mezzanotte prima di andare avanti. Se fallisce, **fermati** come nel Task 3, Step 13.
 
-- [ ] **Step 4: commit.**
+- [x] **Step 4: commit.**
 
 ```bash
 git add e2e/casa.spec.ts
@@ -851,7 +851,7 @@ git commit -m "Prova end-to-end dell'ordine da casa"
 - Modifica: `README.md`, `.env.example`
 - Crea: `docs/verifiche/2026-10-13-tappa-4-fase-a.md` (usa la data del giorno in cui esegui, nel nome e nel testo)
 
-- [ ] **Step 1:** In `README.md` (modifica 1 di 5) **sostituisci**:
+- [x] **Step 1:** In `README.md` (modifica 1 di 5) **sostituisci**:
 
 ```md
 - **Tappa 3**: asporto e domicilio: zone, orari, fasce, checkout, accettazione con suono, pagina dello stato ed email.
@@ -923,7 +923,7 @@ con:
 L'app gira su Vercel, con le funzioni a Francoforte (`regions` in `vercel.json`) accanto al database Supabase (`eu-central-1`). Le variabili di Production si impostano nel progetto Vercel: quelle segrete (`DATABASE_URL`, `CRON_SECRET`) come «Sensitive». Le Preview non ricevono `DATABASE_URL`, così nessuna anteprima scrive sul database reale; `ORDINI_CASA_PROVA` non va mai impostata su Vercel.
 ```
 
-- [ ] **Step 2:** In `.env.example` (modifica 1 di 2) **sostituisci**:
+- [x] **Step 2:** In `.env.example` (modifica 1 di 2) **sostituisci**:
 
 ```
 # Supabase → Connect → Transaction pooler (porta 6543)
@@ -954,13 +954,13 @@ E2E_EMAIL=
 E2E_PASSWORD=
 ```
 
-- [ ] **Step 3: verifica finale.**
+- [x] **Step 3: verifica finale.**
   - `npm test` → atteso **64 file, 292 test passati**.
   - `npm run typecheck` e `npm run lint` senza errori.
   - Build come su Vercel, senza `.env.local`: rinomina temporaneamente `.env.local` in `.env.local.bak`, esegui `npm run build` (deve riuscire e mostrare `ƒ /api/cron/anonimizza`), poi **rimetti subito** il nome `.env.local`. Controlla con `git status` che `.env.local` non compaia.
   - `npm run e2e` → **2 passed** (o 1 passed + 1 skipped dopo le 23:00, come nel Task 4).
 
-- [ ] **Step 4: verbale.** **Crea** `docs/verifiche/2026-10-13-tappa-4-fase-a.md` con:
+- [x] **Step 4: verbale.** **Crea** `docs/verifiche/2026-10-13-tappa-4-fase-a.md` con:
   - titolo `# Verifica della tappa 4 — fase A`, data e branch;
   - una tabella «Task | Verifica» con l'esito di ogni task (test prima e dopo il codice, numeri di file/test, esito di `npm run e2e`, esito dello Step 12 del Task 1 **senza** URL né password);
   - una sezione «Scostamenti» con tutto ciò che non è andato esattamente come scritto (anche «nessuno»);
