@@ -14,7 +14,7 @@ export function ModuloTavolo({ tavolo,url }: { tavolo?: Tavolo; url?: string }) 
   return <form key={stato.invii} action={azione} className="admin-tavolo ds-card">
     <h2 className="heading-sm">{tavolo ? tavolo.nome : 'Aggiungi tavolo'}</h2>
     {tavolo && <p>Slug: <code>{tavolo.slug}</code> · {tavolo.attivo ? 'Attivo' : 'Disattivato'}</p>}
-    {tavolo && <><p><a className="ds-link" href={url}>{url}</a></p><ConfermaAzione inCorso={qrInCorso || inCorso} domanda="I QR stampati di questo tavolo smetteranno di funzionare. Generare un nuovo QR?" conferma={() => startQr(async () => {
+    {tavolo && <>{url && <p><a className="ds-link" href={url}>{url}</a></p>}<ConfermaAzione inCorso={qrInCorso || inCorso} domanda="I QR stampati di questo tavolo smetteranno di funzionare e i clienti seduti dovranno scansionare il nuovo QR. Generare un nuovo QR?" conferma={() => startQr(async () => {
       setErroreQr(null)
       try { const e = await nuovoQr(tavolo.id); if (!e.ok) setErroreQr(e.errore ?? 'Nuovo QR non riuscito.'); router.refresh() }
       catch { setErroreQr('Nuovo QR non riuscito, riprova.') }

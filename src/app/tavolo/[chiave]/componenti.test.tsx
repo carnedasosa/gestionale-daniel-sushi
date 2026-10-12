@@ -1,9 +1,11 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it, vi } from 'vitest'
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
-vi.mock('./azioni', () => ({ inviaOrdine: vi.fn() }))
+vi.mock('./azioni', () => ({ inviaOrdine: vi.fn(), entraAlTavolo: vi.fn(), inizializzaDispositivo: vi.fn(), pulisciCookieTavolo: vi.fn() }))
 import { OrdinatoFinora } from './OrdinatoFinora'
 import { CardPiatto } from './MenuOrdinabile'
+import { ModuloCodice } from './ModuloCodice'
+import { Carrello } from './Carrello'
 import type { OrdineClient } from '@/tavoli/ordini-repo'
 import type { Piatto } from '@/menu/repo'
 it('ordini: stato, note, riga barrata e totale senza ordini annullati', () => {
@@ -15,4 +17,12 @@ it('piatto esaurito mostra allergeni e nessun bottone Aggiungi', () => {
   const p: Piatto = { id: 'p', categoriaId: 'x', numero: 1, nome: 'Salmone', descrizione: null, prezzoCent: 600, piccante: false, vegetariano: false, dellaCasa: false, allergeni: ['pesce'], allergeniConfermati: true, disponibile: false, posizione: 0 }
   const html = renderToStaticMarkup(<CardPiatto piatto={p} quantita={0} modifica={() => {}} />)
   expect(html).toContain('Esaurito'); expect(html).toContain('Allergeni: Pesce'); expect(html).not.toContain('Aggiungi')
+})
+it('il saluto «tavolo chiuso» sparisce se il tavolo è stato riaperto', () => {
+  expect(renderToStaticMarkup(<ModuloCodice chiave="abcdefghijkl" chiuso />)).toContain('Il tavolo è chiuso')
+  expect(renderToStaticMarkup(<ModuloCodice chiave="abcdefghijkl" chiuso tavoloAperto />)).not.toContain('Il tavolo è chiuso')
+})
+it('una poke da ricomporre non mostra un prezzo e il totale lo dice', () => {
+  const html = renderToStaticMarkup(<Carrello righe={[{ piattoId: null,quantita: 1,nota: '',poke: { Base: ['Riso'] },nome: 'Poke composta',prezzoCent: 0,daRicomporre: true }]} modifica={() => {}} nota={() => {}} invia={async () => false} inCorso={false} errore={null} />)
+  expect(html).toContain('Poke composta · —'); expect(html).toContain('senza le poke da ricomporre'); expect(html).not.toContain('Poke composta · 0,00')
 })

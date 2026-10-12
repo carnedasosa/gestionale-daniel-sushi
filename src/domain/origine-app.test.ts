@@ -8,3 +8,7 @@ it('usa APP_URL e preserva HTTP locale anche senza proxy', () => {
   expect(() => origineApp(new Headers(),'javascript:alert(1)')).toThrow()
   expect(() => origineApp(new Headers(),'https://user:password@example.com')).toThrow()
 })
+it('ignora un x-forwarded-proto diverso da http o https', () => {
+  expect(origineApp(new Headers({ host: 'ordini.example','x-forwarded-proto': 'javascript' }))).toBe('https://ordini.example')
+  expect(origineApp(new Headers({ host: 'localhost:3000','x-forwarded-proto': 'ftp' }))).toBe('http://localhost:3000')
+})

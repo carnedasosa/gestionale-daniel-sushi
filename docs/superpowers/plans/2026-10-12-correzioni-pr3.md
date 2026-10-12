@@ -1094,7 +1094,7 @@ it('senza indirizzo conta solo dispositivo e sessione; a trenta errori blocca an
 
 **File:** `src/domain/origine-app.ts`, `src/domain/origine-app.test.ts`, `src/app/admin/tavoli/page.tsx`, `src/app/admin/tavoli/ModuloTavolo.tsx`, `src/app/tavolo/[chiave]/Carrello.tsx`, `src/app/tavolo/[chiave]/page.tsx`, `src/app/tavolo/[chiave]/ModuloCodice.tsx`, `src/app/tavolo/[chiave]/componenti.test.tsx`, `supabase/migrations/20261011120000_menu_e_ruoli.sql` (solo rinomina), `docs/verifiche/correzioni-tappa-2/README.md`
 
-- [ ] **Step 1 (Minor 10): `origineApp`** — in `src/domain/origine-app.ts` sostituisci:
+- [x] **Step 1 (Minor 10): `origineApp`** — in `src/domain/origine-app.ts` sostituisci:
 ```ts
   const proto = h.get('x-forwarded-proto')?.split(',')[0].trim() || (locale ? 'http' : 'https')
 ```
@@ -1112,7 +1112,7 @@ it('ignora un x-forwarded-proto diverso da http o https', () => {
 })
 ```
 
-- [ ] **Step 2 (Minor 10): pagina tavoli admin** — in `src/app/admin/tavoli/page.tsx` sostituisci:
+- [x] **Step 2 (Minor 10): pagina tavoli admin** — in `src/app/admin/tavoli/page.tsx` sostituisci:
 ```tsx
   const origin = origineApp(await headers(),process.env.APP_URL)
   const tavoli = await elencoTavoli(db)
@@ -1131,7 +1131,7 @@ con
 ```
 La pagina di stampa (`stampa/page.tsx`) **resta com'è**: lì un `APP_URL` non valido deve continuare a fermare la stampa.
 
-- [ ] **Step 3 (Minor 5): conferma «Nuovo QR»** — in `src/app/admin/tavoli/ModuloTavolo.tsx` sostituisci:
+- [x] **Step 3 (Minor 5): conferma «Nuovo QR»** — in `src/app/admin/tavoli/ModuloTavolo.tsx` sostituisci:
 ```tsx
     {tavolo && <><p><a className="ds-link" href={url}>{url}</a></p><ConfermaAzione inCorso={qrInCorso || inCorso} domanda="I QR stampati di questo tavolo smetteranno di funzionare. Generare un nuovo QR?"
 ```
@@ -1140,11 +1140,11 @@ con
     {tavolo && <>{url && <p><a className="ds-link" href={url}>{url}</a></p>}<ConfermaAzione inCorso={qrInCorso || inCorso} domanda="I QR stampati di questo tavolo smetteranno di funzionare e i clienti seduti dovranno scansionare il nuovo QR. Generare un nuovo QR?"
 ```
 
-- [ ] **Step 4 (Minor 12): poke da ricomporre senza prezzo finto** — in `src/app/tavolo/[chiave]/Carrello.tsx`:
+- [x] **Step 4 (Minor 12): poke da ricomporre senza prezzo finto** — in `src/app/tavolo/[chiave]/Carrello.tsx`:
   - `        <h3>{r.nome} · {formatEuro(r.prezzoCent * r.quantita)}</h3>` → `        <h3>{r.nome} · {r.daRicomporre ? '—' : formatEuro(r.prezzoCent * r.quantita)}</h3>`
   - `      <p>Totale stimato: <strong>{formatEuro(totale)}</strong>. Il prezzo viene verificato all’invio.</p>` → `      <p>Totale stimato: <strong>{formatEuro(totale)}</strong>{righe.some(r => r.daRicomporre) && ' (senza le poke da ricomporre)'}. Il prezzo viene verificato all’invio.</p>`
 
-- [ ] **Step 5 (Minor 3): saluto «tavolo chiuso» solo se il tavolo è ancora chiuso** — in `src/app/tavolo/[chiave]/page.tsx`:
+- [x] **Step 5 (Minor 3): saluto «tavolo chiuso» solo se il tavolo è ancora chiuso** — in `src/app/tavolo/[chiave]/page.tsx`:
   - `import { tavoloDaChiave, sessionePerId } from '@/tavoli/repo'` → `import { tavoloDaChiave, sessionePerId, sessioneDelTavolo } from '@/tavoli/repo'`
   - dopo la riga che inizia con `  const dati = autorizzata && sessione ? await Promise.all(` aggiungi:
     ```tsx
@@ -1157,7 +1157,7 @@ con
   - `export function ModuloCodice({ chiave,pulisci = false,chiuso = false }: { chiave: string; pulisci?: boolean; chiuso?: boolean }) {` → `export function ModuloCodice({ chiave,pulisci = false,chiuso = false,tavoloAperto = false }: { chiave: string; pulisci?: boolean; chiuso?: boolean; tavoloAperto?: boolean }) {`
   - `    {(chiuso || eraChiuso) && <p role="status">` → `    {(chiuso || eraChiuso) && !tavoloAperto && <p role="status">`
 
-- [ ] **Step 6: test** — in `src/app/tavolo/[chiave]/componenti.test.tsx`:
+- [x] **Step 6: test** — in `src/app/tavolo/[chiave]/componenti.test.tsx`:
   - `vi.mock('./azioni', () => ({ inviaOrdine: vi.fn() }))` → `vi.mock('./azioni', () => ({ inviaOrdine: vi.fn(), entraAlTavolo: vi.fn(), inizializzaDispositivo: vi.fn(), pulisciCookieTavolo: vi.fn() }))`
   - dopo `import { CardPiatto } from './MenuOrdinabile'` aggiungi:
     ```tsx
@@ -1176,19 +1176,19 @@ con
     })
     ```
 
-- [ ] **Step 7: nome della prima migrazione** — il DB reale l'ha registrata come versione `20261011163506`: con il nome attuale un futuro `supabase db push` proverebbe a rieseguirla e fallirebbe.
+- [x] **Step 7: nome della prima migrazione** — il DB reale l'ha registrata come versione `20261011163506`: con il nome attuale un futuro `supabase db push` proverebbe a rieseguirla e fallirebbe.
   ```bash
   git mv supabase/migrations/20261011120000_menu_e_ruoli.sql supabase/migrations/20261011163506_menu_e_ruoli.sql
   ```
   Il contenuto **non** cambia. I test PGlite leggono le migrazioni in ordine di nome: l'ordine resta lo stesso. Non modificare i vecchi documenti che citano il nome precedente.
 
-- [ ] **Step 8 (Minor 11): nota nel README di verifica** — in fondo alla sezione «Supabase reale» di `docs/verifiche/correzioni-tappa-2/README.md` aggiungi:
+- [x] **Step 8 (Minor 11): nota nel README di verifica** — in fondo alla sezione «Supabase reale» di `docs/verifiche/correzioni-tappa-2/README.md` aggiungi:
   ```markdown
   Se `poke_config` viene salvata in una forma non valida, `/admin/poke` mostra «Configurazione della poke non trovata» e la poke composta non è ordinabile: si corregge solo via SQL, ripristinando `gruppi` come array JSON di gruppi. La migrazione della tappa 1 è stata rinominata in `20261011163506_menu_e_ruoli.sql`, la versione registrata sul progetto Supabase.
   ```
 
-- [ ] **Step 9:** `npm test` → **41 file, 192 test passati**; `npm run typecheck`; `npm run lint`; `npm run build`.
-- [ ] **Step 10: commit** — `git add -A src supabase docs/verifiche/correzioni-tappa-2/README.md && git status --short` (controlla che compaiano solo i file di questo task) `&& git commit -m "Rifiniture: origine QR robusta, poke da ricomporre, saluto tavolo e nome migrazione"`
+- [x] **Step 9:** `npm test` → **41 file, 192 test passati**; `npm run typecheck`; `npm run lint`; `npm run build`.
+- [x] **Step 10: commit** — `git add -A src supabase docs/verifiche/correzioni-tappa-2/README.md && git status --short` (controlla che compaiano solo i file di questo task) `&& git commit -m "Rifiniture: origine QR robusta, poke da ricomporre, saluto tavolo e nome migrazione"`
 
 ---
 

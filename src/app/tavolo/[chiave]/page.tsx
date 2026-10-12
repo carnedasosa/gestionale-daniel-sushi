@@ -2,7 +2,7 @@ import Image from 'next/image'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { db } from '@/server/db'
-import { tavoloDaChiave, sessionePerId } from '@/tavoli/repo'
+import { tavoloDaChiave, sessionePerId, sessioneDelTavolo } from '@/tavoli/repo'
 import { valutaAccesso } from '@/domain/accesso-tavolo'
 import { nomeCookieTavolo } from '@/tavoli/cookie'
 import { ModuloCodice } from './ModuloCodice'
@@ -25,11 +25,13 @@ export default async function TavoloPage({ params }: { params: Promise<{ chiave:
   const accesso = valutaAccesso(tavolo.id,!!id,sessione)
   const autorizzata = accesso.autorizzata
   const dati = autorizzata && sessione ? await Promise.all([leggiMenu(db),leggiPokeConfig(db),ordiniDellaSessione(db,sessione.id)]) : null
+  // Il saluto «tavolo chiuso» non va mostrato se nel frattempo il tavolo è stato riaperto.
+  const tavoloAperto = !autorizzata && !!await sessioneDelTavolo(db,tavolo.id)
   return <main className="contenitore tavolo-pagina">
     <header className="intestazione"><Image src="/logo.png" alt="Daniel's Sushi" width={64} height={64} priority /><h1 className="heading">{tavolo.nome}</h1></header>
     <AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={new Date().toISOString()} />
     {dati && sessione ? <><MenuOrdinabile key={sessione.id} categorie={dati[0]} config={dati[1]} sessioneId={sessione.id} chiave={chiave} /><OrdinatoFinora ordini={dati[2].map(o => ({ ...o,creatoIl: o.creatoIl.toISOString() }))} /></> : <>
-      <ModuloCodice chiave={chiave} pulisci={accesso.pulisci} chiuso={accesso.chiuso} />
+      <ModuloCodice chiave={chiave} pulisci={accesso.pulisci} chiuso={accesso.chiuso} tavoloAperto={tavoloAperto} />
     </>}
   </main>
 }

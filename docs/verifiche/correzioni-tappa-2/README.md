@@ -31,6 +31,8 @@ Le cinque tabelle della tappa 2 mantengono RLS attivo, nessuna policy e nessun p
 
 La prova reale aveva rilevato risultati misassociati tra letture parallele attraverso il transaction pooler (una query sui conti riceveva colonne di un'altra lettura), con postgres.js che accoda più query sulla stessa connessione. La prima correzione con `reserve()`/`release()` introduceva però un guasto peggiore (revisione PR #3, N1): dopo una caduta della connessione postgres@3.4.9 rimette in uso una connessione morta. Con un server Postgres finto è emerso che anche `sql.begin` lascia inutilizzabile la connessione se cade durante una transazione. Il driver è stato quindi sostituito con `pg` 8.23.0: una query per connessione alla volta, connessioni rotte scartate dal pool, ascoltatori `error` sul pool e sulla connessione in transazione. I test in `src/server/db.integrazione.test.ts` (server finto in `tests/server/postgres-finto.ts`) coprono caduta durante lettura e transazione, rollback, assenza di pipelining e caduta di una connessione inattiva.
 
+Se `poke_config` viene salvata in una forma non valida, `/admin/poke` mostra «Configurazione della poke non trovata» e la poke composta non è ordinabile: si corregge solo via SQL, ripristinando `gruppi` come array JSON di gruppi. La migrazione della tappa 1 è stata rinominata in `20261011163506_menu_e_ruoli.sql`, la versione registrata sul progetto Supabase.
+
 ## Prova nel browser
 
 Build di produzione locale con database reale; login amministratore già eseguito dall'utente. Il cliente usa Chrome senza cookie di login amministratore/staff, verificato dal reindirizzamento di `/staff` all'accesso.
