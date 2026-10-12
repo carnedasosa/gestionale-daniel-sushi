@@ -45,7 +45,7 @@ Restano valide le decisioni della spec generale: pagamento solo alla consegna o 
    - Consenso all'informativa privacy (link a `/privacy`) e riepilogo: righe, consegna, totale, «paghi alla consegna/al ritiro».
    - Sotto il minimo della zona il riepilogo dice quanto manca e l'invio è disabilitato.
 3. **Invio**: il server ricalcola tutto. Se il totale differisce da quello mostrato al cliente, l'ordine non parte, compare «I prezzi sono cambiati: controlla il riepilogo» e il riepilogo si aggiorna. Se la fascia si è riempita, la pagina lo dice e propone le fasce rimaste. Se l'invio va a buon fine, il carrello si svuota e si passa alla pagina dello stato.
-4. **Pagina dello stato `/ordine/[token]`**, aggiornata ogni 10 s: stato, orario (anche spostato), servizio, zona e indirizzo, riepilogo, totale, pagamento, motivo dell'eventuale rifiuto.
+4. **Pagina dello stato `/ordine/[token]`**, aggiornata ogni 10 s: stato, orario (anche spostato; non più mostrato quando l'ordine è completato, rifiutato o annullato), servizio, zona e indirizzo, riepilogo, totale, pagamento, motivo dell'eventuale rifiuto.
    - Se resta in attesa più di 10': «Non abbiamo ancora risposto: chiamaci al …» con il telefono del locale.
    - Ordine anonimizzato: «Ordine non più disponibile».
    - Stati mostrati al cliente: In attesa di conferma · Confermato · In preparazione · Pronto per il ritiro / Pronto, sta per partire · In consegna · Ritirato / Consegnato · Rifiutato · Annullato.
@@ -120,7 +120,7 @@ Domicilio: come l'asporto, ma `pronto` → `in_consegna` → `completato`.
 
 - `rifiutato` solo da `in_attesa`. `annullato` da `accettato`, `in_preparazione`, `pronto`, `in_consegna`.
 - Accettare con spostamento: la fascia diventa fascia + 15 o + 30 minuti.
-- Ogni cambio di stato è condizionato allo stato atteso (`update … where stato = $atteso`): un doppio tocco non salta due passaggi.
+- Ogni cambio di stato è condizionato allo stato atteso (riga bloccata con `select … for update` e stato confrontato prima dell'`update`): un doppio tocco non salta due passaggi.
 - Tavolo invariato: `inviato` → `in_preparazione` → `servito`, `annullato`.
 
 ### 5.4 Prezzi e totali
@@ -165,6 +165,7 @@ Domicilio: come l'asporto, ma `pronto` → `in_consegna` → `completato`.
   - un domicilio non anonimizzato ha indirizzo e zona.
 - Indici: `(tipo, fascia)` per la capacità, `(cliente_telefono, stato)`, `(rete, creato_il)`, `(creato_il) where anonimizzato_il is null and tipo <> 'tavolo'`.
 - I 3 ordini esistenti (tavolo) restano validi senza modifiche.
+- I vincoli sono resi stretti da una seconda migrazione `20261013140000_vincoli_casa.sql`: nella prima i campi obbligatori mancanti (NULL) passavano il check, e il tavolo vietava solo alcune colonne della casa.
 
 **Nuove tabelle:**
 - `zone_consegna(id, nome, costo_cent, minimo_cent, attiva, posizione)`.
