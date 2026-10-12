@@ -48,3 +48,6 @@
 @media (max-width: 40rem) { .admin-poke-regole { grid-template-columns: minmax(0, 1fr); } .admin-modulo-piatto { padding: 16px; } }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .admin__barra { background: var(--bg-elevated); } }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .admin__barra { background: var(--bg-elevated); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+.admin-turni { display: grid; gap: var(--sp-8); padding: 0; margin: 0; list-style: none; }
+.admin-turni li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-8); overflow-wrap: anywhere; }
+.admin-tavolo select, .admin-tavolo input[type=time], .admin-tavolo input[type=date] { min-width: 0; width: 100%; }
