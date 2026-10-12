@@ -68,7 +68,7 @@ Scelte tecniche (di Claude, su delega dell'utente):
 
 - **Dipendenze di sviluppo**, con versioni esatte fissate nel piano:
   - `@playwright/test`, solo Chromium;
-  - `@electric-sql/pglite-socket` `0.2.11`, compatibile con PGlite `0.5.8` e già usato nella prova della tappa 3.
+  - **niente `@electric-sql/pglite-socket`**: nella verifica del 13/10 alternava i singoli messaggi di connessioni diverse (errore `bind message supplies 3 parameters…` con lo schermo staff). Al suo posto un piccolo server in `e2e/server-pglite.ts` manda a PGlite blocchi interi di protocollo (fino a Sync o Query) e tiene PGlite alla connessione che ha una transazione aperta.
 - **Ambiente:** `npm run e2e`.
   1. Avvia un PGlite in memoria esposto su `127.0.0.1` con tutte le migrazioni e il seed.
   2. Fa `next build` e `next start` con `DATABASE_URL` puntato lì. Va provata la build di produzione, non `next dev`.
