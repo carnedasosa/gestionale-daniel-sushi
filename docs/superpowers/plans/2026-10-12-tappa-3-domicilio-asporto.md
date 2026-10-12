@@ -4765,14 +4765,14 @@ Il progetto Supabase è `daniel-sushi` (ref `rxsywhdznaugfhmsdjsa`) nell'organiz
 
 ### Task 15: Consegna
 
-- [ ] **Step 1:** rileggi il diff del branch contro la spec della tappa 3 (§4, §5, §6) e la Review Focus di questo piano. Se trovi uno scostamento **non lo correggi da solo**: riportalo all'utente.
-- [ ] **Step 2:** `npm test && npm run typecheck && npm run lint && npm run build` verdi senza flag.
-- [ ] **Step 3:** `git push -u origin tappa-3-casa` e PR verso `main` in italiano, nello stile della PR #3:
+- [x] **Step 1:** rileggi il diff del branch contro la spec della tappa 3 (§4, §5, §6) e la Review Focus di questo piano. Se trovi uno scostamento **non lo correggi da solo**: riportalo all'utente.
+- [x] **Step 2:** `npm test && npm run typecheck && npm run lint && npm run build` verdi senza flag.
+- [x] **Step 3:** `git push -u origin tappa-3-casa` e PR verso `main` in italiano, nello stile della PR #3:
   - cosa contiene;
   - verifiche fatte (test, build, prova nel browser);
   - cosa serve prima di aprire al pubblico: allergeni di piatti e ingredienti, telefono, orari, zone, dominio e chiave Resend, testo della privacy, pubblicazione su Vercel con `CRON_SECRET`.
-- [ ] **Step 4:** nel repo `daniel-sushi`, `git push -u origin ordina-ora` e PR verso `main`. Nella descrizione: «L'indirizzo dell'app va scritto in `js/ordini.js` quando l'app è pubblicata; fino ad allora non cambia nulla per i visitatori».
-- [ ] **Step 5:** **non fare merge.** Riferisci all'utente: commit creati, numero di test, esito della prova, link delle due PR, eventuali scostamenti.
+- [x] **Step 4:** nel repo `daniel-sushi`, `git push -u origin ordina-ora` e PR verso `main`. Nella descrizione: «L'indirizzo dell'app va scritto in `js/ordini.js` quando l'app è pubblicata; fino ad allora non cambia nulla per i visitatori».
+- [x] **Step 5:** **non fare merge.** Riferisci all'utente: commit creati, numero di test, esito della prova, link delle due PR, eventuali scostamenti.
 
 ---
 
