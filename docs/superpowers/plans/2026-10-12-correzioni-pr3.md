@@ -452,7 +452,7 @@ git commit -m "Driver pg al posto di postgres.js: connessioni cadute scartate, n
 
 **Interfacce prodotte:** `StatoArrivi`, `arriviCucina(prima, attuali) → { stato, arrivati }`, `segnaLetto`, `leggiStatoArrivi`; `DatiStaff`; `SchermoStaff({ dati: DatiStaff | null, ora })`.
 
-- [ ] **Step 1: test di dominio** — sostituisci **tutto** `src/domain/arrivi-cucina.test.ts` con:
+- [x] **Step 1: test di dominio** — sostituisci **tutto** `src/domain/arrivi-cucina.test.ts` con:
 
 ```ts
 import { expect, it } from 'vitest'
@@ -486,7 +486,7 @@ it('ignora valori salvati illeggibili o malformati', () => {
 
 `npx vitest run src/domain/arrivi-cucina.test.ts` → atteso FAIL.
 
-- [ ] **Step 2: dominio** — sostituisci **tutto** `src/domain/arrivi-cucina.ts` con:
+- [x] **Step 2: dominio** — sostituisci **tutto** `src/domain/arrivi-cucina.ts` con:
 
 ```ts
 // Ordini della cucina già mostrati e ordini segnalati come nuovi ma non ancora letti.
@@ -522,7 +522,7 @@ export function leggiStatoArrivi(testo: string | null): StatoArrivi | null {
 
 `npx vitest run src/domain/arrivi-cucina.test.ts` → **4 passati**.
 
-- [ ] **Step 3: audio condiviso** — in `src/app/staff/InizioTurno.tsx` applica queste sostituzioni (ciascun «prima» compare una volta sola):
+- [x] **Step 3: audio condiviso** — in `src/app/staff/InizioTurno.tsx` applica queste sostituzioni (ciascun «prima» compare una volta sola):
 
 (a) prima:
 ```tsx
@@ -579,7 +579,7 @@ dopo:
 
 Dopo le modifiche `grep -n "audio\.current\|const audio" src/app/staff/InizioTurno.tsx` → nessun risultato.
 
-- [ ] **Step 4: SchermoStaff** — in `src/app/staff/SchermoStaff.tsx`:
+- [x] **Step 4: SchermoStaff** — in `src/app/staff/SchermoStaff.tsx`:
 
 (a) prima: `import { arriviCucina } from '@/domain/arrivi-cucina'` — dopo: `import { arriviCucina, leggiStatoArrivi, segnaLetto, type StatoArrivi } from '@/domain/arrivi-cucina'`
 
@@ -656,7 +656,7 @@ dopo:
 
 (d) prima: `nuovo={nuovi.has(o.id)}` — dopo: `nuovo={nuovi.includes(o.id)}`
 
-- [ ] **Step 5: pagina staff** — in `src/app/staff/page.tsx`. Attenzione: anche il ruolo (`richiediRuolo` → `leggiRuolo`) si legge dal DB. Se il DB è giù fallisce per primo quello e, senza questa modifica, Next mostrerebbe `error.tsx` smontando tutto lo schermo: il caso più comune di guasto resterebbe scoperto.
+- [x] **Step 5: pagina staff** — in `src/app/staff/page.tsx`. Attenzione: anche il ruolo (`richiediRuolo` → `leggiRuolo`) si legge dal DB. Se il DB è giù fallisce per primo quello e, senza questa modifica, Next mostrerebbe `error.tsx` smontando tutto lo schermo: il caso più comune di guasto resterebbe scoperto.
 
 (0a) prima: `import { richiediRuolo } from '@/auth/sessione'` — dopo:
 ```tsx
@@ -711,7 +711,7 @@ dopo:
       <InizioTurno><SchermoStaff ora={ora} dati={datiStaff} /></InizioTurno>
 ```
 
-- [ ] **Step 6: test dei componenti**
+- [x] **Step 6: test dei componenti**
 
 In `src/app/staff/page.test.tsx`:
 
@@ -777,9 +777,9 @@ it('senza dati e senza dati precedenti mostra il caricamento invece di smontarsi
 })
 ```
 
-- [ ] **Step 7: verifiche** — `npx vitest run src/app/staff src/domain/arrivi-cucina.test.ts` tutti verdi; `npm run typecheck`; `npm run lint`.
+- [x] **Step 7: verifiche** — `npx vitest run src/app/staff src/domain/arrivi-cucina.test.ts` tutti verdi; `npm run typecheck`; `npm run lint`.
 
-- [ ] **Step 8: commit** — `git add src/domain/arrivi-cucina.ts src/domain/arrivi-cucina.test.ts src/app/staff/InizioTurno.tsx src/app/staff/SchermoStaff.tsx src/app/staff/SchermoStaff.test.tsx src/app/staff/page.tsx src/app/staff/page.test.tsx && git commit -m "Cucina sempre montata: ultimi dati, suono condiviso e ordini visti salvati nella scheda"`
+- [x] **Step 8: commit** — `git add src/domain/arrivi-cucina.ts src/domain/arrivi-cucina.test.ts src/app/staff/InizioTurno.tsx src/app/staff/SchermoStaff.tsx src/app/staff/SchermoStaff.test.tsx src/app/staff/page.tsx src/app/staff/page.test.tsx && git commit -m "Cucina sempre montata: ultimi dati, suono condiviso e ordini visti salvati nella scheda"`
 
 ---
 

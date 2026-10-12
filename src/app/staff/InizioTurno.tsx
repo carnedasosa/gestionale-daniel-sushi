@@ -1,14 +1,17 @@
 'use client'
 import { createContext, useCallback, useEffect, useRef, useState } from 'react'
 export const SuonoTurno = createContext<(ripetizioni?: number) => void>(() => {})
+// Il contesto audio vive quanto la pagina del browser, non quanto il componente: se lo schermo
+// viene rimontato (navigazione nell'area staff, errore temporaneo) il suono resta attivo.
+let audioCondiviso: AudioContext | null = null
 export function InizioTurno({ children }: { children: React.ReactNode }) {
   const [iniziato,setIniziato] = useState(false)
-  const [audioAttivo,setAudioAttivo] = useState(false)
+  // Sul server e alla prima idratazione audioCondiviso è null: nessuna differenza tra HTML e client.
+  const [audioAttivo,setAudioAttivo] = useState(() => audioCondiviso?.state === 'running')
   const [avviso,setAvviso] = useState<string | null>(null)
-  const audio = useRef<AudioContext | null>(null)
   const lock = useRef<WakeLockSentinel | null>(null)
   const suona = useCallback((ripetizioni = 1) => {
-    const ctx = audio.current
+    const ctx = audioCondiviso
     if (!ctx || ctx.state !== 'running') return
     for (let i = 0; i < ripetizioni; i++) {
       const oscillatore = ctx.createOscillator(), volume = ctx.createGain()
@@ -23,7 +26,10 @@ export function InizioTurno({ children }: { children: React.ReactNode }) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Ripristino della preferenza da sessionStorage.
       if (sessionStorage.getItem('ds_turno') === 'iniziato') setIniziato(true)
     } catch { /* Si può iniziare il turno anche senza storage. */ }
-    return () => { const ctx = audio.current; if (ctx) { ctx.onstatechange = null; if (ctx.state!=='closed') void ctx.close().catch(() => {}) } }
+    const ctx = audioCondiviso
+    if (ctx) ctx.onstatechange = () => setAudioAttivo(ctx.state==='running')
+    // Il contesto non si chiude allo smontaggio: lo riprende il prossimo montaggio.
+    return () => { if (ctx) ctx.onstatechange = null }
   },[])
   useEffect(() => {
     let attivo = true
@@ -36,7 +42,7 @@ export function InizioTurno({ children }: { children: React.ReactNode }) {
         setAvviso(null)
       } catch { setAvviso('Schermo sempre acceso non disponibile: controlla le impostazioni del dispositivo.') }
     }
-    const visibilita = () => { void acquisisci(); if (audio.current?.state !== 'running') setAudioAttivo(false) }
+    const visibilita = () => { void acquisisci(); if (audioCondiviso?.state !== 'running') setAudioAttivo(false) }
     void acquisisci(); document.addEventListener('visibilitychange',visibilita)
     return () => { attivo = false; document.removeEventListener('visibilitychange',visibilita); void lock.current?.release().catch(() => {}); lock.current = null }
   },[iniziato])
@@ -44,8 +50,8 @@ export function InizioTurno({ children }: { children: React.ReactNode }) {
     setIniziato(true)
     try { sessionStorage.setItem('ds_turno','iniziato') } catch { /* Stato in memoria. */ }
     try {
-      if (!audio.current || audio.current.state==='closed') audio.current = new AudioContext()
-      const ctx = audio.current
+      if (!audioCondiviso || audioCondiviso.state==='closed') audioCondiviso = new AudioContext()
+      const ctx = audioCondiviso
       ctx.onstatechange = () => setAudioAttivo(ctx.state==='running')
       await ctx.resume(); setAudioAttivo(ctx.state==='running'); suona()
     }

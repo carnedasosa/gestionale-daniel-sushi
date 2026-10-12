@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useContext, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatEuro } from '@/domain/soldi'
-import { arriviCucina } from '@/domain/arrivi-cucina'
+import { arriviCucina, leggiStatoArrivi, segnaLetto, type StatoArrivi } from '@/domain/arrivi-cucina'
 import type { OrdineClient, RiepilogoTavolo } from '@/tavoli/ordini-repo'
 import type { TavoloConSessione, ContoRecente } from '@/tavoli/repo'
 import { DettaglioRighe } from '@/componenti/DettaglioRighe'
@@ -26,22 +26,41 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
     </div>
   </article>
 }
-export function SchermoStaff({ tavoli,ordini,riepiloghi,contiRecenti,ora }: { tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[]; ora: string }) {
+export interface DatiStaff { tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[] }
+const CHIAVE_ARRIVI = 'ds_arrivi_cucina'
+function arriviSalvati(): StatoArrivi | null {
+  try { return leggiStatoArrivi(sessionStorage.getItem(CHIAVE_ARRIVI)) } catch { return null }
+}
+function salvaArrivi(stato: StatoArrivi) {
+  try { sessionStorage.setItem(CHIAVE_ARRIVI,JSON.stringify(stato)) } catch { /* Senza storage la memoria resta solo in questa pagina. */ }
+}
+export function SchermoStaff({ dati,ora }: { dati: DatiStaff | null; ora: string }) {
+  // Se una lettura dal database fallisce lo schermo resta montato con gli ultimi dati ricevuti:
+  // smontarlo azzererebbe il suono e la memoria degli ordini già visti.
+  const [ultimi,setUltimi] = useState(dati)
+  if (dati && dati !== ultimi) setUltimi(dati)
+  const mostrati = dati ?? ultimi
+  const ordini = mostrati?.ordini
   const [errore,setErrore] = useState<string | null>(null)
-  const [nuovi,setNuovi] = useState<Set<string>>(new Set())
-  const visti = useRef<Set<string> | null>(null)
+  const [nuovi,setNuovi] = useState<string[]>([])
+  // undefined = non ancora letto da sessionStorage; null = primo avvio del turno in questa scheda.
+  const arrivi = useRef<StatoArrivi | null | undefined>(undefined)
   const [inCorso,startTransition] = useTransition()
   const bloccato = useRef(false)
   const router = useRouter(), suona = useContext(SuonoTurno)
   useEffect(() => {
-    const arrivi = arriviCucina(visti.current,ordini.map(o => o.id))
-    const nuoviIds = arrivi.nuovi
-    visti.current = arrivi.visti
-    if (nuoviIds.length) {
-      setNuovi(s => new Set([...s,...nuoviIds])); suona(3)
-    }
+    if (!ordini) return
+    if (arrivi.current === undefined) arrivi.current = arriviSalvati()
+    const { stato,arrivati } = arriviCucina(arrivi.current,ordini.map(o => o.id))
+    arrivi.current = stato; salvaArrivi(stato)
+    setNuovi(stato.nuovi)
+    if (arrivati.length) suona(3)
   },[ordini,suona])
-  const leggi = (id: string) => setNuovi(s => { const prossimi = new Set(s); prossimi.delete(id); return prossimi })
+  const leggi = (id: string) => {
+    if (!arrivi.current) return
+    arrivi.current = segnaLetto(arrivi.current,id); salvaArrivi(arrivi.current)
+    setNuovi(arrivi.current.nuovi)
+  }
   const esegui: Esegui = azione => {
     if (bloccato.current) return
     bloccato.current = true; setErrore(null)
@@ -51,12 +70,14 @@ export function SchermoStaff({ tavoli,ordini,riepiloghi,contiRecenti,ora }: { ta
       finally { bloccato.current = false }
     })
   }
+  if (!mostrati || !ordini) return <p role="status">Caricamento dello schermo…</p>
+  const { tavoli,riepiloghi,contiRecenti } = mostrati
   return <>
     {errore && <p role="alert" className="staff-nota">{errore}</p>}
     <section><h2 className="heading">Cucina</h2><div className="staff-colonne">{(['inviato','in_preparazione'] as const).map(stato => <section key={stato}>
       <h3 className="heading-sm">{stato === 'inviato' ? 'Inviati' : 'In preparazione'}</h3>
       {!ordini.some(o => o.stato === stato) && <p>Nessun ordine.</p>}
-      {ordini.filter(o => o.stato === stato).map(o => <CardOrdine key={o.id} ordine={o} ora={ora} nuovo={nuovi.has(o.id)} inCorso={inCorso} leggi={() => leggi(o.id)} esegui={esegui} />)}
+      {ordini.filter(o => o.stato === stato).map(o => <CardOrdine key={o.id} ordine={o} ora={ora} nuovo={nuovi.includes(o.id)} inCorso={inCorso} leggi={() => leggi(o.id)} esegui={esegui} />)}
     </section>)}</div></section>
     <section><h2 className="heading">Tavoli</h2>{!tavoli.length && <p>Nessun tavolo configurato. Chiedi all’admin di aggiungerli.</p>}<div className="staff-tavoli">{tavoli.filter(t => t.attivo || t.sessione).map(t => {
       const s = t.sessione, r = riepiloghi.find(r => r.sessioneId === s?.id)
