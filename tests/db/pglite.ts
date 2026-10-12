@@ -4,7 +4,7 @@ import path from 'node:path'
 import type { Db } from '@/server/db-tipi'
 
 // Quello che Supabase ha già e PGlite no: schema auth, auth.uid() e i ruoli dell'API.
-const STUB_SUPABASE = `
+export const STUB_SUPABASE = `
   create schema auth;
   create table auth.users (id uuid primary key, email text unique);
   create role anon nologin;

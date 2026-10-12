@@ -7,11 +7,13 @@ Il lavoro è diviso in tappe:
 - **Tappa 1**: base del progetto, menù pubblico con allergeni, accesso admin/staff e gestione del menù.
 - **Tappa 2**: tavoli, QR, codice del cameriere, carrello con note e poke, cucina e conto.
 - **Tappa 3**: asporto e domicilio: zone, orari, fasce, checkout, accettazione con suono, pagina dello stato ed email.
+- **Tappa 4**: messa online: connessione cifrata al database, Vercel a Francoforte, prove end-to-end, poi dominio ed email.
 
 Documentazione di progetto:
 
 - Specifica: [`docs/superpowers/specs/2026-10-11-gestionale-ordini-design.md`](docs/superpowers/specs/2026-10-11-gestionale-ordini-design.md)
 - Specifica della tappa 3: [`docs/superpowers/specs/2026-10-12-tappa-3-domicilio-asporto-design.md`](docs/superpowers/specs/2026-10-12-tappa-3-domicilio-asporto-design.md)
+- Specifica della tappa 4: [`docs/superpowers/specs/2026-10-13-tappa-4-messa-online-design.md`](docs/superpowers/specs/2026-10-13-tappa-4-messa-online-design.md)
 - Piani di lavoro: [`docs/superpowers/plans/`](docs/superpowers/plans/)
 
 ## Requisiti
@@ -32,12 +34,13 @@ Documentazione di progetto:
    | --- | --- |
    | `SUPABASE_URL` | Supabase → Project Settings → API |
    | `SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API |
-   | `DATABASE_URL` | Supabase → Connect → Transaction pooler (porta 6543), con la password del database |
+   | `DATABASE_URL` | Supabase → Connect → Transaction pooler (porta 6543), con la password del database. Senza `?sslmode=…`: la connessione è cifrata dal gestionale, con il certificato di Supabase (`src/server/ca-supabase.ts`) verificato |
    | `APP_URL` (opzionale) | URL assoluto dell'app per i QR e per i link nelle email, es. `https://ordini.esempio.it`; se assente i QR usano l'host della richiesta e le email restano spente |
    | `RESEND_API_KEY` (opzionale) | Resend → API Keys; senza, le email ai clienti restano spente |
    | `EMAIL_MITTENTE` (opzionale) | mittente su un dominio verificato in Resend, es. `Daniel's Sushi <ordini@tuodominio.it>` |
    | `CRON_SECRET` (opzionale) | stringa casuale di almeno 16 caratteri; su Vercel protegge il cron di anonimizzazione |
    | `ORDINI_CASA_PROVA` (solo locale) | `1` per provare gli ordini da casa senza allergeni confermati; ignorata in produzione |
+   | `E2E_EMAIL`, `E2E_PASSWORD` (solo locale) | utente di prova creato in Supabase → Authentication → Users, solo per `npm run e2e`; sul database reale non ha ruoli |
 
    Queste variabili sono lette solo dal server e non finiscono mai nel browser. Non committare `.env.local`.
 
@@ -57,6 +60,15 @@ Documentazione di progetto:
 | `npm run typecheck` | controlla i tipi TypeScript |
 | `npm run lint` | esegue ESLint |
 | `npm run build` | compila l'app per la produzione |
+| `npm run e2e` | prove end-to-end nel browser (tavolo e ordine da casa) sulla build di produzione, con un database finto |
+
+## Prove end-to-end
+
+`npm run e2e` compila l'app, la avvia su http://127.0.0.1:3100 e la collega a un database PGlite in memoria (`e2e/db-locale.ts`) con migrazioni, seed e dati di prova: il database reale non viene mai toccato. Il login dello staff usa Supabase Auth con l'utente di prova (`E2E_EMAIL`, `E2E_PASSWORD`), che riceve il ruolo admin solo nel database finto. La prima volta serve `npx playwright install chromium`. Dopo le 23:00 la prova da casa si salta, perché le fasce non attraversano la mezzanotte. Con `E2E_DEBUG=1` il database finto stampa le interrogazioni che riceve.
+
+## Pubblicazione
+
+L'app gira su Vercel, con le funzioni a Francoforte (`regions` in `vercel.json`) accanto al database Supabase (`eu-central-1`). Le variabili di Production si impostano nel progetto Vercel: quelle segrete (`DATABASE_URL`, `CRON_SECRET`) come «Sensitive». Le Preview non ricevono `DATABASE_URL`, così nessuna anteprima scrive sul database reale; `ORDINI_CASA_PROVA` non va mai impostata su Vercel.
 
 ## Database
 

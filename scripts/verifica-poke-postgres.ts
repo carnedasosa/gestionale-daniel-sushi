@@ -2,9 +2,10 @@
 import assert from 'node:assert/strict'
 import pg from 'pg'
 import { adattaPool, OPZIONI_POOL } from '../src/server/db-adapter'
+import { opzioniTls } from '../src/server/tls-db'
 import { leggiPokeConfig, salvaPokeConfig } from '../src/tavoli/poke-repo'
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL!, ...OPZIONI_POOL, max: 1 })
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL!, ...OPZIONI_POOL, max: 1, ssl: opzioniTls(process.env.DATABASE_URL!) })
 pool.on('error', err => console.error('Connessione al database persa:', err.message))
 async function verifica() {
 try {

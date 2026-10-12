@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/genera-seed.ts",
     "ruolo": "tsx --env-file=.env.local scripts/assegna-ruolo.ts"
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
+    "@playwright/test": "1.63.0",
     "@types/node": "^22.20.5",
     "@types/pg": "8.23.0",
     "@types/qrcode": "1.5.6",
