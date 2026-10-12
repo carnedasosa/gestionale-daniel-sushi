@@ -192,17 +192,17 @@ Tutte le nuove tabelle con RLS attiva, privilegi revocati ad `anon` e `authentic
   - `impostazioni-repo` (impostazioni, zone, orari, chiusure);
   - `ordini-casa-repo` (creazione transazionale, lettura per token, da accettare, cambi di stato, anonimizzazione);
   - `email-repo` (coda, presa in carico, esito).
-  - `leggiOrdini` della tappa 2 passa a `left join` sulle sessioni e restituisce anche i campi della casa, così la cucina legge tavoli e casa con una sola funzione.
+  - La lettura degli ordini dei tavoli (`leggiOrdini`) resta com'è; la cucina riceve anche gli ordini da casa attivi (`ordiniCasaAttivi`) e li unisce a quelli dei tavoli nello schermo staff. Il calcolo dei prezzi delle righe (`prezzaRighe`) e il loro salvataggio (`salvaRighe`) sono estratti da `creaOrdineTavolo` e condivisi; le azioni del tavolo su un ordine (`avanzaStato`, `annullaOrdine`) valgono solo per `tipo='tavolo'`.
 - **Invio email** (`src/casa/resend.ts`): `POST https://api.resend.com/emails` con `fetch`, `Authorization: Bearer RESEND_API_KEY`, `Idempotency-Key: <id riga email>`. Nessuna nuova dipendenza. `smaltisciCodaEmail(db)`:
   - prende in carico fino a 10 email non inviate, con meno di 5 tentativi, di ordini non anonimizzati, segnando `in_invio_dal` (riprendibile dopo 2');
   - invia e registra l'esito.
-  - Si chiama con `after()` dopo l'invio di un ordine e dopo ogni azione staff che accoda un'email, e a ogni rendering di `/staff` (nuovi tentativi).
+  - Si chiama con `after()` dopo l'invio di un ordine e a ogni rendering di `/staff`. Ogni azione dello staff fa ridisegnare lo schermo, quindi l'email accodata parte subito e quelle fallite si ritentano.
   - Senza `RESEND_API_KEY`, `EMAIL_MITTENTE` o `APP_URL` non fa nulla.
 - **Anonimizzazione**: `GET /api/cron/anonimizza`, autorizzata solo con `Authorization: Bearer ${CRON_SECRET}` (401 se il segreto manca o non coincide).
   - Per gli ordini da casa con più di 12 mesi e non ancora anonimizzati: azzera nome, telefono, email, indirizzo, note di consegna, «pago con», rete e le note delle righe, imposta `anonimizzato_il`.
   - Idempotente, pianificata ogni giorno in `vercel.json` (`0 3 * * *`).
 - **Pagine e azioni nuove**: `/` (menù ordinabile), `/ordina`, `/ordine/[token]`, `/privacy`, `/admin/domicilio`. Sezioni nuove in `/staff` e `/admin/poke`. Le azioni staff chiamano `richiediRuolo('staff')`, quelle admin `richiediRuolo('admin')`, come prima istruzione.
-- **Componenti riusati**: card del piatto, carrello, composer della poke e `Pannello` della tappa 2, spostati in `src/ordinare/` e condivisi fra tavolo e casa. Il tavolo continua a funzionare identico.
+- **Componenti riusati**: card del piatto, carrello e composer della poke della tappa 2, spostati in `src/ordinare/` insieme a un hook del carrello salvato nel browser e condivisi fra tavolo e casa (`Pannello` resta in `src/componenti/`). Il tavolo continua a funzionare identico.
 - **Variabili d'ambiente nuove** (tutte solo server, facoltative): `RESEND_API_KEY`, `EMAIL_MITTENTE`, `CRON_SECRET`, `ORDINI_CASA_PROVA`. `APP_URL` serve anche per i link nelle email.
 
 ### 6.3 Errori e casi limite
