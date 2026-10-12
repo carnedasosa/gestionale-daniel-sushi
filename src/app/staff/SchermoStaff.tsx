@@ -11,6 +11,9 @@ import { DettaglioRighe } from '@/componenti/DettaglioRighe'
 import { ConfermaAzione } from '@/componenti/ConfermaAzione'
 import { SuonoTurno } from './InizioTurno'
 import { ChiudiTavolo } from './ChiudiTavolo'
+import { CardOrdineCasa, PannelloOrdiniOnline, type OrdiniOnline } from './OrdiniCasa'
+import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
+import { colonnaCucina } from '@/domain/stati-casa'
 import { apriTavolo, sbloccaTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, type EsitoStaff } from './azioni'
 
 type Esegui = (azione: () => Promise<EsitoStaff>) => void
@@ -27,7 +30,7 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
     </div>
   </article>
 }
-export interface DatiStaff { tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[] }
+export interface DatiStaff { tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[]; casa: OrdineCasaClient[]; ordiniOnline: OrdiniOnline }
 const CHIAVE_ARRIVI = 'ds_arrivi_cucina'
 function arriviSalvati(): StatoArrivi | null {
   try { return leggiStatoArrivi(sessionStorage.getItem(CHIAVE_ARRIVI)) } catch { return null }
@@ -71,15 +74,31 @@ export function SchermoStaff({ dati,ora }: { dati: DatiStaff | null; ora: string
       finally { bloccato.current = false }
     })
   }
+  // Suono ripetuto ogni 10 secondi finché c'è un ordine da casa da accettare; subito quando ne arriva uno nuovo.
+  const inAttesa = (mostrati?.casa ?? []).filter(o => o.stato === 'in_attesa').map(o => o.id).join(',')
+  useEffect(() => {
+    if (!inAttesa) return
+    suona(3)
+    const timer = setInterval(() => suona(3),10000)
+    return () => clearInterval(timer)
+  },[inAttesa,suona])
   if (!mostrati || !ordini) return <p role="status">Caricamento dello schermo…</p>
-  const { tavoli,riepiloghi,contiRecenti } = mostrati
+  const { tavoli,riepiloghi,contiRecenti,casa,ordiniOnline } = mostrati
+  // Tavoli e casa nella stessa cucina: la casa per orario della fascia, i tavoli per arrivo.
+  const cucina = [...ordini.map(o => ({ casa: false as const,o,quando: o.creatoIl })),...casa.filter(o => colonnaCucina(o.stato)).map(o => ({ casa: true as const,o,quando: o.fascia }))]
+    .sort((a,b) => a.quando.localeCompare(b.quando))
   return <>
     {errore && <p role="alert" className="staff-nota">{errore}</p>}
-    <section><h2 className="heading">Cucina</h2><div className="staff-colonne">{(['inviato','in_preparazione'] as const).map(stato => <section key={stato}>
-      <h3 className="heading-sm">{stato === 'inviato' ? 'Inviati' : 'In preparazione'}</h3>
-      {!ordini.some(o => o.stato === stato) && <p>Nessun ordine.</p>}
-      {ordini.filter(o => o.stato === stato).map(o => <CardOrdine key={o.id} ordine={o} ora={ora} nuovo={nuovi.includes(o.id)} inCorso={inCorso} leggi={() => leggi(o.id)} esegui={esegui} />)}
-    </section>)}</div></section>
+    <PannelloOrdiniOnline stato={ordiniOnline} inCorso={inCorso} esegui={esegui} />
+    <section><h2 className="heading">Da accettare</h2>{!inAttesa && <p>Nessun ordine da accettare.</p>}
+      <div className="staff-tavoli">{casa.filter(o => o.stato === 'in_attesa').map(o => <CardOrdineCasa key={o.id} ordine={o} ora={ora} inCorso={inCorso} esegui={esegui} daAccettare />)}</div></section>
+    <section><h2 className="heading">Cucina</h2><div className="staff-colonne staff-colonne--tre">{(['da_preparare','in_preparazione','pronti'] as const).map(colonna => { const qui = cucina.filter(x => colonnaCucina(x.o.stato) === colonna)
+      return <section key={colonna}>
+        <h3 className="heading-sm">{{ da_preparare: 'Da preparare',in_preparazione: 'In preparazione',pronti: 'Pronti e in consegna' }[colonna]}</h3>
+        {!qui.length && <p>Nessun ordine.</p>}
+        {qui.map(x => x.casa ? <CardOrdineCasa key={x.o.id} ordine={x.o} ora={ora} inCorso={inCorso} esegui={esegui} daAccettare={false} />
+          : <CardOrdine key={x.o.id} ordine={x.o} ora={ora} nuovo={nuovi.includes(x.o.id)} inCorso={inCorso} leggi={() => leggi(x.o.id)} esegui={esegui} />)}
+      </section> })}</div></section>
     <section><h2 className="heading">Tavoli</h2>{!tavoli.length && <p>Nessun tavolo configurato. Chiedi all’admin di aggiungerli.</p>}<div className="staff-tavoli">{tavoli.filter(t => t.attivo || t.sessione).map(t => {
       const s = t.sessione, r = riepiloghi.find(r => r.sessioneId === s?.id)
       return <article className="ds-card staff-tavolo" key={t.id}><h3 className="heading-sm">{t.nome}</h3>{s ? <>

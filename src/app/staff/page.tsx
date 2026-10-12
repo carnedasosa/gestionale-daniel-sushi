@@ -5,6 +5,10 @@ import { db } from '@/server/db'
 import { elencoTavoli, contiRecenti } from '@/tavoli/repo'
 import { ordiniAttivi, riepiloghiTavoli } from '@/tavoli/ordini-repo'
 import { AggiornamentoAutomatico } from '@/componenti/AggiornamentoAutomatico'
+import { ordiniCasaAttivi, perClient } from '@/casa/ordini-casa-repo'
+import { leggiDisponibilita } from '@/casa/disponibilita'
+import { avviaInvioEmail } from '@/casa/avvia-email'
+import { modalitaProva, TESTO_MOTIVO, type StatoApertura } from '@/domain/apertura-casa'
 import { InizioTurno } from './InizioTurno'
 import { SchermoStaff } from './SchermoStaff'
 import './staff.css'
@@ -16,17 +20,22 @@ export default async function AreaStaff() {
     // dati del browser invece di passare alla pagina d'errore. I redirect di accesso e permessi
     // passano comunque (unstable_rethrow) e senza ruolo verificato non si legge alcun dato.
     await richiediRuolo('staff')
-    dati = await Promise.all([elencoTavoli(db),ordiniAttivi(db),riepiloghiTavoli(db),contiRecenti(db)])
+    dati = await Promise.all([elencoTavoli(db),ordiniAttivi(db),riepiloghiTavoli(db),contiRecenti(db),ordiniCasaAttivi(db),leggiDisponibilita(db,new Date(),modalitaProva(process.env))])
+    // Ogni aggiornamento dello schermo ritenta anche le email rimaste in coda.
+    avviaInvioEmail()
   } catch (err) {
     unstable_rethrow(err)
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')
   }
   const ora = new Date().toISOString()
+  const motivo = (a: StatoApertura) => a.aperto ? null : TESTO_MOTIVO[a.motivo]
   const datiStaff = dati ? {
     tavoli: dati[0].map(t => ({ ...t,sessione: t.sessione ? { ...t.sessione,apertaIl: t.sessione.apertaIl.toISOString() } : null })),
     ordini: dati[1].map(o => ({ ...o,creatoIl: o.creatoIl.toISOString() })),
     riepiloghi: dati[2],
     contiRecenti: dati[3].map(c => ({ ...c,chiusaIl: c.chiusaIl.toISOString() })),
+    casa: dati[4].map(perClient),
+    ordiniOnline: { accesi: dati[5].apertiIl === dati[5].oggi,asporto: motivo(dati[5].servizi.asporto.apertura),domicilio: motivo(dati[5].servizi.domicilio.apertura) },
   } : null
   return (
     <main className="contenitore staff-pagina">

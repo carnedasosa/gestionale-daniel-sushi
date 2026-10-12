@@ -1,0 +1,15 @@
+.casa-pagina { display: grid; gap: var(--sp-24); padding-block: var(--sp-16) var(--sp-48); }
+.casa-modulo { display: grid; gap: var(--sp-24); max-width: 640px; }
+.casa-sezione { display: grid; gap: var(--sp-16); padding: var(--sp-24); margin: 0; min-width: 0; border: 0; overflow-wrap: anywhere; }
+.casa-sezione legend { float: left; width: 100%; margin-bottom: var(--sp-8); }
+.casa-sezione input:not([type=radio]):not([type=checkbox]), .casa-sezione select, .casa-sezione textarea { min-width: 0; width: 100%; }
+.casa-avviso { margin: 0; padding: var(--sp-16); border-left: var(--sp-4) solid var(--arancio); background: var(--bianco); border-radius: var(--radius-card); overflow-wrap: anywhere; }
+.casa-errore { margin: 0; color: var(--distruttivo); font-size: .9375rem; }
+.casa-nota { color: var(--inchiostro-tenue); }
+.casa-riepilogo { display: grid; gap: var(--sp-8); margin: 0; padding: 0; list-style: none; }
+.casa-riepilogo li, .casa-totale { display: flex; justify-content: space-between; gap: var(--sp-16); }
+.casa-riepilogo li > span:last-child, .casa-totale strong { flex-shrink: 0; white-space: nowrap; overflow-wrap: normal; }
+.casa-totale { margin: 0; padding-top: var(--sp-8); border-top: var(--hairline) solid var(--filetto); font-size: 1.125rem; }
+.casa-stato .heading-sm { margin: 0; }
+.casa-testo { max-width: 720px; }
+@media (max-width: 480px) { .casa-sezione { padding: var(--sp-16); } }

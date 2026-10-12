@@ -11,9 +11,10 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    // I test con PGlite (~1,5 s a test, ~7 s a file) superano i 5 s di default quando i file girano in parallelo.
-    testTimeout: 30000,
-    hookTimeout: 30000,
+    // I test con PGlite (~1,5 s a test, ~7 s a file) superano i 5 s di default quando i file girano in parallelo;
+    // con una ventina di file PGlite insieme il seed nel beforeEach può superare anche i 30 s.
+    testTimeout: 60000,
+    hookTimeout: 60000,
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'tests/**/*.test.ts', 'scripts/**/*.test.ts'],
   },
 })
