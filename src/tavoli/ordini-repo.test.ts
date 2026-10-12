@@ -33,8 +33,12 @@ it('un ordine arrivato dopo il conto richiede conferma anche se è già servito'
   const conto = (await contoSessione(db,sessione))!
   const e = await creaOrdineTavolo(db,sessione,righe()); if (!e.ok) throw new Error(e.errore)
   await avanzaStato(db,e.ordine.id); await avanzaStato(db,e.ordine.id)
+  // La pagina si aggiorna da sola: il nuovo ordine compare negli ordini del conto...
+  const aggiornato = (await contoSessione(db,sessione))!
+  expect(aggiornato.ordiniIds.filter(id => !conto.ordiniIds.includes(id))).toEqual([e.ordine.id])
+  // ...ma la chiusura usa ancora l'ora del primo conto visto dal cameriere.
   expect(await chiudiSessione(db,sessione,conto.vistoAlle)).toEqual({ ok: false,motivo: 'ordini_dopo_conto',n: 1 })
-  expect(await chiudiSessione(db,sessione,conto.vistoAlle,true)).toEqual({ ok: true })
+  expect(await chiudiSessione(db,sessione,aggiornato.vistoAlle)).toEqual({ ok: true })
 })
 it('conto: annulla una voce raggruppata anche servita e annulla ordini rimasti vuoti', async () => {
   const { db } = ambiente

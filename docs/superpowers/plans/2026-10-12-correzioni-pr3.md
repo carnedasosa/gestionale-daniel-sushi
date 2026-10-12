@@ -838,7 +838,7 @@ export function puoAggiornare(inizioInCorso: number | null, ora: number): boolea
 
 **Interfacce prodotte:** `Conto.ordiniIds: string[]`; `RiferimentoConto`; `ChiusuraConto({ sessioneId, attuale })`; `AvvisoContoCambiato({ base, attuale, ricontrollato })`.
 
-- [ ] **Step 1: test del repository** — in `src/tavoli/ordini-repo.test.ts`, nel test `'un ordine arrivato dopo il conto richiede conferma anche se è già servito'`, sostituisci:
+- [x] **Step 1: test del repository** — in `src/tavoli/ordini-repo.test.ts`, nel test `'un ordine arrivato dopo il conto richiede conferma anche se è già servito'`, sostituisci:
 ```ts
   await avanzaStato(db,e.ordine.id); await avanzaStato(db,e.ordine.id)
   expect(await chiudiSessione(db,sessione,conto.vistoAlle)).toEqual({ ok: false,motivo: 'ordini_dopo_conto',n: 1 })
@@ -858,7 +858,7 @@ con
 ```
 Esegui `npx vitest run src/tavoli/ordini-repo.test.ts` → FAIL (`ordiniIds` non esiste) o errore di tipo.
 
-- [ ] **Step 2: repository** — in `src/tavoli/ordini-repo.ts`:
+- [x] **Step 2: repository** — in `src/tavoli/ordini-repo.ts`:
 
 prima:
 ```ts
@@ -880,7 +880,7 @@ dopo:
 ```
 Riesegui → verde.
 
-- [ ] **Step 3: test del componente** — crea `src/app/staff/ChiusuraConto.test.tsx`:
+- [x] **Step 3: test del componente** — crea `src/app/staff/ChiusuraConto.test.tsx`:
 
 ```tsx
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -902,7 +902,7 @@ it('al primo render il riferimento è il conto attuale e la chiusura resta il bo
 })
 ```
 
-- [ ] **Step 4: componente** — crea `src/app/staff/ChiusuraConto.tsx`:
+- [x] **Step 4: componente** — crea `src/app/staff/ChiusuraConto.tsx`:
 
 ```tsx
 'use client'
@@ -933,14 +933,14 @@ export function ChiusuraConto({ sessioneId,attuale }: { sessioneId: string; attu
 }
 ```
 
-- [ ] **Step 5: pagina del conto** — in `src/app/staff/conto/[sessione]/page.tsx`:
+- [x] **Step 5: pagina del conto** — in `src/app/staff/conto/[sessione]/page.tsx`:
   - `import { ChiudiTavolo } from '../../ChiudiTavolo'` → `import { ChiusuraConto } from '../../ChiusuraConto'`
   - la riga `    {!conto.chiusaIl && <div className="staff-navigazione"><ChiudiTavolo sessioneId={sessione} contoVistoAlle={conto.vistoAlle.toISOString()} primaria /></div>}` → `    {!conto.chiusaIl && <ChiusuraConto sessioneId={sessione} attuale={{ vistoAlle: conto.vistoAlle.toISOString(),ordiniIds: conto.ordiniIds,totaleCent: conto.totaleCent }} />}`
 
 **Non** modificare `ChiudiTavolo.tsx`: resta usato anche dalle card dei tavoli.
 
-- [ ] **Step 6:** `npx vitest run src/app/staff src/tavoli/ordini-repo.test.ts` verde; `npm run typecheck`; `npm run lint`.
-- [ ] **Step 7: commit** — `git add src/tavoli/ordini-repo.ts src/tavoli/ordini-repo.test.ts src/app/staff/ChiusuraConto.tsx src/app/staff/ChiusuraConto.test.tsx "src/app/staff/conto/[sessione]/page.tsx" && git commit -m "Conto: riferimento fisso per la chiusura e avviso sui nuovi ordini arrivati"`
+- [x] **Step 6:** `npx vitest run src/app/staff src/tavoli/ordini-repo.test.ts` verde; `npm run typecheck`; `npm run lint`.
+- [x] **Step 7: commit** — `git add src/tavoli/ordini-repo.ts src/tavoli/ordini-repo.test.ts src/app/staff/ChiusuraConto.tsx src/app/staff/ChiusuraConto.test.tsx "src/app/staff/conto/[sessione]/page.tsx" && git commit -m "Conto: riferimento fisso per la chiusura e avviso sui nuovi ordini arrivati"`
 
 ---
 

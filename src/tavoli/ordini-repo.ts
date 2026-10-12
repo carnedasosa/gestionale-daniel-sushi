@@ -119,7 +119,8 @@ export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce
     return righe.length>0
   })
 }
-export interface Conto { tavoloNome: string; apertaIl: Date; chiusaIl: Date | null; vistoAlle: Date; voci: (IdentitaVoce & { quantita: number; importoCent: number })[]; totaleCent: number }
+// ordiniIds: ordini non annullati del conto, per riconoscere quelli arrivati dopo l'apertura della pagina.
+export interface Conto { tavoloNome: string; apertaIl: Date; chiusaIl: Date | null; vistoAlle: Date; voci: (IdentitaVoce & { quantita: number; importoCent: number })[]; totaleCent: number; ordiniIds: string[] }
 export async function contoSessione(db: Db, sessioneId: string): Promise<Conto | null> {
   if (!idValido(sessioneId)) return null
   return db.transazione(async tx => {
@@ -129,6 +130,7 @@ export async function contoSessione(db: Db, sessioneId: string): Promise<Conto |
   const voci = await tx.query<Conto['voci'][number]>(`select r.nome,r.numero,r.prezzo_unit_cent as "prezzoUnitCent",r.poke,sum(r.quantita)::int as quantita,sum(r.prezzo_unit_cent::bigint*r.quantita)::float8 as "importoCent"
     from righe_ordine r join ordini o on o.id=r.ordine_id where o.sessione_id=$1 and o.stato <> 'annullato' and not r.annullata
     group by r.numero,r.nome,r.prezzo_unit_cent,r.poke order by r.numero nulls last,r.nome,r.prezzo_unit_cent,r.poke`,[sessioneId])
-  return { ...s,vistoAlle,voci,totaleCent: voci.reduce((s,r) => s + r.importoCent,0) }
+  const ordini = await tx.query<{ id: string }>("select id from ordini where sessione_id=$1 and stato<>'annullato' order by creato_il,id",[sessioneId])
+  return { ...s,vistoAlle,voci,totaleCent: voci.reduce((s,r) => s + r.importoCent,0),ordiniIds: ordini.map(o => o.id) }
   })
 }

@@ -5,7 +5,7 @@ import { db } from '@/server/db'
 import { contoSessione } from '@/tavoli/ordini-repo'
 import { formatEuro } from '@/domain/soldi'
 import { AggiornamentoAutomatico } from '@/componenti/AggiornamentoAutomatico'
-import { ChiudiTavolo } from '../../ChiudiTavolo'
+import { ChiusuraConto } from '../../ChiusuraConto'
 import { VoceConto } from '../../VoceConto'
 import '../../staff.css'
 export default async function ContoPage({ params }: { params: Promise<{ sessione: string }> }) {
@@ -18,6 +18,6 @@ export default async function ContoPage({ params }: { params: Promise<{ sessione
     {conto.chiusaIl ? <p role="status">Tavolo chiuso alle {conto.chiusaIl.toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</p> : <AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={conto.vistoAlle.toISOString()} />}
     <table className="staff-conto"><caption className="visually-hidden">Riepilogo del tavolo</caption><thead><tr><th>N.</th><th>Piatto</th><th>Quantità</th><th>Importo</th></tr></thead><tbody>{conto.voci.map(v => <VoceConto key={JSON.stringify([v.numero,v.nome,v.prezzoUnitCent,v.poke])} sessioneId={sessione} voce={v} />)}</tbody></table>
     <p className="heading">Totale: {formatEuro(conto.totaleCent)}</p><p>Da battere in cassa: questo non è uno scontrino fiscale.</p>
-    {!conto.chiusaIl && <div className="staff-navigazione"><ChiudiTavolo sessioneId={sessione} contoVistoAlle={conto.vistoAlle.toISOString()} primaria /></div>}
+    {!conto.chiusaIl && <ChiusuraConto sessioneId={sessione} attuale={{ vistoAlle: conto.vistoAlle.toISOString(),ordiniIds: conto.ordiniIds,totaleCent: conto.totaleCent }} />}
   </main>
 }
