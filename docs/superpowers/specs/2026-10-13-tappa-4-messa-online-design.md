@@ -27,7 +27,7 @@ Scelte tecniche (di Claude, su delega dell'utente):
 
 - `main` = `6f82aec` (tappe 1–3, 62 file e 285 test). Branch di questa tappa: `tappa-4-online`.
 - DB reale: 5 migrazioni, 3 ordini da tavolo, 0 piatti con allergeni confermati, capacità 2/1 rimasta dalla prova della tappa 3.
-- Nessun deploy. Team Vercel `carnedasosas-projects` (piano gratuito), nessun progetto collegato al repo.
+- Nessun deploy. Team Vercel `carnedasosas-projects`, già su **Pro** (confermato dall'utente il 13/10), nessun progetto collegato al repo.
 - Connessione al pooler **senza TLS** (`src/server/db.ts`). Prova in sola lettura del 13/10: il pooler `aws-1-eu-central-1.pooler.supabase.com:6543` presenta `*.pooler.supabase.com`, firmato da «Supabase Intermediate 2021 CA» → «Supabase Root 2021 CA». Con il certificato pubblico `prod-ca-2021.crt` e `rejectUnauthorized: true` la connessione riesce e il nome host è verificato.
 - Vercel esegue le funzioni in `iad1` (Washington) se non si indica una regione.
 - Login dello staff: Supabase Auth con email e password (`signInWithPassword`, `getClaims`). Nessun link via email.
@@ -61,7 +61,6 @@ Scelte tecniche (di Claude, su delega dell'utente):
 
   | Passo | Chi |
   |---|---|
-  | Passaggio del team a Pro, con pagamento | L'utente |
   | Valori segreti (`DATABASE_URL`, `CRON_SECRET`) nel dashboard di Vercel | L'utente |
   | Creazione del progetto collegato al repo, regione, variabili non segrete, verifica del deploy | Claude o Codex, dopo conferma |
 
