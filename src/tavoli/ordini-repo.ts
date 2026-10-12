@@ -2,7 +2,7 @@ import type { Db } from '@/server/db-tipi'
 import { validaCarrello, type RigaCarrello } from '@/domain/carrello'
 import { validaPoke, type SceltePoke } from '@/domain/poke'
 import { prossimoStato, type StatoOrdineTavolo } from '@/domain/stati-tavolo'
-import { leggiPokeConfig } from './poke-repo'
+import { leggiAllergeniPoke, leggiPokeConfig } from './poke-repo'
 import { idValido } from './validazione'
 
 export interface RigaOrdine { id: string; numero: number | null; nome: string; prezzoUnitCent: number; quantita: number; nota: string | null; poke: SceltePoke | null; annullata: boolean }
@@ -16,6 +16,40 @@ async function leggiOrdini(db: Db, condizione: string, parametri: unknown[] = []
   if (!ordini.length) return []
   const righe = await db.query<RigaOrdine & { ordineId: string }>(`select ${COLONNE_RIGA},ordine_id as "ordineId" from righe_ordine where ordine_id=any($1::uuid[]) order by posizione`,[ordini.map(o => o.id)])
   return ordini.map(o => ({ ...o,righe: righe.filter(r => r.ordineId === o.id).map(r => ({ id: r.id, numero: r.numero, nome: r.nome, prezzoUnitCent: r.prezzoUnitCent, quantita: r.quantita, nota: r.nota, poke: r.poke, annullata: r.annullata })) }))
+}
+export type RigaDaSalvare = Omit<RigaOrdine,'id' | 'annullata'> & { piattoId: string | null }
+export type EsitoPrezzi = { ok: true; righe: RigaDaSalvare[]; totaleCent: number } | { ok: false; errore: string; nonDisponibili?: string[]; nonDisponibiliIds?: string[] }
+/**
+ * Prezzi delle righe ricalcolati dal DB, dentro la transazione dell'invio (piatti e poke restano bloccati fino al commit).
+ * `pokeDaCasa`: la poke composta richiede anche gli allergeni degli ingredienti confermati.
+ */
+export async function prezzaRighe(tx: Db, carrello: RigaCarrello[], { pokeDaCasa = false } = {}): Promise<EsitoPrezzi> {
+  const ids = [...new Set(carrello.flatMap(r => r.piattoId ? [r.piattoId] : []))].sort()
+  const piatti = await tx.query<{ id: string; numero: number | null; nome: string; prezzo_cent: number; disponibile: boolean }>('select id,numero,nome,prezzo_cent,disponibile from piatti where id=any($1::uuid[]) order by id for share',[ids])
+  const nonDisponibiliIds = ids.filter(id => !piatti.find(p => p.id === id)?.disponibile)
+  const nonDisponibili = nonDisponibiliIds.map(id => piatti.find(p => p.id === id)?.nome ?? 'Piatto non più in menù')
+  if (nonDisponibili.length) return { ok: false, errore: 'Alcuni piatti non sono più disponibili', nonDisponibili, nonDisponibiliIds }
+  if (carrello.some(r => r.piattoId === null)) await tx.query('select id from poke_config where id=1 for share')
+  const config = carrello.some(r => r.piattoId === null) ? await leggiPokeConfig(tx) : null
+  if (config && pokeDaCasa && !(await leggiAllergeniPoke(tx,config)).confermati) return { ok: false, errore: 'La poke composta non si può ordinare online in questo momento: rimuovila dal carrello.' }
+  const righe: RigaDaSalvare[] = []
+  for (const r of carrello) {
+    if (r.piattoId) {
+      const p = piatti.find(p => p.id === r.piattoId)!
+      righe.push({ piattoId: p.id, numero: p.numero, nome: p.nome, prezzoUnitCent: p.prezzo_cent, quantita: r.quantita, nota: r.nota || null, poke: null })
+    } else {
+      if (!config) return { ok: false, errore: 'La poke composta non è ancora disponibile' }
+      const poke = validaPoke(config,r.poke)
+      if (!poke.ok) return poke
+      righe.push({ piattoId: null, numero: null, nome: 'Poke composta', prezzoUnitCent: poke.prezzoCent, quantita: r.quantita, nota: r.nota || null, poke: poke.scelte })
+    }
+  }
+  const totaleCent = righe.reduce((s,r) => s + r.prezzoUnitCent * r.quantita,0)
+  if (!Number.isSafeInteger(totaleCent) || totaleCent > 2147483647) return { ok: false, errore: 'Il totale dell’ordine è troppo alto.' }
+  return { ok: true, righe, totaleCent }
+}
+export async function salvaRighe(tx: Db, ordineId: string, righe: RigaDaSalvare[]): Promise<void> {
+  for (const [i,r] of righe.entries()) await tx.query(`insert into righe_ordine(ordine_id,piatto_id,numero,nome,prezzo_unit_cent,quantita,nota,poke,posizione) values ($1,$2,$3,$4,$5,$6,$7,$8::text::jsonb,$9)`,[ordineId,r.piattoId,r.numero,r.nome,r.prezzoUnitCent,r.quantita,r.nota,r.poke ? JSON.stringify(r.poke) : null,i])
 }
 async function ordineGiaInviato(db: Db,sessioneId: string,key: string): Promise<EsitoCreazione | null> {
   const [o] = await leggiOrdini(db,'o.chiave_invio=$1',[key])
@@ -35,29 +69,10 @@ export async function creaOrdineTavolo(db: Db, sessioneId: string, input: RigaCa
     const dopoLock = await ordineGiaInviato(tx,sessioneId,chiaveInvio)
     if (dopoLock) return dopoLock
     if (!s || s.chiusaIl) return chiuso
-    const ids = [...new Set(carrello.righe.flatMap(r => r.piattoId ? [r.piattoId] : []))].sort()
-    const piatti = await tx.query<{ id: string; numero: number | null; nome: string; prezzo_cent: number; disponibile: boolean }>('select id,numero,nome,prezzo_cent,disponibile from piatti where id=any($1::uuid[]) order by id for share',[ids])
-    const nonDisponibiliIds = ids.filter(id => !piatti.find(p => p.id === id)?.disponibile)
-    const nonDisponibili = nonDisponibiliIds.map(id => piatti.find(p => p.id === id)?.nome ?? 'Piatto non più in menù')
-    if (nonDisponibili.length) return { ok: false, errore: 'Alcuni piatti non sono più disponibili', nonDisponibili, nonDisponibiliIds }
-    if (carrello.righe.some(r => r.piattoId === null)) await tx.query('select id from poke_config where id=1 for share')
-    const config = carrello.righe.some(r => r.piattoId === null) ? await leggiPokeConfig(tx) : null
-    const righe: (Omit<RigaOrdine,'id' | 'annullata'> & { piattoId: string | null })[] = []
-    for (const r of carrello.righe) {
-      if (r.piattoId) {
-        const p = piatti.find(p => p.id === r.piattoId)!
-        righe.push({ piattoId: p.id, numero: p.numero, nome: p.nome, prezzoUnitCent: p.prezzo_cent, quantita: r.quantita, nota: r.nota || null, poke: null })
-      } else {
-        if (!config) return { ok: false, errore: 'La poke composta non è ancora disponibile' }
-        const poke = validaPoke(config,r.poke)
-        if (!poke.ok) return poke
-        righe.push({ piattoId: null, numero: null, nome: 'Poke composta', prezzoUnitCent: poke.prezzoCent, quantita: r.quantita, nota: r.nota || null, poke: poke.scelte })
-      }
-    }
-    const totale = righe.reduce((s,r) => s + r.prezzoUnitCent * r.quantita,0)
-    if (!Number.isSafeInteger(totale) || totale > 2147483647) return { ok: false, errore: 'Il totale dell’ordine è troppo alto.' }
-    const [ordine] = await tx.query<{ id: string }>('insert into ordini(sessione_id,totale_cent,chiave_invio,creato_il) values ($1,$2,$3,clock_timestamp()) returning id',[sessioneId,totale,chiaveInvio])
-    for (const [i,r] of righe.entries()) await tx.query(`insert into righe_ordine(ordine_id,piatto_id,numero,nome,prezzo_unit_cent,quantita,nota,poke,posizione) values ($1,$2,$3,$4,$5,$6,$7,$8::text::jsonb,$9)`,[ordine.id,r.piattoId,r.numero,r.nome,r.prezzoUnitCent,r.quantita,r.nota,r.poke ? JSON.stringify(r.poke) : null,i])
+    const prezzi = await prezzaRighe(tx,carrello.righe)
+    if (!prezzi.ok) return prezzi
+    const [ordine] = await tx.query<{ id: string }>('insert into ordini(sessione_id,totale_cent,chiave_invio,creato_il) values ($1,$2,$3,clock_timestamp()) returning id',[sessioneId,prezzi.totaleCent,chiaveInvio])
+    await salvaRighe(tx,ordine.id,prezzi.righe)
     return { ok: true, ordine: (await leggiOrdini(tx,'o.id=$1',[ordine.id]))[0] }
   }) } catch (err) {
     // Dopo il rollback possiamo rileggere anche il conflitto tra sessioni diverse.
@@ -81,7 +96,7 @@ export async function riepiloghiTavoli(db: Db): Promise<RiepilogoTavolo[]> {
 export async function avanzaStato(db: Db, ordineId: string): Promise<Ordine | null> {
   if (!idValido(ordineId)) return null
   return db.transazione(async tx => {
-    const [o] = await tx.query<{ stato: StatoOrdineTavolo }>('select stato from ordini where id=$1 for update',[ordineId])
+    const [o] = await tx.query<{ stato: StatoOrdineTavolo }>("select stato from ordini where id=$1 and tipo='tavolo' for update",[ordineId])
     const stato = o ? prossimoStato(o.stato) : null
     if (!stato) return null
     await tx.query('update ordini set stato=$2,aggiornato_il=now() where id=$1',[ordineId,stato])
@@ -90,13 +105,13 @@ export async function avanzaStato(db: Db, ordineId: string): Promise<Ordine | nu
 }
 export async function annullaOrdine(db: Db, ordineId: string): Promise<boolean> {
   if (!idValido(ordineId)) return false
-  return (await db.query("update ordini set stato='annullato',aggiornato_il=now() where id=$1 and stato in ('inviato','in_preparazione') returning id",[ordineId])).length === 1
+  return (await db.query("update ordini set stato='annullato',aggiornato_il=now() where id=$1 and tipo='tavolo' and stato in ('inviato','in_preparazione') returning id",[ordineId])).length === 1
 }
 export async function annullaRiga(db: Db, rigaId: string): Promise<boolean> {
   if (!idValido(rigaId)) return false
   return db.transazione(async tx => {
     // Il lock sull'ordine serializza annullamenti di righe diverse e il ricalcolo.
-    const [o] = await tx.query<{ id: string }>(`select o.id from ordini o join righe_ordine r on r.ordine_id=o.id where r.id=$1 and o.stato <> 'annullato' for update of o`,[rigaId])
+    const [o] = await tx.query<{ id: string }>(`select o.id from ordini o join righe_ordine r on r.ordine_id=o.id where r.id=$1 and o.stato not in ('annullato','rifiutato') for update of o`,[rigaId])
     if (!o) return false
     const righe = await tx.query('update righe_ordine set annullata=true where id=$1 and not annullata returning id',[rigaId])
     if (!righe.length) return false
@@ -104,8 +119,10 @@ export async function annullaRiga(db: Db, rigaId: string): Promise<boolean> {
     return true
   })
 }
+// Totale = righe attive + consegna (solo domicilio). Senza righe attive l'ordine è annullato; da casa il cliente riceve l'email.
 async function ricalcolaOrdine(db: Db,id: string) {
-  await db.query(`update ordini set totale_cent=r.totale,stato=case when r.n=0 then 'annullato' else ordini.stato end,aggiornato_il=clock_timestamp() from (select coalesce(sum(prezzo_unit_cent*quantita),0)::int as totale,count(*) as n from righe_ordine where ordine_id=$1 and not annullata) r where ordini.id=$1`,[id])
+  await db.query(`update ordini set totale_cent=case when r.n=0 then 0 else r.totale+coalesce(ordini.consegna_cent,0) end,stato=case when r.n=0 then 'annullato' else ordini.stato end,aggiornato_il=clock_timestamp() from (select coalesce(sum(prezzo_unit_cent*quantita),0)::int as totale,count(*) as n from righe_ordine where ordine_id=$1 and not annullata) r where ordini.id=$1`,[id])
+  await db.query(`insert into email_ordini (ordine_id,tipo) select id,'annullato' from ordini where id=$1 and tipo<>'tavolo' and stato='annullato' on conflict (ordine_id,tipo) do nothing`,[id])
 }
 export interface IdentitaVoce { nome: string; numero: number | null; prezzoUnitCent: number; poke: SceltePoke | null }
 export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce): Promise<boolean> {
