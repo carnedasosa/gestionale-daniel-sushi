@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { prossimoStatoConnessione, verificaConnessione } from './connessione'
+import { prossimoStatoConnessione, verificaConnessione, puoAggiornare } from './connessione'
 afterEach(() => { vi.useRealTimers() })
 it('mantiene l’ultimo aggiornamento quando cade la rete e lo aggiorna solo su successo', () => {
   const s = { offline: false,ultimoAggiornamento: '2026-10-11T19:00:00Z' }
@@ -19,4 +19,9 @@ it('probe senza cache: solo 204 è successo, errori e timeout non autorizzano il
   const attesa = verificaConnessione((_url,init) => new Promise((_resolve,reject) => init!.signal!.addEventListener('abort',() => reject(new Error('timeout')))))
   await vi.advanceTimersByTimeAsync(4000)
   expect(await attesa).toBe(false)
+})
+it('non accoda aggiornamenti mentre uno è in corso, salvo dopo 30 secondi', () => {
+  expect(puoAggiornare(null,1000)).toBe(true)
+  expect(puoAggiornare(1000,1000 + 29_999)).toBe(false)
+  expect(puoAggiornare(1000,1000 + 30_000)).toBe(true)
 })

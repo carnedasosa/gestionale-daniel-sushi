@@ -12,3 +12,9 @@ export async function verificaConnessione(fetcher: (url: string,init: RequestIni
   catch { return false }
   finally { clearTimeout(timeout); signal?.removeEventListener('abort',interrompi) }
 }
+// Un aggiornamento della pagina ancora in corso blocca il successivo, ma non per sempre:
+// se dopo 30 secondi non è finito si riprova comunque.
+export const ATTESA_MASSIMA_AGGIORNAMENTO_MS = 30_000
+export function puoAggiornare(inizioInCorso: number | null, ora: number): boolean {
+  return inizioInCorso === null || ora - inizioInCorso >= ATTESA_MASSIMA_AGGIORNAMENTO_MS
+}

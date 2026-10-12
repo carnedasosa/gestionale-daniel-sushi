@@ -787,7 +787,7 @@ it('senza dati e senza dati precedenti mostra il caricamento invece di smontarsi
 
 **File:** `src/domain/connessione.ts`, `src/domain/connessione.test.ts`, `src/componenti/AggiornamentoAutomatico.tsx`
 
-- [ ] **Step 1: test** — in `src/domain/connessione.test.ts` cambia l'import `import { prossimoStatoConnessione, verificaConnessione } from './connessione'` in `import { prossimoStatoConnessione, verificaConnessione, puoAggiornare } from './connessione'` e aggiungi in fondo:
+- [x] **Step 1: test** — in `src/domain/connessione.test.ts` cambia l'import `import { prossimoStatoConnessione, verificaConnessione } from './connessione'` in `import { prossimoStatoConnessione, verificaConnessione, puoAggiornare } from './connessione'` e aggiungi in fondo:
 
 ```ts
 it('non accoda aggiornamenti mentre uno è in corso, salvo dopo 30 secondi', () => {
@@ -798,7 +798,7 @@ it('non accoda aggiornamenti mentre uno è in corso, salvo dopo 30 secondi', () 
 ```
 Esegui → FAIL.
 
-- [ ] **Step 2: dominio** — aggiungi in fondo a `src/domain/connessione.ts`:
+- [x] **Step 2: dominio** — aggiungi in fondo a `src/domain/connessione.ts`:
 
 ```ts
 // Un aggiornamento della pagina ancora in corso blocca il successivo, ma non per sempre:
@@ -809,7 +809,7 @@ export function puoAggiornare(inizioInCorso: number | null, ora: number): boolea
 }
 ```
 
-- [ ] **Step 3: componente** — in `src/componenti/AggiornamentoAutomatico.tsx`:
+- [x] **Step 3: componente** — in `src/componenti/AggiornamentoAutomatico.tsx`:
 
 (a) `import { useEffect, useRef, useState } from 'react'` → `import { useEffect, useRef, useState, useTransition } from 'react'`
 
@@ -827,8 +827,8 @@ export function puoAggiornare(inizioInCorso: number | null, ora: number): boolea
 
 (e) `      if (ok) router.refresh()` → `      if (ok) { inizioAggiornamento.current = Date.now(); startTransition(() => router.refresh()) }`
 
-- [ ] **Step 4:** `npx vitest run src/domain/connessione.test.ts` verde; `npm run typecheck`; `npm run lint`.
-- [ ] **Step 5: commit** — `git add src/domain/connessione.ts src/domain/connessione.test.ts src/componenti/AggiornamentoAutomatico.tsx && git commit -m "Aggiornamento automatico: niente refresh accumulati mentre uno è in corso"`
+- [x] **Step 4:** `npx vitest run src/domain/connessione.test.ts` verde; `npm run typecheck`; `npm run lint`.
+- [x] **Step 5: commit** — `git add src/domain/connessione.ts src/domain/connessione.test.ts src/componenti/AggiornamentoAutomatico.tsx && git commit -m "Aggiornamento automatico: niente refresh accumulati mentre uno è in corso"`
 
 ---
 

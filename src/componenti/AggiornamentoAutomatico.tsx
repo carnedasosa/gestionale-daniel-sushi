@@ -1,12 +1,16 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { prossimoStatoConnessione, verificaConnessione, type StatoConnessione } from '@/domain/connessione'
+import { prossimoStatoConnessione, puoAggiornare, verificaConnessione, type StatoConnessione } from '@/domain/connessione'
 export function AggiornamentoAutomatico({ ogniSecondi,ultimoAggiornamento }: { ogniSecondi: number; ultimoAggiornamento?: string }) {
   const router = useRouter()
   const [stato,setStato] = useState<StatoConnessione>({ offline: false,ultimoAggiornamento: ultimoAggiornamento ?? null })
   const ultimo = useRef(ultimoAggiornamento)
   useEffect(() => { ultimo.current = ultimoAggiornamento },[ultimoAggiornamento])
+  // router.refresh() dentro una transizione: isPending resta vero finché la pagina aggiornata non arriva.
+  const [aggiornando,startTransition] = useTransition()
+  const inizioAggiornamento = useRef<number | null>(null)
+  useEffect(() => { if (!aggiornando) inizioAggiornamento.current = null },[aggiornando])
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined
     let richiesta: AbortController | undefined
@@ -14,14 +18,14 @@ export function AggiornamentoAutomatico({ ogniSecondi,ultimoAggiornamento }: { o
     const ferma = () => { if (timer) clearInterval(timer); timer = undefined }
     const errore = () => setStato(s => prossimoStatoConnessione(s,false,null))
     const aggiorna = async () => {
-      if (occupato || document.visibilityState !== 'visible') return
+      if (occupato || document.visibilityState !== 'visible' || !puoAggiornare(inizioAggiornamento.current,Date.now())) return
       if (!navigator.onLine) { errore(); return }
       occupato = true; richiesta = new AbortController()
       const ok = await verificaConnessione(fetch,richiesta.signal)
       occupato = false
       if (!attivo || document.visibilityState !== 'visible') return
       setStato(s => prossimoStatoConnessione(s,ok,ultimo.current ?? null))
-      if (ok) router.refresh()
+      if (ok) { inizioAggiornamento.current = Date.now(); startTransition(() => router.refresh()) }
     }
     const avvia = () => {
       ferma()
