@@ -6,11 +6,12 @@ Il lavoro è diviso in tappe:
 
 - **Tappa 1**: base del progetto, menù pubblico con allergeni, accesso admin/staff e gestione del menù.
 - **Tappa 2**: tavoli, QR, codice del cameriere, carrello con note e poke, cucina e conto.
-- **Tappa 3**: asporto e domicilio, ancora da implementare.
+- **Tappa 3**: asporto e domicilio: zone, orari, fasce, checkout, accettazione con suono, pagina dello stato ed email.
 
 Documentazione di progetto:
 
 - Specifica: [`docs/superpowers/specs/2026-10-11-gestionale-ordini-design.md`](docs/superpowers/specs/2026-10-11-gestionale-ordini-design.md)
+- Specifica della tappa 3: [`docs/superpowers/specs/2026-10-12-tappa-3-domicilio-asporto-design.md`](docs/superpowers/specs/2026-10-12-tappa-3-domicilio-asporto-design.md)
 - Piani di lavoro: [`docs/superpowers/plans/`](docs/superpowers/plans/)
 
 ## Requisiti
@@ -32,7 +33,11 @@ Documentazione di progetto:
    | `SUPABASE_URL` | Supabase → Project Settings → API |
    | `SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API |
    | `DATABASE_URL` | Supabase → Connect → Transaction pooler (porta 6543), con la password del database |
-   | `APP_URL` (opzionale) | URL assoluto dell'app per i QR, es. `https://ordini.esempio.it`; se assente viene usato l'host della richiesta |
+   | `APP_URL` (opzionale) | URL assoluto dell'app per i QR e per i link nelle email, es. `https://ordini.esempio.it`; se assente i QR usano l'host della richiesta e le email restano spente |
+   | `RESEND_API_KEY` (opzionale) | Resend → API Keys; senza, le email ai clienti restano spente |
+   | `EMAIL_MITTENTE` (opzionale) | mittente su un dominio verificato in Resend, es. `Daniel's Sushi <ordini@tuodominio.it>` |
+   | `CRON_SECRET` (opzionale) | stringa casuale di almeno 16 caratteri; su Vercel protegge il cron di anonimizzazione |
+   | `ORDINI_CASA_PROVA` (solo locale) | `1` per provare gli ordini da casa senza allergeni confermati; ignorata in produzione |
 
    Queste variabili sono lette solo dal server e non finiscono mai nel browser. Non committare `.env.local`.
 
@@ -73,10 +78,15 @@ Le nuove registrazioni sono disattivate in Supabase: solo gli utenti creati a ma
 
 | Percorso | Contenuto |
 | --- | --- |
-| `/` | menù pubblico |
+| `/` | menù pubblico, ordinabile quando gli ordini da casa sono aperti |
+| `/ordina` | riepilogo e conferma dell'ordine da casa |
+| `/ordine/[token]` | stato dell'ordine da casa, aggiornato da solo |
+| `/privacy` | informativa privacy (testo provvisorio) |
 | `/accesso` | accesso per admin e staff |
 | `/admin/menu` | gestione del menù (admin) |
-| `/admin/poke` | prezzi e regole della poke (admin) |
+| `/admin/poke` | prezzi, regole e allergeni degli ingredienti della poke (admin) |
+| `/admin/domicilio` | impostazioni, zone, orari e chiusure degli ordini da casa (admin) |
+| `/api/cron/anonimizza` | anonimizzazione giornaliera (solo con `CRON_SECRET`) |
 | `/admin/tavoli` | gestione tavoli (admin) |
 | `/admin/tavoli/stampa` | QR dei tavoli attivi (admin) |
 | `/staff` | cucina e apertura/chiusura tavoli |
@@ -109,6 +119,18 @@ Il carrello e la sua chiave di invio si conservano in `sessionStorage` per quell
 
 Lo schermo staff si aggiorna ogni 5 secondi e il tavolo ogni 10. L'aggiornamento si ferma nelle schede nascoste e riparte subito quando tornano visibili o torna la connessione. Prima del refresh viene controllata la connessione con `GET /stato`, senza DB: se manca, la schermata resta visibile con l’ora dell’ultimo aggiornamento e riprende automaticamente. Il browser non legge mai il database: viene usato `router.refresh()`, senza Supabase Realtime o policy di lettura API. `cacheComponents` resta disabilitato. I test SQL usano PGlite con tutte le migrazioni reali e transazioni, senza Docker. PGlite serializza le transazioni e non prova la concorrenza reale: in Postgres le garanzie dipendono dagli indici unici e dai lock.
 
+## Ordini da casa
+
+Applica la migrazione `20261013120000_domicilio_asporto.sql` dopo le precedenti: aggiunge zone, orari, chiusure, impostazioni e coda delle email, e le colonne degli ordini da casa. Gli ordini dei tavoli restano validi. Anche questa va autorizzata prima di applicarla al database reale.
+
+In `/admin/domicilio` imposta il telefono del locale, gli ordini per fascia di 15 minuti e quanti di questi possono essere a domicilio, l'anticipo minimo, le zone (costo e ordine minimo), i turni di asporto e domicilio per ogni giorno e le chiusure straordinarie. Le zone non si cancellano: si disattivano.
+
+Gli ordini si aprono solo dallo schermo staff con **Apri ordini di oggi**: l'interruttore vale per il giorno in cui si accende e il giorno dopo riparte spento. Servono anche il telefono del locale, gli allergeni confermati e almeno una fascia libera. Il cliente sceglie i piatti in `/`, conferma in `/ordina` (asporto o domicilio, fascia, dati, contanti o carta, privacy) e segue l'ordine in `/ordine/<token>`. Il server ricalcola tutto: se il totale cambia, l'ordine non parte e il riepilogo si aggiorna. Due clienti non possono prendere insieme l'ultimo posto di una fascia: gli invii da casa si mettono in fila sul lock delle impostazioni. Al massimo 3 ordini in attesa per telefono e 10 all'ora per rete.
+
+Sullo schermo staff gli ordini da casa compaiono in **Da accettare** con un suono ogni 10 secondi: **Accetta**, **Accetta +15’**, **Accetta +30’** o **Rifiuta** con motivo. Poi passano nella cucina insieme ai tavoli: **Da preparare**, **In preparazione**, **Pronti e in consegna** (Pronto → Ritirato, oppure Partito → Consegnato).
+
+Le email (ricevuto, accettato, rifiutato, annullato) si accodano nel database e partono subito dopo l'azione; quelle non riuscite si ritentano a ogni aggiornamento dello schermo staff, fino a 5 volte. Servono `RESEND_API_KEY`, `EMAIL_MITTENTE` con un dominio verificato e `APP_URL`; senza, le email restano in coda e l'app funziona lo stesso. Ogni giorno alle 3 il cron di Vercel (`vercel.json`) chiama `/api/cron/anonimizza`, che toglie i dati personali dagli ordini da casa più vecchi di 12 mesi.
+
 ## Allergeni
 
-Per la vendita a distanza il Reg. UE 1169/2011, art. 14, impone che le informazioni sugli allergeni siano disponibili prima dell'acquisto. Per questo gli ordini da casa non partono finché tutti i piatti non hanno gli allergeni confermati.
+Per la vendita a distanza il Reg. UE 1169/2011, art. 14, impone che le informazioni sugli allergeni siano disponibili prima dell'acquisto. Per questo gli ordini da casa non partono finché tutti i piatti disponibili non hanno gli allergeni confermati, e la poke composta si ordina da casa solo quando in `/admin/poke` sono confermati gli allergeni di tutti gli ingredienti. Per le prove in locale c'è `ORDINI_CASA_PROVA=1`, ignorata in produzione.
