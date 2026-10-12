@@ -3,11 +3,22 @@ import { fasceDelGiorno, fascePrenotabili, SERVIZI, type Occupazione, type Regol
 import { aperturaServizio, type StatoApertura } from '@/domain/apertura-casa'
 import { dataRoma, giornoSettimana, istanteRoma } from '@/domain/ora-roma'
 import { STATI_ATTIVI_CASA } from '@/domain/stati-casa'
+import { pokeOrdinabile } from '@/domain/poke'
+import type { AllergeniVoci } from '@/domain/allergeni-poke'
+import type { PokeConfig } from '@/menu/importa'
+import { leggiAllergeniPoke, leggiPokeConfig } from '@/tavoli/poke-repo'
 import { allergeniCompleti, chiusoIl, elencoZone, leggiImpostazioni, turniDelGiorno, type Zona } from './impostazioni-repo'
 export interface DisponibilitaServizio { apertura: StatoApertura; fasce: string[] }
 export interface DisponibilitaCasa {
   oggi: string; telefono: string | null; apertiIl: string | null; regole: RegoleFasce; zone: Zona[]
   servizi: Record<Servizio,DisponibilitaServizio>
+}
+/** Poke composta ordinabile da casa: prezzi impostati e allergeni degli ingredienti confermati. */
+export async function leggiPokeDaCasa(db: Db): Promise<{ config: PokeConfig; allergeni: AllergeniVoci } | null> {
+  const config = await leggiPokeConfig(db)
+  if (!config || !pokeOrdinabile(config)) return null
+  const allergeni = await leggiAllergeniPoke(db,config)
+  return allergeni.confermati ? { config,allergeni: allergeni.voci } : null
 }
 /** Ordini attivi da casa per fascia, nel giorno `oggi` di Roma. */
 export async function occupazioneFasce(db: Db, oggi: string): Promise<Occupazione[]> {

@@ -46,5 +46,12 @@ export function useCarrelloSalvato(chiave: string, archivio: 'session' | 'local'
     return null
   }
   const svuota = () => imposta(VUOTO)
-  return { carrello,ref,caricato,bloccato,imposta,modificaRighe,modificaPiatto,aggiungiPoke,svuota }
+  /** Blocca le modifiche durante un invio; false se un invio è già in corso o il carrello non è pronto. */
+  const blocca = (): boolean => {
+    if (bloccato.current || !caricato || !ref.current.chiaveInvio) return false
+    bloccato.current = true
+    return true
+  }
+  const sblocca = () => { bloccato.current = false }
+  return { carrello,ref,caricato,bloccato,imposta,modificaRighe,modificaPiatto,aggiungiPoke,svuota,blocca,sblocca }
 }
