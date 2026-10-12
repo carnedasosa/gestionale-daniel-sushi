@@ -123,10 +123,10 @@ Casi che i test automatici non coprono e che un revisore (o la prova del Task 14
 
 **File:** `vitest.config.mts`
 
-- [ ] **Step 1:** `git status` deve essere pulito. Poi `git checkout tappa-3-casa`. Se il branch è anche su GitHub, esegui `git pull`.
-- [ ] **Step 2:** `git log --oneline -3` deve mostrare in cima il commit del piano, poi `Spec della tappa 3: domicilio e asporto` (`9759d70`) e `9013b1c`. Se ci sono altri commit dell'utente che toccano file di questo piano, **fermati** e chiedi.
-- [ ] **Step 3:** `npm ci` e poi `npm test` → atteso **41 file, 192 test passati**. Se no, fermati.
-- [ ] **Step 4: tempi dei test.** Con una ventina di file PGlite in più, il seed nel `beforeEach` può superare i 30 secondi quando i file girano in parallelo.
+- [x] **Step 1:** `git status` deve essere pulito. Poi `git checkout tappa-3-casa`. Se il branch è anche su GitHub, esegui `git pull`.
+- [x] **Step 2:** `git log --oneline -3` deve mostrare in cima il commit del piano, poi `Spec della tappa 3: domicilio e asporto` (`9759d70`) e `9013b1c`. Se ci sono altri commit dell'utente che toccano file di questo piano, **fermati** e chiedi.
+- [x] **Step 3:** `npm ci` e poi `npm test` → atteso **41 file, 192 test passati**. Se no, fermati.
+- [x] **Step 4: tempi dei test.** Con una ventina di file PGlite in più, il seed nel `beforeEach` può superare i 30 secondi quando i file girano in parallelo.
 
 **Sostituisci tutto il contenuto** di `vitest.config.mts` con:
 
@@ -154,7 +154,7 @@ export default defineConfig({
 ```
 
 
-- [ ] **Step 5: commit** — `git add vitest.config.mts && git commit -m "Test: 60 secondi per i file PGlite che girano in parallelo"`
+- [x] **Step 5: commit** — `git add vitest.config.mts && git commit -m "Test: 60 secondi per i file PGlite che girano in parallelo"`
 
 ---
 
@@ -168,7 +168,7 @@ export default defineConfig({
 - `Servizio`, `SERVIZI`, `servizioValido`, `DURATA_FASCIA`, `Turno`, `RegoleFasce`, `Occupazione`;
 - `minutiDa`, `fasceDelGiorno`, `fasciaPrenotabile`, `fascePrenotabili`.
 
-- [ ] **Step 1: test (prima del codice)**
+- [x] **Step 1: test (prima del codice)**
 
 **Crea** `src/domain/ora-roma.test.ts` con:
 
@@ -240,8 +240,8 @@ it('elenco delle prenotabili con l’occupazione del database', () => {
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/domain/ora-roma.test.ts src/domain/fasce.test.ts` → atteso **FAIL**: i moduli non esistono.
-- [ ] **Step 3: codice**
+- [x] **Step 2:** `npx vitest run src/domain/ora-roma.test.ts src/domain/fasce.test.ts` → atteso **FAIL**: i moduli non esistono.
+- [x] **Step 3: codice**
 
 **Crea** `src/domain/ora-roma.ts` con:
 
@@ -331,8 +331,8 @@ export function fascePrenotabili(servizio: Servizio, fasce: Date[], occupazione:
 ```
 
 
-- [ ] **Step 4:** stesso comando → atteso **2 file, 8 test verdi** (compreso il giorno del cambio d'ora, 25/10/2026). Poi `npm run typecheck` e `npm run lint`.
-- [ ] **Step 5: commit** — `git add src/domain/ora-roma.ts src/domain/ora-roma.test.ts src/domain/fasce.ts src/domain/fasce.test.ts && git commit -m "Ora di Roma e fasce di 15 minuti"`
+- [x] **Step 4:** stesso comando → atteso **2 file, 8 test verdi** (compreso il giorno del cambio d'ora, 25/10/2026). Poi `npm run typecheck` e `npm run lint`.
+- [x] **Step 5: commit** — `git add src/domain/ora-roma.ts src/domain/ora-roma.test.ts src/domain/fasce.ts src/domain/fasce.test.ts && git commit -m "Ora di Roma e fasce di 15 minuti"`
 
 ---
 
@@ -349,7 +349,7 @@ export function fascePrenotabili(servizio: Servizio, fasce: Date[], occupazione:
 - `apertura-casa`: `MotivoChiusura`, `DatiApertura`, `StatoApertura`, `TESTO_MOTIVO`, `aperturaServizio(servizio,d)`, `modalitaProva(env)`.
 - `allergeni-poke`: `AllergeniVoci`, `AllergeniPoke`, `normalizzaAllergeniVoci(gruppi,dato)`, `allergeniScelte(voci,scelte)`.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Crea** `src/domain/stati-casa.test.ts` con:
 
@@ -489,8 +489,8 @@ it('allergeni delle scelte uniti senza ripetizioni', () => {
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/domain/stati-casa.test.ts src/domain/checkout.test.ts src/domain/apertura-casa.test.ts src/domain/allergeni-poke.test.ts` → atteso **FAIL** (moduli mancanti).
-- [ ] **Step 3: codice**
+- [x] **Step 2:** `npx vitest run src/domain/stati-casa.test.ts src/domain/checkout.test.ts src/domain/apertura-casa.test.ts src/domain/allergeni-poke.test.ts` → atteso **FAIL** (moduli mancanti).
+- [x] **Step 3: codice**
 
 **Crea** `src/domain/stati-casa.ts` con:
 
@@ -684,8 +684,8 @@ export function allergeniScelte(voci: AllergeniVoci, scelte: SceltePoke): Codice
 ```
 
 
-- [ ] **Step 4:** stesso comando → atteso **4 file, 17 test verdi**; `npm run typecheck`; `npm run lint`.
-- [ ] **Step 5: commit** — `git add src/domain/stati-casa.ts src/domain/stati-casa.test.ts src/domain/checkout.ts src/domain/checkout.test.ts src/domain/apertura-casa.ts src/domain/apertura-casa.test.ts src/domain/allergeni-poke.ts src/domain/allergeni-poke.test.ts && git commit -m "Stati da casa, dati del checkout, apertura degli ordini e allergeni della poke"`
+- [x] **Step 4:** stesso comando → atteso **4 file, 17 test verdi**; `npm run typecheck`; `npm run lint`.
+- [x] **Step 5: commit** — `git add src/domain/stati-casa.ts src/domain/stati-casa.test.ts src/domain/checkout.ts src/domain/checkout.test.ts src/domain/apertura-casa.ts src/domain/apertura-casa.test.ts src/domain/allergeni-poke.ts src/domain/allergeni-poke.test.ts && git commit -m "Stati da casa, dati del checkout, apertura degli ordini e allergeni della poke"`
 
 ---
 
@@ -701,7 +701,7 @@ export function allergeniScelte(voci: AllergeniVoci, scelte: SceltePoke): Codice
 
 Gli ordini dei tavoli già presenti restano validi: il primo test lo prova applicando la migrazione su un DB con ordini esistenti.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Crea** `tests/db/casa.test.ts` con:
 
@@ -784,8 +784,8 @@ describe('schema degli ordini da casa', () => {
 ```
 
 
-- [ ] **Step 2:** `npx vitest run tests/db/casa.test.ts` → atteso **FAIL**: il file della migrazione non esiste (`ENOENT`) e le tabelle mancano.
-- [ ] **Step 3: migrazione**
+- [x] **Step 2:** `npx vitest run tests/db/casa.test.ts` → atteso **FAIL**: il file della migrazione non esiste (`ENOENT`) e le tabelle mancano.
+- [x] **Step 3: migrazione**
 
 **Crea** `supabase/migrations/20261013120000_domicilio_asporto.sql` con:
 
@@ -894,8 +894,8 @@ revoke all on public.zone_consegna, public.orari_casa, public.chiusure_casa, pub
 ```
 
 
-- [ ] **Step 4:** stesso comando → atteso **1 file, 7 test verdi**. Poi `npm test` → nessuna regressione nei test esistenti (**48 file, 224 test**).
-- [ ] **Step 5: commit** — `git add supabase/migrations/20261013120000_domicilio_asporto.sql tests/db/casa.test.ts && git commit -m "Schema degli ordini da casa: zone, orari, chiusure, impostazioni e coda email"`
+- [x] **Step 4:** stesso comando → atteso **1 file, 7 test verdi**. Poi `npm test` → nessuna regressione nei test esistenti (**48 file, 224 test**).
+- [x] **Step 5: commit** — `git add supabase/migrations/20261013120000_domicilio_asporto.sql tests/db/casa.test.ts && git commit -m "Schema degli ordini da casa: zone, orari, chiusure, impostazioni e coda email"`
 
 ---
 
@@ -908,7 +908,7 @@ revoke all on public.zone_consegna, public.orari_casa, public.chiusure_casa, pub
 
 **Interfacce prodotte:** `leggiAllergeniPoke(db,config): Promise<AllergeniPoke>`, `salvaAllergeniPoke(db,a)`, azione `salvaAllergeniPokeAdmin(stato,fd)` con `StatoAllergeniPoke`.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Sostituisci tutto il contenuto** di `src/tavoli/poke-repo.test.ts` con:
 
@@ -1005,8 +1005,8 @@ it('propaga redirect e gestisce errore DB', async () => {
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/tavoli/poke-repo.test.ts src/app/admin/poke/azioni.test.ts` → atteso **FAIL** (funzioni non esportate).
-- [ ] **Step 3: codice**
+- [x] **Step 2:** `npx vitest run src/tavoli/poke-repo.test.ts src/app/admin/poke/azioni.test.ts` → atteso **FAIL** (funzioni non esportate).
+- [x] **Step 3: codice**
 
 **Sostituisci tutto il contenuto** di `src/tavoli/poke-repo.ts` con:
 
@@ -1154,8 +1154,8 @@ export default async function PokeAdmin() {
 ```
 
 
-- [ ] **Step 4:** stesso comando → atteso **2 file, 7 test verdi**; `npm run typecheck`; `npm run lint`.
-- [ ] **Step 5: commit** — `git add src/tavoli/poke-repo.ts src/tavoli/poke-repo.test.ts src/app/admin/poke && git commit -m "Allergeni degli ingredienti della poke"`
+- [x] **Step 4:** stesso comando → atteso **2 file, 7 test verdi**; `npm run typecheck`; `npm run lint`.
+- [x] **Step 5: commit** — `git add src/tavoli/poke-repo.ts src/tavoli/poke-repo.test.ts src/app/admin/poke && git commit -m "Allergeni degli ingredienti della poke"`
 
 ---
 
@@ -1172,7 +1172,7 @@ export default async function PokeAdmin() {
 - `allergeniCompleti(db)`;
 - disponibilità: `occupazioneFasce(db,oggi)`, `leggiDisponibilita(db,adesso,prova): DisponibilitaCasa`.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Crea** `src/casa/impostazioni-repo.test.ts` con:
 
@@ -1264,8 +1264,8 @@ it('disponibilità: allergeni, interruttore di ieri e giorno di chiusura', async
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/casa/impostazioni-repo.test.ts` → atteso **FAIL**.
-- [ ] **Step 3: codice**
+- [x] **Step 2:** `npx vitest run src/casa/impostazioni-repo.test.ts` → atteso **FAIL**.
+- [x] **Step 3: codice**
 
 **Crea** `src/casa/impostazioni-repo.ts` con:
 
@@ -1377,8 +1377,8 @@ export async function leggiDisponibilita(db: Db, adesso: Date, prova: boolean): 
 ```
 
 
-- [ ] **Step 4:** stesso comando → atteso **1 file, 6 test verdi**; `npm run typecheck`; `npm run lint`.
-- [ ] **Step 5: commit** — `git add src/casa && git commit -m "Impostazioni da casa: zone, orari, chiusure e disponibilità di oggi"`
+- [x] **Step 4:** stesso comando → atteso **1 file, 6 test verdi**; `npm run typecheck`; `npm run lint`.
+- [x] **Step 5: commit** — `git add src/casa && git commit -m "Impostazioni da casa: zone, orari, chiusure e disponibilità di oggi"`
 
 ---
 
@@ -1390,7 +1390,7 @@ export async function leggiDisponibilita(db: Db, adesso: Date, prova: boolean): 
 
 **Attenzione:** `GIORNI` sta in `src/domain/valida-domicilio.ts` e **non** in `ModuliDomicilio.tsx` (file `'use client'`). Vedi Global Constraints.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Crea** `src/domain/valida-domicilio.test.ts` con:
 
@@ -1480,8 +1480,8 @@ it('redirect di ruolo propagati ed errori del DB in italiano', async () => {
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/domain/valida-domicilio.test.ts src/app/admin/domicilio` → atteso **FAIL**.
-- [ ] **Step 3: codice**
+- [x] **Step 2:** `npx vitest run src/domain/valida-domicilio.test.ts src/app/admin/domicilio` → atteso **FAIL**.
+- [x] **Step 3: codice**
 
 **Crea** `src/domain/valida-domicilio.ts` con:
 
@@ -1776,8 +1776,8 @@ con
 ```
 
 
-- [ ] **Step 4:** stesso comando → atteso **2 file, 9 test verdi**; `npm run typecheck`; `npm run lint`.
-- [ ] **Step 5: commit** — `git add src/domain/valida-domicilio.ts src/domain/valida-domicilio.test.ts src/app/admin/domicilio src/app/admin/layout.tsx src/app/admin/admin.css && git commit -m "Admin: impostazioni, zone, orari e chiusure del domicilio"`
+- [x] **Step 4:** stesso comando → atteso **2 file, 9 test verdi**; `npm run typecheck`; `npm run lint`.
+- [x] **Step 5: commit** — `git add src/domain/valida-domicilio.ts src/domain/valida-domicilio.test.ts src/app/admin/domicilio src/app/admin/layout.tsx src/app/admin/admin.css && git commit -m "Admin: impostazioni, zone, orari e chiusure del domicilio"`
 
 ---
 
@@ -1798,7 +1798,7 @@ Il comportamento del tavolo **non cambia**: chiave `carrello_<sessione>` in `ses
 - `useCarrelloSalvato(chiave,'session'|'local')` → `{ carrello,ref,caricato,bloccato,imposta,modificaRighe,modificaPiatto,aggiungiPoke,svuota }`. Il Task 10 aggiungerà `blocca`/`sblocca`;
 - `vistaCarrello(righe,piatti,config): RigaVista[]`, `totaleVista(righe)`.
 
-- [ ] **Step 1: sposta i file** (le modifiche ai file spostati sono nello Step 3):
+- [x] **Step 1: sposta i file** (le modifiche ai file spostati sono nello Step 3):
 
 ```bash
 mkdir -p src/ordinare
@@ -1806,7 +1806,7 @@ git mv "src/app/tavolo/[chiave]/Carrello.tsx" "src/ordinare/Carrello.tsx"
 git mv "src/app/tavolo/[chiave]/ComponiPoke.tsx" "src/ordinare/ComponiPoke.tsx"
 ```
 
-- [ ] **Step 2: test**
+- [x] **Step 2: test**
 
 **Crea** `src/ordinare/vista-carrello.test.ts` con:
 
@@ -1871,7 +1871,7 @@ it('una poke da ricomporre non mostra un prezzo e il totale lo dice', () => {
 ```
 
 
-- [ ] **Step 3: codice** (per i due file spostati salta il `git mv` già fatto nello Step 1 e applica solo le modifiche):
+- [x] **Step 3: codice** (per i due file spostati salta il `git mv` già fatto nello Step 1 e applica solo le modifiche):
 
 **Sposta** `src/app/tavolo/[chiave]/Carrello.tsx` in `src/ordinare/Carrello.tsx`: `git mv "src/app/tavolo/[chiave]/Carrello.tsx" "src/ordinare/Carrello.tsx"`. Poi, nel file spostato:
 
@@ -2158,8 +2158,8 @@ export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categor
 ```
 
 
-- [ ] **Step 4:** `npx vitest run src/ordinare "src/app/tavolo"` → atteso tutto verde (vista-carrello: 1 test; componenti del tavolo: 6 test). Poi `npm run typecheck` e `npm run lint`: **nessun** errore `react-hooks`.
-- [ ] **Step 5: commit** — `git add -A src/ordinare "src/app/tavolo/[chiave]" && git commit -m "Carrello, card dei piatti e composer condivisi tra tavolo e casa"`
+- [x] **Step 4:** `npx vitest run src/ordinare "src/app/tavolo"` → atteso tutto verde (vista-carrello: 1 test; componenti del tavolo: 6 test). Poi `npm run typecheck` e `npm run lint`: **nessun** errore `react-hooks`.
+- [x] **Step 5: commit** — `git add -A src/ordinare "src/app/tavolo/[chiave]" && git commit -m "Carrello, card dei piatti e composer condivisi tra tavolo e casa"`
 
 ---
 
@@ -2183,7 +2183,7 @@ Le modifiche a `ordini-repo.ts`:
 - `anonimizzaOrdiniCasa(db,adesso): number`;
 - in `ordini-repo`: `prezzaRighe(tx,righe,{ pokeDaCasa })`, `salvaRighe(tx,ordineId,righe)`, `RigaDaSalvare`, `EsitoPrezzi`.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Crea** `src/casa/ordini-casa-repo.test.ts` con:
 
@@ -2344,8 +2344,8 @@ it('anonimizzazione dopo 12 mesi, idempotente', async () => {
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/casa/ordini-casa-repo.test.ts` → atteso **FAIL**.
-- [ ] **Step 3: codice**
+- [x] **Step 2:** `npx vitest run src/casa/ordini-casa-repo.test.ts` → atteso **FAIL**.
+- [x] **Step 3: codice**
 
 **Modifica** `src/tavoli/ordini-repo.ts` (1 di 6): sostituisci
 
@@ -2706,8 +2706,8 @@ export async function anonimizzaOrdiniCasa(db: Db, adesso: Date): Promise<number
 ```
 
 
-- [ ] **Step 4:** `npx vitest run src/casa src/tavoli` → atteso tutto verde (ordini-casa-repo: **13 test**; i test esistenti del tavolo invariati). Poi `npm run typecheck` e `npm run lint`.
-- [ ] **Step 5: commit** — `git add src/tavoli/ordini-repo.ts src/casa/ordini-casa-repo.ts src/casa/ordini-casa-repo.test.ts && git commit -m "Ordini da casa: invio in fila sulla capacità, accettazione, stati e anonimizzazione"`
+- [x] **Step 4:** `npx vitest run src/casa src/tavoli` → atteso tutto verde (ordini-casa-repo: **13 test**; i test esistenti del tavolo invariati). Poi `npm run typecheck` e `npm run lint`.
+- [x] **Step 5: commit** — `git add src/tavoli/ordini-repo.ts src/casa/ordini-casa-repo.ts src/casa/ordini-casa-repo.test.ts && git commit -m "Ordini da casa: invio in fila sulla capacità, accettazione, stati e anonimizzazione"`
 
 ---
 
@@ -2724,7 +2724,7 @@ export async function anonimizzaOrdiniCasa(db: Db, adesso: Date): Promise<number
 - `prendiEmailDaInviare(db,limite?)`, `segnaInviata`, `segnaErrore`, `MASSIMO_TENTATIVI_EMAIL`;
 - `smaltisciCodaEmail(db,env?,fetch?)`, `avviaInvioEmail()`. Quest'ultima usa `after()` di `next/server` e va chiamata solo da azioni o pagine.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Crea** `tests/db/casa-pronta.ts` con:
 
@@ -2847,8 +2847,8 @@ it('una presa in carico non viene ripresa per 2 minuti; gli ordini anonimizzati 
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/domain/email-ordini.test.ts src/casa/coda-email.test.ts` → atteso **FAIL**.
-- [ ] **Step 3: codice**
+- [x] **Step 2:** `npx vitest run src/domain/email-ordini.test.ts src/casa/coda-email.test.ts` → atteso **FAIL**.
+- [x] **Step 3: codice**
 
 **Crea** `src/domain/email-ordini.ts` con:
 
@@ -2999,8 +2999,8 @@ export function avviaInvioEmail(): void {
 ```
 
 
-- [ ] **Step 4:** stesso comando → atteso **2 file, 9 test verdi**; `npm run typecheck`; `npm run lint`.
-- [ ] **Step 5: commit** — `git add src/domain/email-ordini.ts src/domain/email-ordini.test.ts src/casa/resend.ts src/casa/email-repo.ts src/casa/coda-email.ts src/casa/coda-email.test.ts src/casa/avvia-email.ts tests/db/casa-pronta.ts && git commit -m "Email ai clienti: testi, coda con nuovi tentativi e invio con Resend"`
+- [x] **Step 4:** stesso comando → atteso **2 file, 9 test verdi**; `npm run typecheck`; `npm run lint`.
+- [x] **Step 5: commit** — `git add src/domain/email-ordini.ts src/domain/email-ordini.test.ts src/casa/resend.ts src/casa/email-repo.ts src/casa/coda-email.ts src/casa/coda-email.test.ts src/casa/avvia-email.ts tests/db/casa-pronta.ts && git commit -m "Email ai clienti: testi, coda con nuovi tentativi e invio con Resend"`
 
 ---
 
@@ -3017,7 +3017,7 @@ export function avviaInvioEmail(): void {
 - `CHIAVE_CARRELLO_CASA`, `CHIAVE_ULTIMO_ORDINE`, `leggiUltimoOrdine(testo,adesso)`;
 - `StatoOrdine`, `ordineConcluso(stato)`.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Crea** `src/ordinare/archivio-casa.test.ts` con:
 
@@ -3115,8 +3115,8 @@ it('checkout: servizio chiuso con motivo, orari in ora di Roma, conferma bloccat
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/ordinare/archivio-casa.test.ts "src/app/(cliente)"` → atteso **FAIL**.
-- [ ] **Step 3: codice**
+- [x] **Step 2:** `npx vitest run src/ordinare/archivio-casa.test.ts "src/app/(cliente)"` → atteso **FAIL**.
+- [x] **Step 3: codice**
 
 **Crea** `src/ordinare/archivio-casa.ts` con:
 
@@ -3634,8 +3634,8 @@ export default function Privacy() {
 ```
 
 
-- [ ] **Step 4:** stesso comando → atteso **3 file, 8 test verdi**; `npm run typecheck`; `npm run lint`.
-- [ ] **Step 5: commit** — `git add -A "src/app/(cliente)" src/ordinare src/casa/disponibilita.ts && git commit -m "Cliente da casa: menù ordinabile, checkout, pagina dello stato e informativa privacy"`
+- [x] **Step 4:** stesso comando → atteso **3 file, 8 test verdi**; `npm run typecheck`; `npm run lint`.
+- [x] **Step 5: commit** — `git add -A "src/app/(cliente)" src/ordinare src/casa/disponibilita.ts && git commit -m "Cliente da casa: menù ordinabile, checkout, pagina dello stato e informativa privacy"`
 
 ---
 
@@ -3651,7 +3651,7 @@ Le azioni dello staff non chiamano `after()`: ogni azione fa `router.refresh()`,
 - azioni `apriOrdiniOnline`, `chiudiOrdiniOnline`, `accettaOrdineStaff(id,ritardo)`, `rifiutaOrdineStaff(id,motivo,altro)`, `avanzaOrdineCasaStaff(id,da)`, `annullaOrdineCasaStaff(id)`;
 - `DatiStaff` con `casa` e `ordiniOnline`.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Crea** `src/app/staff/azioni-casa.test.ts` con:
 
@@ -3792,8 +3792,8 @@ it('se il DB non risponde nemmeno per il ruolo resta lo schermo, senza leggere d
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/app/staff` → atteso **FAIL**.
-- [ ] **Step 3: codice**
+- [x] **Step 2:** `npx vitest run src/app/staff` → atteso **FAIL**.
+- [x] **Step 3: codice**
 
 **Crea** `src/app/staff/azioni-casa.ts` con:
 
@@ -4148,8 +4148,8 @@ con
 ```
 
 
-- [ ] **Step 4:** `npx vitest run src/app/staff` → atteso tutto verde (azioni-casa: 4 test, SchermoStaff: 4, page: 4, più quelli già esistenti). Poi `npm run typecheck` e `npm run lint`.
-- [ ] **Step 5: commit** — `git add src/app/staff && git commit -m "Schermo staff: ordini online, da accettare con suono e cucina su tre colonne"`
+- [x] **Step 4:** `npx vitest run src/app/staff` → atteso tutto verde (azioni-casa: 4 test, SchermoStaff: 4, page: 4, più quelli già esistenti). Poi `npm run typecheck` e `npm run lint`.
+- [x] **Step 5: commit** — `git add src/app/staff && git commit -m "Schermo staff: ordini online, da accettare con suono e cucina su tre colonne"`
 
 ---
 
@@ -4159,7 +4159,7 @@ con
 - crea `src/casa/cron.ts` (+test), `src/app/api/cron/anonimizza/route.ts` (+test) e `vercel.json`;
 - modifica `.env.example` e `README.md`.
 
-- [ ] **Step 1: test**
+- [x] **Step 1: test**
 
 **Crea** `src/casa/cron.test.ts` con:
 
@@ -4207,8 +4207,8 @@ it('con il segreto anonimizza e dice quanti ordini; errore del DB → 500', asyn
 ```
 
 
-- [ ] **Step 2:** `npx vitest run src/casa/cron.test.ts src/app/api` → atteso **FAIL**.
-- [ ] **Step 3: codice e configurazione**
+- [x] **Step 2:** `npx vitest run src/casa/cron.test.ts src/app/api` → atteso **FAIL**.
+- [x] **Step 3: codice e configurazione**
 
 **Crea** `src/casa/cron.ts` con:
 
@@ -4405,12 +4405,12 @@ Per la vendita a distanza il Reg. UE 1169/2011, art. 14, impone che le informazi
 ```
 
 
-- [ ] **Step 4:** stesso comando → atteso **2 file, 3 test verdi**.
-- [ ] **Step 5: verifica completa del branch:**
+- [x] **Step 4:** stesso comando → atteso **2 file, 3 test verdi**.
+- [x] **Step 5: verifica completa del branch:**
   - `npm test` → atteso **61 file, 283 test verdi**;
   - `npm run typecheck` e `npm run lint` puliti;
   - `npm run build` **senza `.env.local`**: rinominalo temporaneamente, poi rimettilo. Nell'elenco delle route devono comparire `/ordina`, `/ordine/[token]`, `/privacy` (statica), `/admin/domicilio` e `/api/cron/anonimizza`.
-- [ ] **Step 6: commit** — `git add src/casa/cron.ts src/casa/cron.test.ts src/app/api vercel.json .env.example README.md && git commit -m "Anonimizzazione giornaliera, variabili e documentazione degli ordini da casa"`
+- [x] **Step 6: commit** — `git add src/casa/cron.ts src/casa/cron.test.ts src/app/api vercel.json .env.example README.md && git commit -m "Anonimizzazione giornaliera, variabili e documentazione degli ordini da casa"`
 
 ---
 
@@ -4424,7 +4424,7 @@ Per la vendita a distanza il Reg. UE 1169/2011, art. 14, impone che le informazi
 - L'indirizzo dell'app resta **vuoto** finché l'app non è pubblicata: con la costante vuota i link restano identici a oggi (`#dove`).
 - I tre «Ordina» delle box portano a `/#box`, la categoria Box del menù dell'app.
 
-- [ ] **Step 1: codice**
+- [x] **Step 1: codice**
 
 **Crea** `js/ordini.js` con:
 
@@ -4679,7 +4679,7 @@ con
 ```
 
 
-- [ ] **Step 2: prova nel browser.**
+- [x] **Step 2: prova nel browser.**
   - Servi la cartella con un server statico qualsiasi; il protocollo `file://` va bene solo se il browser esegue gli script.
   - Con `URL_ORDINI = ''`, in console `[...document.querySelectorAll('a[data-ordina]')].map(a => a.getAttribute('href'))` → in `index.html` cinque volte `"#dove"`.
   - Metti **temporaneamente** `URL_ORDINI = 'https://ordini.esempio.it/'` e ricarica:
@@ -4688,7 +4688,7 @@ con
     - il menù del sito funziona ancora;
     - nessun errore in console.
   - **Rimetti `''`** prima del commit.
-- [ ] **Step 3: commit** — `git add js/ordini.js index.html menu.html crediti.html && git commit -m "Bottoni «Ordina» collegati all'app degli ordini (indirizzo in js/ordini.js)"`
+- [x] **Step 3: commit** — `git add js/ordini.js index.html menu.html crediti.html && git commit -m "Bottoni «Ordina» collegati all'app degli ordini (indirizzo in js/ordini.js)"`
 
 ---
 
@@ -4696,10 +4696,10 @@ con
 
 Il progetto Supabase è `daniel-sushi` (ref `rxsywhdznaugfhmsdjsa`) nell'organizzazione free «daniel sushi». Torna nel repo del gestionale, branch `tappa-3-casa`.
 
-- [ ] **Step 1 (sola lettura):** controlla che sul DB reale ci siano esattamente le 3 migrazioni dello «Stato verificato» e nessuna tabella `zone_consegna`.
+- [x] **Step 1 (sola lettura):** controlla che sul DB reale ci siano esattamente le 3 migrazioni dello «Stato verificato» e nessuna tabella `zone_consegna`.
   - Query: `select version,name from supabase_migrations.schema_migrations order by version;` e `select to_regclass('public.zone_consegna');` (atteso `null`).
   - Se trovi altro, **fermati**.
-- [ ] **Step 2: chiedi all'utente:** «Posso applicare al database reale la migrazione `20261013120000_domicilio_asporto.sql`? Aggiunge cinque tabelle e alcune colonne agli ordini, cambia i vincoli di `ordini` mantenendo validi gli ordini esistenti, e la registra nella cronologia delle migrazioni nella stessa transazione.» **Solo col suo sì:**
+- [x] **Step 2: chiedi all'utente:** «Posso applicare al database reale la migrazione `20261013120000_domicilio_asporto.sql`? Aggiunge cinque tabelle e alcune colonne agli ordini, cambia i vincoli di `ordini` mantenendo validi gli ordini esistenti, e la registra nella cronologia delle migrazioni nella stessa transazione.» **Solo col suo sì:**
   - esegui in **una sola** chiamata SQL (MCP Supabase `execute_sql`, o uno script locale che usa `DATABASE_URL` da `.env.local` senza stamparla):
 
     ```sql
@@ -4710,7 +4710,7 @@ Il progetto Supabase è `daniel-sushi` (ref `rxsywhdznaugfhmsdjsa`) nell'organiz
     ```
 
   - Poi **(sola lettura)** ricontrolla la cronologia (4 righe), `select count(*) from ordini` (invariato) e gli advisor di sicurezza. Atteso solo «RLS Enabled No Policy» informativo, più il warning Auth già noto «Leaked Password Protection Disabled».
-- [ ] **Step 3: chiedi all'utente:** «Per la prova nel browser devo, sul database reale:
+- [x] **Step 3: chiedi all'utente:** «Per la prova nel browser devo, sul database reale:
   - impostare telefono, una zona e un turno in `/admin/domicilio`;
   - aprire gli ordini online;
   - creare 2–3 ordini di prova (con `ORDINI_CASA_PROVA=1` in `.env.local`, solo in locale, perché gli allergeni non sono ancora confermati);
@@ -4740,7 +4740,7 @@ Il progetto Supabase è `daniel-sushi` (ref `rxsywhdznaugfhmsdjsa`) nell'organiz
   7. Coda email **(sola lettura)**: `select tipo,tentativi,inviata_il from email_ordini;` → righe presenti, `tentativi = 0` (Resend non configurato).
   8. «Chiudi ordini online» → il menù pubblico dice «Ordini online chiusi in questo momento.».
   9. Le pagine nuove a 375 px: nessuno scroll orizzontale.
-- [ ] **Step 4: pulizia (chiedi prima, mostrando le query):**
+- [x] **Step 4: pulizia (chiedi prima, mostrando le query):**
 
   ```sql
   begin;
@@ -4752,7 +4752,7 @@ Il progetto Supabase è `daniel-sushi` (ref `rxsywhdznaugfhmsdjsa`) nell'organiz
   ```
 
   (le email della coda si cancellano con gli ordini). Togli `ORDINI_CASA_PROVA=1` da `.env.local`. Il telefono resta solo se l'utente lo conferma come numero vero del locale; altrimenti `update impostazioni_casa set telefono = null where id = 1;`.
-- [ ] **Step 5: verbale** — crea `docs/verifiche/2026-10-13-tappa-3.md` con:
+- [x] **Step 5: verbale** — crea `docs/verifiche/2026-10-13-tappa-3.md` con:
   - comandi eseguiti e risultati (file e test);
   - esito dei 9 punti della prova;
   - SQL della migrazione e della pulizia, con i conteggi;
