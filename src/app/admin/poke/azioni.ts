@@ -30,6 +30,6 @@ export async function salvaPoke(stato: StatoPoke, fd: FormData): Promise<StatoPo
     return errore('Salvataggio non riuscito: controlla la connessione e riprova.')
   }
   revalidatePath('/admin/poke')
-  revalidatePath('/tavolo/[slug]','page')
+  revalidatePath('/tavolo/[chiave]','page')
   return { salvato: true, errore: null, valori: null, invii }
 }

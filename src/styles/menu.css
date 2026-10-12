@@ -1,20 +1,30 @@
-.menu-cat { display: flex; flex-direction: column; gap: var(--sp-24); scroll-margin-top: 80px; }
-.menu-cat + .menu-cat { margin-top: var(--sp-40); }
-.menu-cat__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-8) var(--sp-24); }
-.menu-cat__head h2 { font: 400 clamp(40px, 4.6vw, 56px)/1 var(--font-display); letter-spacing: .031em; text-transform: uppercase; color: var(--indaco); }
-.menu-cat__note { font: 500 13px/1.6 var(--font-label); letter-spacing: .2em; text-transform: uppercase; color: var(--arancio-ink); }
-.dishes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); column-gap: var(--sp-56); }
-.dish {
-  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--sp-4) var(--sp-12);
-  padding: var(--sp-16) 0 var(--sp-24); border-bottom: 1px solid var(--filetto); align-items: baseline;
-}
-.dish__num { font: 400 24px/1 var(--font-display); color: var(--arancio-ink); letter-spacing: .03em; font-variant-numeric: tabular-nums; }
-.dish__name { font: 700 18px/1.35 var(--font-body); color: var(--indaco); }
-.dish__price { font: 700 16px/1.35 var(--font-body); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.dish__desc { grid-column: 2 / 4; font-size: 14px; line-height: 1.65; color: var(--inchiostro-tenue); }
-.dish__tags { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: var(--sp-8); padding-top: var(--sp-4); }
-
-.dish__allergeni { grid-column: 2 / 4; margin: 0; font-size: 13px; color: var(--inchiostro-tenue); }
+.menu-cat { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 24px; }
+.menu-cat + .menu-cat { margin-top: 32px; }
+.menu-cat__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+.menu-cat__head h2 { margin: 0; font: 700 1.375rem/1.28 var(--font-body); color: var(--inchiostro); }
+.menu-cat__note { font: 500 .9375rem/1.4 var(--font-body); color: var(--inchiostro-tenue); }
+.dishes { display: grid; grid-template-columns: minmax(0, 1fr); background: var(--bianco); border: 0; border-radius: var(--radius-card); padding-inline: var(--space-5); }
+.dish { display: grid; grid-template-columns: 2.5em minmax(0, 1fr) auto; gap: 8px 12px; padding-block: 20px; border-bottom: var(--hairline) solid var(--filetto); align-items: baseline; min-height: var(--row-ios); }
+.dish:last-child { border-bottom: 0; }
+.dish__num { font: 500 .9375rem/1.4 var(--font-body); color: var(--inchiostro-tenue); font-variant-numeric: tabular-nums; }
+.dish__name { margin: 0; font: 600 1.0625rem/1.3 var(--font-body); color: var(--inchiostro); overflow-wrap: anywhere; }
+.dish__price { font: 600 1rem/1.4 var(--font-body); font-variant-numeric: tabular-nums; }
+.dish__desc { grid-column: 2 / 4; margin: 0; max-width: var(--measure); font-size: 1.0625rem; line-height: 1.45; color: var(--inchiostro-tenue); }
+.dish__tags { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+.dish__allergeni { grid-column: 2 / 4; margin: 0; font-size: .8125rem; line-height: 1.4; color: var(--inchiostro-tenue); }
 .dish--esaurito .dish__num, .dish--esaurito .dish__name, .dish--esaurito .dish__price { color: var(--inchiostro-tenue); }
-.menu-nav { position: sticky; top: 0; z-index: 2; background: var(--carta); padding-block: var(--sp-16); }
-.intestazione { display: flex; align-items: center; gap: var(--sp-16); padding-block: var(--sp-16); }
+/* La navigazione va a capo: evita una barra sticky che copra i contenuti con testo al 200%. */
+.menu-nav { padding-block: 16px 24px; }
+.intestazione { display: flex; align-items: center; gap: 16px; padding-block: 20px; }
+.intestazione img { flex: none; border-radius: 16px; background: #fff; }
+.intestazione p { color: var(--inchiostro-tenue); }
+.intestazione h1 { letter-spacing: -.025em; }
+.menu-nav .ds-cats { gap: var(--space-2); }
+.contenitore:has(> .menu-nav) { padding-bottom: 40px; }
+@media (max-width: 40rem) {
+  .dish { grid-template-columns: 2em minmax(0, 1fr); }
+  .dish__price { grid-column: 2; }
+  .dish__desc, .dish__tags, .dish__allergeni { grid-column: 2; }
+  .tavolo-pagina .dish { grid-template-columns: 2em minmax(0, 1fr); }
+  .tavolo-dish-azioni { grid-column: 2; }
+}

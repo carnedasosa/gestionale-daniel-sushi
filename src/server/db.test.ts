@@ -1,0 +1,23 @@
+import { afterEach, expect, it, vi } from 'vitest'
+const m = vi.hoisted(() => ({ Pool: vi.fn(), query: vi.fn(), on: vi.fn() }))
+vi.mock('pg', () => ({ default: { Pool: m.Pool } }))
+afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); vi.resetAllMocks() })
+it('senza DATABASE_URL la query fallisce con un messaggio chiaro', async () => {
+  vi.stubEnv('DATABASE_URL', '')
+  const { db } = await import('./db')
+  await expect(db.query('select 1')).rejects.toThrow('DATABASE_URL mancante')
+  expect(m.Pool).not.toHaveBeenCalled()
+})
+it('crea un solo pool con le opzioni condivise, ne ascolta gli errori e restituisce le righe', async () => {
+  vi.stubEnv('DATABASE_URL', 'postgres://prova')
+  m.Pool.mockImplementation(function () { return { query: m.query, on: m.on } })
+  m.query.mockResolvedValueOnce({ rows: [{ a: 1 }] }).mockResolvedValueOnce({ rows: [] })
+  const { db } = await import('./db')
+  expect(await db.query('select $1 as a', [1])).toEqual([{ a: 1 }])
+  expect(await db.query('select 2')).toEqual([])
+  expect(m.Pool).toHaveBeenCalledOnce()
+  expect(m.Pool).toHaveBeenCalledWith({ connectionString: 'postgres://prova', max: 5, connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000 })
+  expect(m.on).toHaveBeenCalledWith('error', expect.any(Function))
+  expect(m.query).toHaveBeenNthCalledWith(1, 'select $1 as a', [1])
+  expect(m.query).toHaveBeenNthCalledWith(2, 'select 2', [])
+})

@@ -1,41 +1,42 @@
-/* I token del design system puntano ai font self-hosted di next/font (--ff-*), mantenendo i fallback originali. */
-:root {
-  --font-display: var(--ff-display), "Oswald", "Arial Narrow", sans-serif;
-  --font-label: var(--ff-label), "Futura", "Century Gothic", sans-serif;
-  --font-body: var(--ff-body), system-ui, sans-serif;
-  --font-script: var(--ff-script), "Segoe Print", cursive;
-}
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; }
-body {
-  background: var(--carta);
-  color: var(--inchiostro);
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-}
+html { font-size: 100%; }
+/* Safari exposes the user's Dynamic Type scale through this system font. */
+@supports (font: -apple-system-body) { html { font: -apple-system-body; font-size: calc(1em * 16 / 17); } }
+body { background: var(--carta); color: var(--inchiostro); font: 400 1.0625rem/1.45 var(--font-body); -webkit-font-smoothing: antialiased; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 img { max-width: 100%; height: auto; display: block; }
-.contenitore { width: min(1120px, 100% - 32px); margin-inline: auto; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+button, input, textarea, select { font: inherit; }
+button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+:where(button, a, input, textarea, select, summary):focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.contenitore { width: min(1120px, 100% - 32px); margin-inline: auto; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+h1, h2, h3 { margin-block: 0 16px; }
+p { overflow-wrap: anywhere; }
+.campo { display: grid; gap: 8px; min-width: 0; }
+.campo input:not([type=checkbox]), .campo textarea, .campo select { min-height: var(--tap); min-width: 0; width: 100%; padding: 12px 14px; border: 0; border-radius: var(--radius-input); background: var(--fill-tertiary); color: var(--inchiostro); }
+.campo :is(input, textarea)::placeholder { color: var(--text-secondary); }
+input[type=checkbox], input[type=radio] { width: 24px; height: 24px; flex: none; accent-color: var(--indaco); }
+label:has(input[type=checkbox], input[type=radio]) { min-height: var(--tap); padding-block: 10px; }
+.non-trovata { display: grid; justify-items: start; gap: 16px; padding-block: 56px; }
+.tavolo-connessione { padding: 16px; border-left: 4px solid var(--arancio); background: var(--bianco); overflow-wrap: anywhere; border-radius: 12px; }
+.tavolo-pannello { width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding: 24px; border: 0; border-radius: var(--radius-sheet); background: var(--bg-elevated); color: var(--inchiostro); overscroll-behavior: contain; --bianco: var(--bg-grouped-elevated-secondary); }
+.tavolo-pannello::backdrop { background: var(--scrim); }
+.tavolo-pannello-testa { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.tavolo-pannello-testa h2 { margin: 0; min-width: 0; }
+.pannello-chiudi { flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--fill-tertiary); color: var(--label); cursor: pointer; font-size: 1.5rem; }
+.conferma-azioni { display: flex; flex-wrap: wrap; justify-content: end; gap: 12px; }
+@media (max-width: 480px) { .tavolo-pannello { padding: 20px 16px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
 
-/* Campi di modulo condivisi tra l'accesso e i moduli del gestionale. */
-.campo { display: grid; gap: var(--sp-4); }
-.campo input:not([type=checkbox]), .campo textarea, .campo select {
-  font: inherit; padding: 12px 14px; border: 1px solid var(--inchiostro); border-radius: 8px; background: var(--bianco);
+/* Angoli continui progressivi: fallback circolare nei browser senza corner-shape. */
+.ds-card, .dishes { --r: var(--radius-cell); }
+.tavolo-pannello { --r: var(--radius-sheet); }
+@supports (corner-shape: squircle) {
+  .ds-card, .dishes, .tavolo-pannello { border-radius: calc(var(--r) * 1.528); corner-shape: superellipse(1.4); }
+  .campo :is(input:not([type=checkbox]), textarea, select) { border-radius: calc(var(--radius-input) * 1.528); corner-shape: superellipse(1.4); }
 }
-
-/* Titoli: le classi .display/.heading* vengono dai token; qui solo colore e misure fluide (come nel sito). */
-.display, .heading-lg, .heading, .heading-sm { color: var(--indaco); }
-.display { font-size: clamp(64px, 9vw, 112px); }
-.heading-lg { font-size: clamp(44px, 5.4vw, 64px); }
-
-/* Pagina 404. */
-.non-trovata { display: grid; justify-items: start; gap: var(--sp-16); padding-block: var(--sp-56); }
-
-/* Dialoghi condivisi tra tavolo e staff. */
-.tavolo-pannello { width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 32px); padding: var(--sp-24); border: 1px solid var(--filetto); border-radius: var(--radius-card); background: var(--carta); color: var(--inchiostro); }
-.tavolo-pannello::backdrop { background: var(--inchiostro); opacity: .5; }
-.tavolo-pannello-testa { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-16); }
-.tavolo-pannello h2 { margin: 0; }
-@media (max-width: 480px) { .tavolo-pannello { padding: var(--sp-16); } }
+@media (min-width: 390px) { .contenitore { width: min(var(--container), 100% - 40px); } }
+@media (prefers-contrast: more) {
+  .campo input:not([type=checkbox]), .campo textarea, .campo select { outline: var(--stroke-1) solid var(--label-secondary); outline-offset: -1px; }
+  :where(button, a, input, textarea, select):focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: 2px; }
+}

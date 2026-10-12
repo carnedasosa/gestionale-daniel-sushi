@@ -1,86 +1,61 @@
-/* Daniel's Sushi — token del design system «Carta e indaco».
-   Derivato dal riferimento Pa'lais (riferimenti/palais-DESIGN.md), adattato al locale.
-   Sorgente: tokens.json. Tema unico chiaro: la carta crema è parte dell'identità. */
-
+/* Alias del gestionale sui token Cupertino: una sola fonte per ogni valore. */
 :root {
-  color-scheme: light;
-
-  /* Superfici */
-  --carta: #FBF9F6;          /* fondo pagina: carta crema */
-  --bianco: #FFFFFF;         /* card e pannelli sopra la carta */
-
-  /* Inchiostri */
-  --indaco: #234386;         /* unico colore freddo: titoli, link, nav, bottone pieno, fasce scure */
-  --on-indaco: #FFFFFF;
-  --indaco-scuro: #1B356B;  /* solo stato hover del bottone pieno */
-  --inchiostro: #000000;     /* testo corrente e filetti netti */
-  --inchiostro-tenue: #5C5A55; /* descrizioni e note — 6.5:1 su carta */
-  --filetto: #E2D9CA;        /* separatori sottili delle liste */
-
-  /* Accenti caldi — solo forme organiche, illustrazioni e bordi */
-  --arancio: #ED7328;        /* blob, bordo del bottone secondario, fascia arancio */
-  --arancio-ink: #BC5110;    /* arancio quando è testo — 4.6:1 su carta */
-  --miele: #FFC400;          /* solo blob */
-  --salvia: #A2D3A6;         /* solo blob */
-  --salvia-ink: #3A6640;     /* testo del badge Vegetariano — 6.3:1 su carta */
-  --sabbia: #D2B68C;         /* dettagli decorativi */
-  --cielo: #6AA8DC;          /* illustrazioni a tratto, mai testo */
-
-  --focus: var(--indaco);
-
-  /* Tipografia (Google Fonts, licenza OFL) */
-  --font-display: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;   /* titoli maiuscoli condensati */
-  --font-label: "Jost", "Futura", "Century Gothic", sans-serif;          /* etichette e nav, molto spaziate */
-  --font-body: "DM Sans", system-ui, sans-serif;                          /* testo e interfaccia */
-  --font-script: "Caveat", "Segoe Print", cursive;                        /* solo frasi d'emozione */
-
-  /* Spaziatura: unità 4px */
-  --sp-4: 4px;
-  --sp-8: 8px;
-  --sp-12: 12px;
-  --sp-16: 16px;
-  --sp-24: 24px;
-  --sp-32: 32px;
-  --sp-40: 40px;
-  --sp-48: 48px;
+  color-scheme: light dark;
+  --carta: var(--bg-grouped);
+  --bianco: var(--bg-grouped-secondary);
+  --indaco: var(--accent-text);
+  --on-indaco: var(--on-accent);
+  --indaco-scuro: color-mix(in srgb, var(--accent) 88%, black);
+  --inchiostro: var(--label);
+  --inchiostro-tenue: var(--text-secondary);
+  --filetto: var(--separator);
+  --arancio: var(--orange-a11y);
+  --arancio-ink: var(--orange-a11y);
+  --salvia-ink: var(--green-a11y);
+  --distruttivo: var(--red-a11y);
+  --secondario: var(--fill-tertiary);
+  --vetro: var(--glass);
+  --focus: var(--focus-ring);
+  --font-body: var(--font-text);
+  --font-display: var(--font-title);
+  --font-label: var(--font-text);
+  --font-script: var(--font-text);
+  --sp-4: var(--space-1);
+  --sp-8: var(--space-2);
+  --sp-12: var(--space-3);
+  --sp-16: var(--space-4);
+  --sp-24: var(--space-6);
+  --sp-32: var(--space-8);
+  --sp-40: var(--space-10);
+  --sp-48: var(--space-12);
   --sp-56: 56px;
-  --sp-64: 64px;
+  --sp-64: var(--space-16);
   --sp-80: 80px;
   --sp-128: 128px;
-
-  /* Forma */
-  --radius-card: 8px;
-  --radius-input: 8px;
-  --radius-tag: 16px;
-  --radius-btn: 32px;
-
-  /* Elevazione: solo le card hanno ombra, morbida e asimmetrica */
-  --ombra-card: rgba(0, 0, 0, 0.16) -14px 10px 49px 0px;
-  --ombra-hover: rgba(0, 0, 0, 0.05) 0px 20px 27px 0px;
-
-  /* Layout */
-  --container: 1200px;
+  --radius-card: var(--radius-cell);
+  --radius-input: var(--radius-md);
+  --radius-tag: var(--radius-sm);
+  --radius-btn: var(--radius-capsule);
+  --ombra-card: none;
+  --ombra-hover: var(--shadow-material-edge);
+  --container: 1120px;
   --measure: 60ch;
-  --tap: 44px;
-
-  /* Movimento */
+  --tap: var(--touch-ios);
   --dur-fast: 120ms;
   --dur-base: 200ms;
-  --dur-slow: 420ms;
-  --dur-blob: 900ms;
-  --stagger: 70ms;
-  --ease-out: cubic-bezier(.2, .7, .2, 1);
-  --ease-in-out: cubic-bezier(.45, 0, .25, 1);
+  --dur-slow: 500ms;
+  --ease-out: cubic-bezier(.32, .72, 0, 1);
 }
-
-/* Scala tipografica */
-.display    { font-family: var(--font-display); font-weight: 400; font-size: 88px; line-height: .86; letter-spacing: .03em; text-transform: uppercase; }
-.heading-lg { font-family: var(--font-display); font-weight: 400; font-size: 56px; line-height: .95; letter-spacing: .031em; text-transform: uppercase; }
-.heading    { font-family: var(--font-display); font-weight: 400; font-size: 46px; line-height: 1; letter-spacing: .043em; text-transform: uppercase; }
-.heading-sm { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: .95; letter-spacing: .043em; text-transform: uppercase; }
-.script     { font-family: var(--font-script); font-weight: 600; font-size: 34px; line-height: 1.15; }
-.eyebrow    { font-family: var(--font-label); font-weight: 500; font-size: 13px; line-height: 1.6; letter-spacing: .2em; text-transform: uppercase; }
-.label      { font-family: var(--font-label); font-weight: 500; font-size: 14px; line-height: 1.4; letter-spacing: .12em; text-transform: uppercase; }
-.body       { font-family: var(--font-body); font-weight: 400; font-size: 16px; line-height: 1.6; }
-.body-sm    { font-family: var(--font-body); font-weight: 400; font-size: 14px; line-height: 1.65; }
-.caption    { font-family: var(--font-label); font-weight: 500; font-size: 12px; line-height: 1.6; letter-spacing: .14em; text-transform: uppercase; }
+.display, .heading-lg, .heading, .heading-sm { font-family: var(--font-display); font-weight: 700; color: var(--inchiostro); overflow-wrap: anywhere; letter-spacing: -.015em; text-wrap: balance; }
+.display { font-size: var(--ios-large-title); line-height: 1.206; }
+.heading-lg { font-size: var(--ios-title-1); line-height: 1.214; }
+.heading { font-size: var(--ios-title-2); line-height: 1.273; }
+.heading-sm { font-size: var(--ios-title-3); line-height: 1.25; font-weight: 600; }
+.script { font: 500 var(--ios-title-3)/1.4 var(--font-body); }
+.eyebrow, .label { font: 600 var(--ios-subhead)/1.333 var(--font-label); }
+.body { font: 400 var(--ios-body)/1.294 var(--font-body); }
+.body-sm { font: 400 var(--ios-subhead)/1.333 var(--font-body); }
+.caption { font: 400 var(--ios-footnote)/1.385 var(--font-body); }
+@media print {
+  :root { color-scheme: light; --carta: #fff; --bianco: #fff; --inchiostro: #000; --inchiostro-tenue: #333; --indaco: #1e6ef4; --on-indaco: #fff; --filetto: #aaa; }
+}

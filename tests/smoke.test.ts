@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 
 describe('design system', () => {
-  it('i token del sito sono presenti nell’app', () => {
+  it('applica i token Cupertino attraverso gli alias del gestionale', () => {
     const css = readFileSync('src/styles/ds/tokens.css', 'utf8')
-    expect(css).toContain('--indaco: #234386')
-    expect(css).toContain('--carta: #FBF9F6')
+    const cupertino = readFileSync('src/styles/ds/cupertino.css', 'utf8')
+    expect(css).toContain('--indaco: var(--accent-text)')
+    expect(css).toContain('--carta: var(--bg-grouped)')
+    expect(cupertino).toContain('--accent: #1e6ef4')
+    expect(cupertino).toContain('--bg-grouped: #f2f2f7')
   })
 })

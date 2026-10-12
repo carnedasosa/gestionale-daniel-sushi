@@ -1,112 +1,49 @@
-/* Daniel's Sushi — componenti del design system «Carta e indaco».
-   Tutti i valori vengono da tokens.css. Regole d'uso in ../README.md, movimento in ../motion.md. */
-
+/* Componenti condivisi: superfici raggruppate e controlli HIG. */
 .ds { font-family: var(--font-body); color: var(--inchiostro); background: var(--carta); }
-.ds *, .ds *::before, .ds *::after { box-sizing: border-box; }
-
-/* ===== Bottoni =====
-   Pieno indaco: l'unico bottone pieno, uno per schermata.
-   Outline arancio: azioni secondarie, con freccia. Testo in arancio-ink per la leggibilità. */
 .ds-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-12);
-  min-height: var(--tap); padding: 14px 32px;
-  border-radius: var(--radius-btn); border: 2px solid transparent;
-  font: 500 13px/1.2 var(--font-label); letter-spacing: .12em; text-transform: uppercase;
-  text-decoration: none; cursor: pointer; text-align: center;
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  min-width: var(--tap); min-height: var(--tap); padding: 12px 20px;
+  border-radius: var(--radius-btn); border: 0;
+  font: 600 1.0625rem/1.3 var(--font-body);
+  text-decoration: none; cursor: pointer; text-align: center; overflow-wrap: anywhere;
+  transition: background-color var(--dur-base) ease-out, transform var(--dur-fast) ease-out;
 }
-.ds-btn--primary { background: var(--indaco); color: var(--on-indaco); }
-.ds-btn--secondary { background: transparent; color: var(--arancio-ink); border-color: var(--arancio); }
-.ds-btn--on-indaco { background: transparent; color: var(--on-indaco); border-color: var(--on-indaco); }
-.ds-btn--lg { padding: 20px 40px; }
-.ds-btn svg { width: 16px; height: 16px; flex: none; }
-.ds-btn:focus-visible, .ds-chip:focus-visible, .ds-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
-
-/* Link testuale */
-.ds-link { color: var(--indaco); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-
-/* ===== Etichette ===== */
-.ds-eyebrow { margin: 0; font: 500 13px/1.6 var(--font-label); letter-spacing: .2em; text-transform: uppercase; color: var(--indaco); }
-
-/* ===== Chip delle categorie (tag, raggio 16px) ===== */
-.ds-cats { display: flex; gap: var(--sp-8); overflow-x: auto; scrollbar-width: none; }
-.ds-cats::-webkit-scrollbar { display: none; }
+.ds-btn--primary { background: var(--accent); color: var(--on-accent); }
+.ds-btn--primary:hover { background: var(--indaco-scuro); }
+.ds-btn--secondary { background: var(--fill-tertiary); color: var(--accent-text); }
+.ds-btn--secondary:hover { background: var(--fill-secondary); }
+.ds-btn--destructive { background: var(--fill-quaternary); color: var(--distruttivo); }
+.ds-btn--destructive:hover { background: var(--fill-tertiary); }
+.ds-btn:active:not(:disabled), .ds-chip:active { transform: scale(.98); }
+.ds-btn--on-indaco { background: transparent; color: var(--on-indaco); border-color: currentColor; }
+.ds-btn--lg { padding: 16px 24px; }
+.ds-btn svg { width: 1.25em; height: 1.25em; flex: none; }
+.ds-btn:disabled { cursor: default; opacity: .6; }
+.ds-link { display: inline-flex; align-items: center; min-width: var(--tap); min-height: var(--tap); color: var(--indaco); font-weight: 600; text-underline-offset: 4px; }
+.ds-eyebrow { margin: 0; font: 600 .9375rem/1.4 var(--font-body); color: var(--inchiostro-tenue); }
+.ds-cats { display: flex; flex-wrap: wrap; gap: 12px; }
 .ds-chip {
-  flex: none; min-height: var(--tap); display: inline-flex; align-items: center;
-  padding: 0 var(--sp-16); border-radius: var(--radius-tag);
-  border: 1px solid var(--inchiostro); background: transparent; color: var(--inchiostro);
-  font: 500 13px/1 var(--font-label); letter-spacing: .12em; text-transform: uppercase;
+  min-width: var(--tap); min-height: var(--tap); display: inline-flex; align-items: center; justify-content: center;
+  padding: 10px 16px; border-radius: var(--radius-capsule); border: 0;
+  background: var(--bianco); color: var(--inchiostro); font: 500 .9375rem/1.4 var(--font-body);
   text-decoration: none; cursor: pointer;
 }
-.ds-chip[aria-current="true"] { background: var(--indaco); border-color: var(--indaco); color: var(--on-indaco); }
-
-/* ===== Badge sotto le voci del menù ===== */
-.ds-badge {
-  display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--radius-tag);
-  font: 500 11px/16px var(--font-label); letter-spacing: .14em; text-transform: uppercase;
-  border: 1px solid currentColor;
-}
+.ds-chip[aria-current="true"] { background: var(--accent); color: var(--on-accent); }
+.ds-chip:hover { box-shadow: var(--shadow-material-edge); }
+.ds-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: var(--radius-tag); font: 600 .75rem/1.4 var(--font-body); border: 1px solid currentColor; }
 .ds-badge--spicy { color: var(--arancio-ink); }
 .ds-badge--veg { color: var(--salvia-ink); }
-.ds-badge--new { color: var(--on-indaco); background: var(--indaco); border-color: var(--indaco); }
-
-/* ===== Card bianca sulla carta: raggio 8px, ombra asimmetrica ===== */
-.ds-card { background: var(--bianco); border-radius: var(--radius-card); box-shadow: var(--ombra-card); }
-
-/* ===== Forme organiche (blob) e onde: SVG pieni in un solo colore caldo ===== */
-.ds-blob { display: block; pointer-events: none; }
-.ds-blob--miele { fill: var(--miele); }
-.ds-blob--salvia { fill: var(--salvia); }
-.ds-blob--arancio { fill: var(--arancio); }
-.ds-blob--sabbia { fill: var(--sabbia); }
-.ds-wave { display: block; width: 100%; height: clamp(40px, 6vw, 96px); }
-
-/* ===== Illustrazione a tratto: mai in un riquadro, leggermente ruotata, può uscire dai bordi ===== */
-.ds-illustration { display: block; pointer-events: none; height: auto; }
-
-/* ===== Movimento — regole in ../motion.md ===== */
-.ds-btn, .ds-chip { transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
-.ds-btn:hover { transform: translateY(-1px); }
-.ds-btn--primary:hover { background: var(--indaco-scuro); }
-.ds-btn--secondary:hover { background: var(--arancio); border-color: var(--arancio); color: var(--inchiostro); }
-.ds-btn--on-indaco:hover { background: var(--on-indaco); color: var(--indaco); }
-.ds-chip:hover { background: var(--bianco); }
-.ds-chip[aria-current="true"]:hover { background: var(--indaco); }
-.ds-btn:active, .ds-chip:active { transform: translateY(1px); transition-duration: 60ms; }
-
-.m-press { transition: transform var(--dur-fast) var(--ease-out); }
-.m-press:hover { transform: translateY(-1px); }
-.m-press:active { transform: translateY(1px); transition-duration: 60ms; }
-
-/* Card: si alzano e l'ombra si allarga appena. */
-.m-lift { transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
-.m-lift:hover { transform: translateY(-4px); }
-
-/* Foto in una card: leggero zoom, il contenitore taglia. */
-.m-zoom { overflow: hidden; }
-.m-zoom > img { transition: transform var(--dur-slow) var(--ease-out); }
-.m-zoom:hover > img { transform: scale(1.04); }
-
-/* Il momento d'effetto: i blob dell'hero si allargano dal centro, uno dopo l'altro (style="--i: n"). */
-@keyframes m-blob-in { from { transform: scale(.82) rotate(-6deg); opacity: .4; } to { transform: none; opacity: 1; } }
-.m-blob { transform-box: fill-box; transform-origin: center; animation: m-blob-in var(--dur-blob) var(--ease-out) both; animation-delay: calc(var(--i, 0) * var(--stagger) * 2); }
-
-/* Ingresso al caricamento: occhiello, titolo, frase e bottoni dell'hero. */
-@keyframes m-enter { from { opacity: .35; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-.m-enter { animation: m-enter var(--dur-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * var(--stagger)); }
-
-/* Comparsa allo scroll dove il browser la supporta; altrove la sezione è già lì. */
-@supports (animation-timeline: view()) {
-  .m-reveal { animation: m-enter linear both; animation-timeline: view(); animation-range: entry 0% entry 40%; }
-}
-
-/* Cambio di categoria nel menù: alterna m-swap-a / m-swap-b. */
-@keyframes m-swap-a { from { opacity: .3; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes m-swap-b { from { opacity: .3; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.m-swap-a { animation: m-swap-a var(--dur-base) var(--ease-out); }
-.m-swap-b { animation: m-swap-b var(--dur-base) var(--ease-out); }
-
+.ds-badge--new { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.ds-card { background: var(--bianco); border: 0; border-radius: var(--radius-card); box-shadow: none; }
+/* Le classi di movimento esistenti restano discrete e senza traslazioni. */
+@keyframes m-fade { from { opacity: .5; } to { opacity: 1; } }
+.m-enter, .m-swap-a, .m-swap-b { animation: m-fade var(--dur-base) ease-out; }
 @media (prefers-reduced-motion: reduce) {
-  .ds-btn, .ds-chip, .m-press, .m-lift, .m-zoom > img { transition: none; }
-  .ds-btn:hover, .ds-btn:active, .ds-chip:active, .m-press:hover, .m-press:active, .m-lift:hover, .m-zoom:hover > img { transform: none; }
-  .m-blob, .m-enter, .m-reveal, .m-swap-a, .m-swap-b { animation: none; }
+  .ds-btn, .ds-chip { transition: none; }
+  .ds-btn:active:not(:disabled), .ds-chip:active { transform: none; }
+  .m-enter, .m-swap-a, .m-swap-b { animation: none; }
 }
+
+.ds-btn[aria-busy="true"]::before { content: ''; width: 1em; height: 1em; flex: none; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: ds-attesa 800ms linear infinite; }
+@keyframes ds-attesa { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ds-btn[aria-busy="true"]::before { animation: none; } }

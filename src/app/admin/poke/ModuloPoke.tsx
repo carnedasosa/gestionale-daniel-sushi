@@ -20,6 +20,6 @@ export function ModuloPoke({ config }: { config: PokeConfig }) {
     </fieldset>)}
     {stato.errore && <p role="alert">{stato.errore}</p>}
     {stato.salvato && <p role="status">Salvato.</p>}
-    <button className="ds-btn ds-btn--primary" disabled={inCorso}>{inCorso ? 'Salvataggio…' : 'Salva'}</button>
+    <button className="ds-btn ds-btn--primary" aria-busy={inCorso} disabled={inCorso}>{inCorso ? 'Salvataggio in corso…' : 'Salva'}</button>
   </form>
 }

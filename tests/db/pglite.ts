@@ -15,11 +15,12 @@ const STUB_SUPABASE = `
   $$;
 `
 
-export async function creaDbDiTest(opzioni: { seed?: boolean } = {}): Promise<{ pg: PGlite; db: Db }> {
+export async function creaDbDiTest(opzioni: { seed?: boolean; primaDi?: string } = {}): Promise<{ pg: PGlite; db: Db }> {
   const pg = new PGlite()
   await pg.exec(STUB_SUPABASE)
   const cartella = path.resolve('supabase/migrations')
   for (const file of readdirSync(cartella).filter((f) => f.endsWith('.sql')).sort()) {
+    if (opzioni.primaDi && file >= opzioni.primaDi) break
     await pg.exec(readFileSync(path.join(cartella, file), 'utf8'))
   }
   if (opzioni.seed) await pg.exec(readFileSync('supabase/seed.sql', 'utf8'))

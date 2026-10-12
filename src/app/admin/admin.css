@@ -1,16 +1,16 @@
-.admin__barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-16); padding: var(--sp-16); background: var(--bianco); border-bottom: 1px solid var(--filetto); }
+.admin__barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-16); padding: var(--sp-16); background: var(--material-bar); -webkit-backdrop-filter: var(--backdrop-bar); backdrop-filter: var(--backdrop-bar); border-bottom: var(--hairline) solid var(--filetto); }
 .admin__nav { display: flex; flex-wrap: wrap; gap: var(--sp-16); margin-right: auto; }
 .admin__contenuto { padding-block: var(--sp-24); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-24); }
 .admin-avviso { padding: var(--sp-16); border: 2px solid var(--arancio); border-radius: 8px; background: var(--bianco); }
 .admin-tabella-scroll { position: relative; overflow-x: auto; }
 .admin-tabella-piatti { width: 100%; border-collapse: collapse; background: var(--bianco); }
-.admin-tabella-piatti th, .admin-tabella-piatti td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--filetto); vertical-align: middle; }
+.admin-tabella-piatti th, .admin-tabella-piatti td { text-align: left; padding: 10px 12px; border-bottom: var(--hairline) solid var(--filetto); vertical-align: middle; }
 .admin-tabella-piatti .num { font-variant-numeric: tabular-nums; width: 3.5em; }
 .admin-stato-allergeni--no { color: var(--arancio-ink); font-weight: 700; }
 .admin-griglia-allergeni { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--sp-8); }
 .admin-modulo-piatto { display: grid; gap: var(--sp-16); max-width: 720px; padding: var(--sp-24); }
 .admin-modulo-piatto fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
-.admin-errore-campo { color: var(--arancio-ink); font-size: 14px; margin: 0; }
+.admin-errore-campo { color: var(--distruttivo); font-size: .9375rem; margin: 0; }
 @media (max-width: 640px) { .admin-tabella-piatti .admin-colonna-secondaria { display: none; } }
 .admin-poke-regole { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-8); }
 .admin-poke-regole input { min-width: 0; width: 100%; }
@@ -20,10 +20,10 @@
 .admin-tavolo p, .admin-tavolo h2 { overflow-wrap: anywhere; }
 .admin-tavolo-check { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--tap); }
 .admin-qr-griglia { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--sp-24); }
-.admin-qr-card { display: grid; justify-items: center; text-align: center; padding: var(--sp-24); border: 1px solid var(--filetto); border-radius: var(--radius-card); break-inside: avoid; }
+.admin-qr-card { display: grid; justify-items: center; text-align: center; padding: var(--sp-24); border: var(--hairline) solid var(--filetto); border-radius: var(--radius-card); break-inside: avoid; }
 .admin-qr { width: min(100%,200px); }
 .admin-qr svg { display: block; width: 100%; height: auto; }
-.admin-qr-url { font-size: 12px; overflow-wrap: anywhere; }
+.admin-qr-url { font-size: .8125rem; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .admin-qr-griglia { grid-template-columns: minmax(0,1fr); } }
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
@@ -33,3 +33,18 @@
   .admin-qr-card { height: 134mm; padding: 8mm; break-inside: avoid; border-radius: 0; }
   .admin-qr-card:nth-child(4n) { break-after: page; }
 }
+
+/* Superfici e navigazione HIG, mantenendo tutte le sezioni accessibili. */
+.admin__barra { padding-top: max(16px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+.admin__nav { gap: 12px; }
+.admin__nav .ds-link { padding-inline: 16px; background: var(--fill-tertiary); border-radius: var(--radius-capsule); text-decoration: none; }
+.admin-modulo-piatto { width: 100%; }
+.admin-tabella-scroll { border-radius: var(--radius-cell); background: var(--bianco); }
+.admin-tabella-piatti { border: 0; }
+.admin-tabella-piatti th { color: var(--inchiostro-tenue); font-weight: 600; }
+.admin-tabella-piatti th, .admin-tabella-piatti td { padding: 16px; }
+.admin-griglia-allergeni label { display: flex; align-items: center; gap: 12px; }
+.admin-qr-card { background: #fff; color: #1c1c1e; }
+@media (max-width: 40rem) { .admin-poke-regole { grid-template-columns: minmax(0, 1fr); } .admin-modulo-piatto { padding: 16px; } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .admin__barra { background: var(--bg-elevated); } }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .admin__barra { background: var(--bg-elevated); -webkit-backdrop-filter: none; backdrop-filter: none; } }

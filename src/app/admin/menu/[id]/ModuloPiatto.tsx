@@ -51,7 +51,7 @@ export function ModuloPiatto({ id, valori }: { id: string; valori: InputPiatto }
       </fieldset>
       {stato.erroreGenerale && <p role="alert" className="admin-errore-campo">{stato.erroreGenerale}</p>}
       {stato.salvato && <p role="status">Salvato.</p>}
-      <button className="ds-btn ds-btn--primary" disabled={inCorso}>{inCorso ? 'Salvataggio…' : 'Salva'}</button>
+      <button className="ds-btn ds-btn--primary" aria-busy={inCorso} disabled={inCorso}>{inCorso ? 'Salvataggio in corso…' : 'Salva'}</button>
     </form>
   )
 }
