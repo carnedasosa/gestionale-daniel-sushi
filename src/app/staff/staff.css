@@ -30,3 +30,13 @@
 
 
 @media print { .staff-navigazione, .staff-barra, .staff-conto button, .staff-conto dialog { display: none; } .staff-conto tr { break-inside: avoid; } }
+.staff-colonne--tre { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.staff-ordine--attesa { border: var(--sp-4) solid var(--distruttivo); }
+.staff-online { display: grid; gap: var(--sp-12); padding: var(--sp-24); }
+.staff-online-stato { margin: 0; padding-left: var(--sp-24); }
+.staff-motivi { display: grid; gap: var(--sp-8); border: 0; padding: 0; margin: 0 0 var(--sp-16); min-width: 0; }
+.staff-motivi label { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--tap); }
+.staff-motivi input { accent-color: var(--indaco); }
+.staff-motivi + .campo textarea { min-width: 0; width: 100%; }
+@media (max-width: 64rem) { .staff-colonne--tre { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 50rem) { .staff-colonne--tre { grid-template-columns: minmax(0,1fr); } }
