@@ -89,12 +89,13 @@ export async function sessioneDelTavolo(db: Db, tavoloId: string): Promise<Sessi
   if (!idValido(tavoloId)) return null
   return (await db.query<SessioneAperta>(`select ${SESSIONE} from sessioni_tavolo where tavolo_id=$1 and chiusa_il is null`,[tavoloId]))[0] ?? null
 }
-export async function registraTentativoFallito(db: Db, d: { tavoloId: string; sessioneId: string; dispositivo: string; ip: string }): Promise<void> {
-  if (!idValido(d.tavoloId) || !idValido(d.sessioneId) || !idValido(d.dispositivo) || typeof d.ip !== 'string') return
+// ip è la rete restituita da ipDaHeaders, o null se l'indirizzo non è noto.
+export async function registraTentativoFallito(db: Db, d: { tavoloId: string; sessioneId: string; dispositivo: string; ip: string | null }): Promise<void> {
+  if (!idValido(d.tavoloId) || !idValido(d.sessioneId) || !idValido(d.dispositivo) || (d.ip !== null && typeof d.ip !== 'string')) return
   await db.query('insert into tentativi_codice(tavolo_id,sessione_id,dispositivo,ip) values ($1,$2,$3,$4)',[d.tavoloId,d.sessioneId,d.dispositivo,d.ip])
 }
-export async function contaErrori(db: Db, d: { sessioneId: string; dispositivo: string; ip: string; minuti: number }): Promise<ErroriCodice> {
-  if (!idValido(d.sessioneId) || !idValido(d.dispositivo) || typeof d.ip !== 'string' || !Number.isSafeInteger(d.minuti) || d.minuti<1) return { dispositivo: 0,ip: 0,sessione: 0 }
+export async function contaErrori(db: Db, d: { sessioneId: string; dispositivo: string; ip: string | null; minuti: number }): Promise<ErroriCodice> {
+  if (!idValido(d.sessioneId) || !idValido(d.dispositivo) || (d.ip !== null && typeof d.ip !== 'string') || !Number.isSafeInteger(d.minuti) || d.minuti<1) return { dispositivo: 0,ip: 0,sessione: 0 }
   return (await db.query<ErroriCodice>(`select count(*)::int as sessione,count(*) filter(where dispositivo=$2)::int as dispositivo,count(*) filter(where ip=$3)::int as ip from tentativi_codice where sessione_id=$1 and creato_il>now()-($4*interval '1 minute')`,[d.sessioneId,d.dispositivo,d.ip,d.minuti]))[0]
 }
 export async function sbloccaSessione(db: Db, id: string): Promise<boolean> {

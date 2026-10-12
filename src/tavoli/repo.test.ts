@@ -58,6 +58,17 @@ it('limite end-to-end su repo reale: dispositivo, IP, finestra, sblocco e riaper
   const riaperta = await apriSessione(db,t.id)
   expect(await contaErrori(db,{ sessioneId: riaperta.id,dispositivo,ip,minuti: 10 })).toEqual({ dispositivo: 0,ip: 0,sessione: 0 })
 })
+it('senza indirizzo conta solo dispositivo e sessione; a trenta errori blocca anche chi è nuovo', async () => {
+  const { db } = ambiente
+  const t = await creaTavolo(db, 'B', 'b'), s = await apriSessione(db,t.id)
+  for (let i=0; i<5; i++) await registraTentativoFallito(db,{ tavoloId: t.id,sessioneId: s.id,dispositivo: randomUUID(),ip: null })
+  // Cinque telefoni senza indirizzo non bloccano un sesto telefono senza indirizzo.
+  expect(await contaErrori(db,{ sessioneId: s.id,dispositivo: randomUUID(),ip: null,minuti: 10 })).toEqual({ dispositivo: 0,ip: 0,sessione: 5 })
+  for (let i=0; i<25; i++) await registraTentativoFallito(db,{ tavoloId: t.id,sessioneId: s.id,dispositivo: randomUUID(),ip: `2001:db8:${i}:0::/64` })
+  expect(bloccato(await contaErrori(db,{ sessioneId: s.id,dispositivo: randomUUID(),ip: '2001:db8:ff:0::/64',minuti: 10 }))).toBe(true)
+  await sbloccaSessione(db,s.id)
+  expect(bloccato(await contaErrori(db,{ sessioneId: s.id,dispositivo: randomUUID(),ip: null,minuti: 10 }))).toBe(false)
+})
 it('le nuove tabelle hanno RLS e nessun privilegio API', async () => {
   const { db } = ambiente
   const tabelle = ['tavoli', 'sessioni_tavolo', 'tentativi_codice', 'ordini', 'righe_ordine']

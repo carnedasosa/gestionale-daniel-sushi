@@ -948,7 +948,7 @@ export function ChiusuraConto({ sessioneId,attuale }: { sessioneId: string; attu
 
 **File:** `src/domain/ip-client.ts`, `src/domain/ip-client.test.ts`, `src/domain/limiti-tentativi.ts`, `src/domain/limiti-tentativi.test.ts`, `src/tavoli/repo.ts`, `src/tavoli/repo.test.ts`, `src/app/tavolo/[chiave]/azioni.test.ts`, `src/app/staff/SchermoStaff.tsx`
 
-- [ ] **Step 1: test** — sostituisci **tutto** `src/domain/ip-client.test.ts` con:
+- [x] **Step 1: test** — sostituisci **tutto** `src/domain/ip-client.test.ts` con:
 
 ```ts
 import { expect, it } from 'vitest'
@@ -987,7 +987,7 @@ it('blocca dispositivo o rete a cinque errori e tutti i nuovi accessi a trenta p
 ```
 Esegui `npx vitest run src/domain/ip-client.test.ts src/domain/limiti-tentativi.test.ts` → FAIL.
 
-- [ ] **Step 2: dominio** — sostituisci **tutto** `src/domain/ip-client.ts` con:
+- [x] **Step 2: dominio** — sostituisci **tutto** `src/domain/ip-client.ts` con:
 
 ```ts
 import { isIP } from 'node:net'
@@ -1037,7 +1037,7 @@ export function bloccato(e: ErroriCodice): boolean {
 }
 ```
 
-- [ ] **Step 3: repository** — in `src/tavoli/repo.ts`:
+- [x] **Step 3: repository** — in `src/tavoli/repo.ts`:
 
 prima:
 ```ts
@@ -1062,7 +1062,7 @@ export async function contaErrori(db: Db, d: { sessioneId: string; dispositivo: 
 ```
 La query SQL di `contaErrori` **non cambia**: con `ip` null il filtro `ip=$3` non conta nulla, che è il comportamento voluto. La colonna `tentativi_codice.ip` accetta già null: **nessuna migrazione**.
 
-- [ ] **Step 4: test del repository** — in `src/tavoli/repo.test.ts`, subito dopo la chiusura `})` del test `'limite end-to-end su repo reale: dispositivo, IP, finestra, sblocco e riapertura'`, aggiungi:
+- [x] **Step 4: test del repository** — in `src/tavoli/repo.test.ts`, subito dopo la chiusura `})` del test `'limite end-to-end su repo reale: dispositivo, IP, finestra, sblocco e riapertura'`, aggiungi:
 
 ```ts
 it('senza indirizzo conta solo dispositivo e sessione; a trenta errori blocca anche chi è nuovo', async () => {
@@ -1079,14 +1079,14 @@ it('senza indirizzo conta solo dispositivo e sessione; a trenta errori blocca an
 ```
 (`randomUUID`, `bloccato` e `sbloccaSessione` sono già importati in quel file.)
 
-- [ ] **Step 5: test dell'azione** — in `src/app/tavolo/[chiave]/azioni.test.ts` sostituisci `{ dispositivo: 0, ip: 1, sessione: 30 }` con `{ dispositivo: 0, ip: 0, sessione: 30 }` (il caso ora prova che il tetto vale anche per chi non ha mai sbagliato). `src/app/tavolo/[chiave]/azioni.ts` **non va modificato**: `ipDaHeaders` ora restituisce `string | null` e i tipi del repository lo accettano.
+- [x] **Step 5: test dell'azione** — in `src/app/tavolo/[chiave]/azioni.test.ts` sostituisci `{ dispositivo: 0, ip: 1, sessione: 30 }` con `{ dispositivo: 0, ip: 0, sessione: 30 }` (il caso ora prova che il tetto vale anche per chi non ha mai sbagliato). `src/app/tavolo/[chiave]/azioni.ts` **non va modificato**: `ipDaHeaders` ora restituisce `string | null` e i tipi del repository lo accettano.
 
-- [ ] **Step 6: card staff** — in `src/app/staff/SchermoStaff.tsx`:
+- [x] **Step 6: card staff** — in `src/app/staff/SchermoStaff.tsx`:
   - dopo `import { formatEuro } from '@/domain/soldi'` aggiungi la riga `import { LIMITE_SESSIONE } from '@/domain/limiti-tentativi'`
   - sostituisci `<p>{s.tentativi} tentativi sbagliati</p>` con `<p>{s.tentativi} tentativi sbagliati{s.tentativi >= LIMITE_SESSIONE && ': nessun nuovo telefono può entrare finché non sblocchi'}</p>`
 
-- [ ] **Step 7:** `npx vitest run src/domain src/tavoli/repo.test.ts src/app/tavolo src/app/staff` verde; `npm run typecheck`; `npm run lint`.
-- [ ] **Step 8: commit** — `git add src/domain/ip-client.ts src/domain/ip-client.test.ts src/domain/limiti-tentativi.ts src/domain/limiti-tentativi.test.ts src/tavoli/repo.ts src/tavoli/repo.test.ts "src/app/tavolo/[chiave]/azioni.test.ts" src/app/staff/SchermoStaff.tsx && git commit -m "Tentativi per rete /64, niente IP condiviso «sconosciuto», tetto di sessione per tutti"`
+- [x] **Step 7:** `npx vitest run src/domain src/tavoli/repo.test.ts src/app/tavolo src/app/staff` verde; `npm run typecheck`; `npm run lint`.
+- [x] **Step 8: commit** — `git add src/domain/ip-client.ts src/domain/ip-client.test.ts src/domain/limiti-tentativi.ts src/domain/limiti-tentativi.test.ts src/tavoli/repo.ts src/tavoli/repo.test.ts "src/app/tavolo/[chiave]/azioni.test.ts" src/app/staff/SchermoStaff.tsx && git commit -m "Tentativi per rete /64, niente IP condiviso «sconosciuto», tetto di sessione per tutti"`
 
 ---
 
