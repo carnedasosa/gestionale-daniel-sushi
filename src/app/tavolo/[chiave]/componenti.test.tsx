@@ -3,9 +3,20 @@ import { expect, it, vi } from 'vitest'
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 vi.mock('./azioni', () => ({ inviaOrdine: vi.fn(), entraAlTavolo: vi.fn(), inizializzaDispositivo: vi.fn(), pulisciCookieTavolo: vi.fn() }))
 import { OrdinatoFinora } from './OrdinatoFinora'
-import { CardPiatto } from './MenuOrdinabile'
+import { CardPiatto } from '@/ordinare/CardPiatto'
 import { ModuloCodice } from './ModuloCodice'
-import { Carrello } from './Carrello'
+import { Carrello } from '@/ordinare/Carrello'
+import { ComponiPoke } from '@/ordinare/ComponiPoke'
+it('il composer mostra gli allergeni solo quando sono passati, altrimenti rimanda al personale', () => {
+  const config = { titolo: 'Poke',gruppi: [{ nome: 'Base',voci: ['Riso'],min: 1,max: 1,inclusi: 1 }],prezzoBaseCent: 900,prezzoExtraCent: 100 }
+  expect(renderToStaticMarkup(<ComponiPoke config={config} aggiungi={() => {}} />)).toContain('chiedi al personale')
+  const html = renderToStaticMarkup(<ComponiPoke config={config} aggiungi={() => {}} allergeni={{ Base: { Riso: ['sesamo'] } }} />)
+  expect(html).toContain('Allergeni della tua poke: nessuno dei 14 allergeni'); expect(html).not.toContain('chiedi al personale')
+})
+it('il carrello da casa porta al riepilogo invece di inviare', () => {
+  const html = renderToStaticMarkup(<Carrello righe={[]} modifica={() => {}} nota={() => {}} invia={async () => false} inCorso={false} errore={null} azione="Vai al riepilogo" />)
+  expect(html).toContain('Vai al riepilogo'); expect(html).not.toContain('Invia ordine')
+})
 import type { OrdineClient } from '@/tavoli/ordini-repo'
 import type { Piatto } from '@/menu/repo'
 it('ordini: stato, note, riga barrata e totale senza ordini annullati', () => {

@@ -1,10 +1,10 @@
 'use client'
 import { useState } from 'react'
 import { formatEuro } from '@/domain/soldi'
-import type { RigaCarrello } from '@/domain/carrello'
 import { Pannello } from '@/componenti/Pannello'
-export interface RigaVista extends RigaCarrello { nome: string; prezzoCent: number; daRicomporre?: boolean }
-export function Carrello({ righe,modifica,nota,invia,inCorso,errore }: { righe: RigaVista[]; modifica: (i: number,q: number) => void; nota: (i: number,testo: string) => void; invia: () => Promise<boolean>; inCorso: boolean; errore: string | null }) {
+import type { RigaVista } from './vista-carrello'
+// `azione`: testo del bottone pieno (al tavolo invia, da casa porta al riepilogo).
+export function Carrello({ righe,modifica,nota,invia,inCorso,errore,azione = 'Invia ordine' }: { righe: RigaVista[]; modifica: (i: number,q: number) => void; nota: (i: number,testo: string) => void; invia: () => Promise<boolean>; inCorso: boolean; errore: string | null; azione?: string }) {
   const [aperto,setAperto] = useState(false)
   const totale = righe.reduce((s,r) => s + r.prezzoCent * r.quantita,0)
   const quantita = righe.reduce((s,r) => s + r.quantita,0)
@@ -22,7 +22,7 @@ export function Carrello({ righe,modifica,nota,invia,inCorso,errore }: { righe: 
       </div>)}
       <p>Totale stimato: <strong>{formatEuro(totale)}</strong>{righe.some(r => r.daRicomporre) && ' (senza le poke da ricomporre)'}. Il prezzo viene verificato all’invio.</p>
       {errore && <p role="alert">{errore}</p>}
-      <button type="button" className="ds-btn ds-btn--primary" aria-busy={inCorso} disabled={inCorso || !righe.length || righe.some(r => r.daRicomporre)} onClick={async () => { if (await invia()) setAperto(false) }}>{inCorso ? 'Invio in corso…' : 'Invia ordine'}</button>
+      <button type="button" className="ds-btn ds-btn--primary" aria-busy={inCorso} disabled={inCorso || !righe.length || righe.some(r => r.daRicomporre)} onClick={async () => { if (await invia()) setAperto(false) }}>{inCorso ? 'Invio in corso…' : azione}</button>
     </Pannello>
   </>
 }
