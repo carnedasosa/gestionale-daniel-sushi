@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
+import { CA_SUPABASE_2021 } from './ca-supabase'
 const m = vi.hoisted(() => ({ Pool: vi.fn(), query: vi.fn(), on: vi.fn() }))
 vi.mock('pg', () => ({ default: { Pool: m.Pool } }))
 afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); vi.resetAllMocks() })
@@ -16,8 +17,22 @@ it('crea un solo pool con le opzioni condivise, ne ascolta gli errori e restitui
   expect(await db.query('select $1 as a', [1])).toEqual([{ a: 1 }])
   expect(await db.query('select 2')).toEqual([])
   expect(m.Pool).toHaveBeenCalledOnce()
-  expect(m.Pool).toHaveBeenCalledWith({ connectionString: 'postgres://prova', max: 5, connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000 })
+  expect(m.Pool).toHaveBeenCalledWith({ connectionString: 'postgres://prova', max: 5, connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000,
+    ssl: { ca: CA_SUPABASE_2021, rejectUnauthorized: true } })
   expect(m.on).toHaveBeenCalledWith('error', expect.any(Function))
   expect(m.query).toHaveBeenNthCalledWith(1, 'select $1 as a', [1])
   expect(m.query).toHaveBeenNthCalledWith(2, 'select 2', [])
+})
+it('in locale il pool non usa TLS; un URL con sslmode non crea il pool', async () => {
+  vi.stubEnv('DATABASE_URL', 'postgres://postgres@127.0.0.1:55432/postgres')
+  m.Pool.mockImplementation(function () { return { query: m.query, on: m.on } })
+  m.query.mockResolvedValueOnce({ rows: [] })
+  const { db } = await import('./db')
+  await db.query('select 1')
+  expect(m.Pool).toHaveBeenCalledWith(expect.objectContaining({ ssl: false }))
+  vi.resetModules(); m.Pool.mockClear()
+  vi.stubEnv('DATABASE_URL', 'postgres://u:p@pooler.esempio.it/postgres?sslmode=require')
+  const { db: db2 } = await import('./db')
+  await expect(db2.query('select 1')).rejects.toThrow('sslmode')
+  expect(m.Pool).not.toHaveBeenCalled()
 })
