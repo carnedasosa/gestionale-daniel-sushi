@@ -52,9 +52,9 @@
 
 ### Task 0: Preparazione
 
-- [ ] `git status` deve essere pulito. `git checkout correzioni-tappa-2 && git pull`.
-- [ ] `git log --oneline -1` deve mostrare `51d2749` o un commit successivo dell'utente. Se successivo, controlla con `git diff 51d2749 --stat` che non tocchi i file di questo piano; se li tocca, **fermati** e chiedi all'utente.
-- [ ] `npm ci` e poi `npm test` → atteso: **39 file, 173 test passati**. Se no, fermati.
+- [x] `git status` deve essere pulito. `git checkout correzioni-tappa-2 && git pull`.
+- [x] `git log --oneline -1` deve mostrare `51d2749` o un commit successivo dell'utente. Se successivo, controlla con `git diff 51d2749 --stat` che non tocchi i file di questo piano; se li tocca, **fermati** e chiedi all'utente.
+- [x] `npm ci` e poi `npm test` → atteso: **39 file, 173 test passati**. Se no, fermati.
 
 ---
 
@@ -70,7 +70,7 @@
 
 **Interfacce prodotte:** `adattaPool(pool: () => pg.Pool): Db`, `OPZIONI_POOL`, `db: Db` (invariato per tutto il resto dell'app). Sparisce `adattaSql`.
 
-- [ ] **Step 1: dipendenze**
+- [x] **Step 1: dipendenze**
 
 ```bash
 npm install --save-exact pg@8.23.0
@@ -80,7 +80,7 @@ npm uninstall postgres
 
 Controlla in `package.json`: `"pg": "8.23.0"` in `dependencies`, `"@types/pg": "8.23.0"` in `devDependencies`, nessuna riga `"postgres"`.
 
-- [ ] **Step 2: server Postgres finto per i test** — crea `tests/server/postgres-finto.ts` con esattamente:
+- [x] **Step 2: server Postgres finto per i test** — crea `tests/server/postgres-finto.ts` con esattamente:
 
 ```ts
 import net from 'node:net'
@@ -186,7 +186,7 @@ export async function avviaPostgresFinto(): Promise<PostgresFinto> {
 }
 ```
 
-- [ ] **Step 3: test d'integrazione (prima del codice)** — crea `src/server/db.integrazione.test.ts`:
+- [x] **Step 3: test d'integrazione (prima del codice)** — crea `src/server/db.integrazione.test.ts`:
 
 ```ts
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -248,9 +248,9 @@ it('una connessione inattiva che cade non fa terminare il processo', async () =>
 }, 5000)
 ```
 
-- [ ] **Step 4:** `npx vitest run src/server/db.integrazione.test.ts` → atteso **FAIL** all'import (`adattaPool`/`OPZIONI_POOL` non esistono ancora).
+- [x] **Step 4:** `npx vitest run src/server/db.integrazione.test.ts` → atteso **FAIL** all'import (`adattaPool`/`OPZIONI_POOL` non esistono ancora).
 
-- [ ] **Step 5: adattatore** — sostituisci **tutto** `src/server/db-adapter.ts` con:
+- [x] **Step 5: adattatore** — sostituisci **tutto** `src/server/db-adapter.ts` con:
 
 ```ts
 import type pg from 'pg'
@@ -301,7 +301,7 @@ export function adattaPool(pool: () => pg.Pool): Db {
 }
 ```
 
-- [ ] **Step 6: client dell'app** — sostituisci **tutto** `src/server/db.ts` con:
+- [x] **Step 6: client dell'app** — sostituisci **tutto** `src/server/db.ts` con:
 
 ```ts
 import 'server-only'
@@ -324,7 +324,7 @@ function client(): pg.Pool {
 export const db: Db = adattaPool(client)
 ```
 
-- [ ] **Step 7: test unitario** — sostituisci **tutto** `src/server/db.test.ts` con:
+- [x] **Step 7: test unitario** — sostituisci **tutto** `src/server/db.test.ts` con:
 
 ```ts
 import { afterEach, expect, it, vi } from 'vitest'
@@ -352,7 +352,7 @@ it('crea un solo pool con le opzioni condivise, ne ascolta gli errori e restitui
 })
 ```
 
-- [ ] **Step 8: script** — in `scripts/assegna-ruolo.ts` sostituisci:
+- [x] **Step 8: script** — in `scripts/assegna-ruolo.ts` sostituisci:
 
 ```ts
 import postgres from 'postgres'
@@ -384,7 +384,7 @@ con
 ```
 e infine `    await sql.end()` con `    await pool.end()`.
 
-- [ ] **Step 9:** in `scripts/verifica-poke-postgres.ts` sostituisci:
+- [x] **Step 9:** in `scripts/verifica-poke-postgres.ts` sostituisci:
 
 ```ts
 import postgres from 'postgres'
@@ -423,21 +423,21 @@ con
 ```
 e infine `  await sql.end()` con `  await pool.end()`.
 
-- [ ] **Step 10: verifiche**
+- [x] **Step 10: verifiche**
   - `git grep -n "from 'postgres'\|adattaSql"` → **nessun risultato**.
   - `npx vitest run src/server` → **7 test passati, 0 errori non gestiti** («Unhandled Errors» non deve comparire).
   - `npm test` → **40 file, 177 test passati** (173 − 3 vecchi test di `db.test.ts` + 2 nuovi + 5 d'integrazione).
   - `npm run typecheck`, `npm run lint`, `npm run build` → puliti.
 
-- [ ] **Step 11: documenta** — in `docs/verifiche/correzioni-tappa-2/README.md`, sezione «Supabase reale», sostituisci il paragrafo che inizia con «La prova reale ha rilevato risultati misassociati» con:
+- [x] **Step 11: documenta** — in `docs/verifiche/correzioni-tappa-2/README.md`, sezione «Supabase reale», sostituisci il paragrafo che inizia con «La prova reale ha rilevato risultati misassociati» con:
 
 ```markdown
 La prova reale aveva rilevato risultati misassociati tra letture parallele attraverso il transaction pooler (una query sui conti riceveva colonne di un'altra lettura), con postgres.js che accoda più query sulla stessa connessione. La prima correzione con `reserve()`/`release()` introduceva però un guasto peggiore (revisione PR #3, N1): dopo una caduta della connessione postgres@3.4.9 rimette in uso una connessione morta. Con un server Postgres finto è emerso che anche `sql.begin` lascia inutilizzabile la connessione se cade durante una transazione. Il driver è stato quindi sostituito con `pg` 8.23.0: una query per connessione alla volta, connessioni rotte scartate dal pool, ascoltatori `error` sul pool e sulla connessione in transazione. I test in `src/server/db.integrazione.test.ts` (server finto in `tests/server/postgres-finto.ts`) coprono caduta durante lettura e transazione, rollback, assenza di pipelining e caduta di una connessione inattiva.
 ```
 
-- [ ] **Step 12: (sola lettura) prova sul DB reale** — chiedi all'utente: «Posso eseguire `npx tsx --env-file=.env.local scripts/verifica-poke-postgres.ts`? Crea solo una tabella temporanea dentro una transazione e non modifica dati persistenti.» Solo col suo sì, eseguilo: atteso il messaggio «Poke: round-trip JSON e prezzi verificati con PostgreSQL; nessun dato persistente modificato.»
+- [x] **Step 12: (sola lettura) prova sul DB reale** — chiedi all'utente: «Posso eseguire `npx tsx --env-file=.env.local scripts/verifica-poke-postgres.ts`? Crea solo una tabella temporanea dentro una transazione e non modifica dati persistenti.» Solo col suo sì, eseguilo: atteso il messaggio «Poke: round-trip JSON e prezzi verificati con PostgreSQL; nessun dato persistente modificato.»
 
-- [ ] **Step 13: commit**
+- [x] **Step 13: commit**
 
 ```bash
 git add package.json package-lock.json src/server tests/server scripts/assegna-ruolo.ts scripts/verifica-poke-postgres.ts docs/verifiche/correzioni-tappa-2/README.md
