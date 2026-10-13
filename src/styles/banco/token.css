@@ -1,0 +1,82 @@
+/* Banco — token del gestionale: carta calda, inchiostro, un colore per ogni stato.
+ * Il blocco di stampa sta prima di quello scuro: contrasto.test.ts separa sul primo blocco scuro. */
+:root {
+  color-scheme: light dark;
+  --b-carta: #F3EFE6;
+  --b-foglio: #FFFFFF;
+  --b-campo: #FBF9F4;
+  --b-inchiostro: #1C1B18;
+  --b-su-inchiostro: #F3EFE6;
+  --b-grafite: #5E5A52;
+  --b-filetto: #DCD6C8;
+  --b-filetto-tenue: #EAE5DA;
+  --b-bordo-campo: #CFC8B8;
+  --b-spento: #E9E4D8;
+  --b-barra: #1C1B18;
+  --b-su-barra: #F3EFE6;
+  --b-barra-tenue: #34322D;
+  --b-barra-bordo: #5A574F;
+
+  --b-st-accettare-sfondo: #FCE3D3; --b-st-accettare-testo: #8A2C05; --b-st-accettare-punto: #D9520C;
+  --b-st-preparare-sfondo: #E9E4D8; --b-st-preparare-testo: #1C1B18; --b-st-preparare-punto: #1C1B18;
+  --b-st-preparazione-sfondo: #DCE8FB; --b-st-preparazione-testo: #123F86; --b-st-preparazione-punto: #2B63C9;
+  --b-st-pronto-sfondo: #D9F0DF; --b-st-pronto-testo: #12572A; --b-st-pronto-punto: #1F8A44;
+  --b-st-ritardo-sfondo: #FBDCDA; --b-st-ritardo-testo: #8E1B14; --b-st-ritardo-punto: #C8261B;
+
+  --b-pericolo-testo: #A61E15;
+  --b-pericolo-pieno: #B42318;
+  --b-accettare-pieno: #B4440A;
+  --b-su-pieno: #FFFFFF;
+  --b-nota-sfondo: #FFF1C9;
+  --b-nota-testo: #5C4300;
+  --b-fuoco: #2B63C9;
+
+  --b-r-campo: 10px;
+  --b-r-btn: 12px;
+  --b-r-card: 16px;
+  --b-r-pannello: 24px;
+  --b-tap: 48px;
+  --b-tap-staff: 56px;
+  --b-veloce: 120ms;
+  --b-base: 180ms;
+  --b-contenitore: 1120px;
+}
+@media print {
+  :root {
+    color-scheme: light;
+    --b-carta: #FFFFFF; --b-foglio: #FFFFFF; --b-campo: #FFFFFF; --b-inchiostro: #000000; --b-su-inchiostro: #FFFFFF;
+    --b-grafite: #333333; --b-filetto: #AAAAAA; --b-filetto-tenue: #CCCCCC; --b-bordo-campo: #AAAAAA;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="chiaro"]) {
+    --b-carta: #141310;
+    --b-foglio: #1E1D19;
+    --b-campo: #25231E;
+    --b-inchiostro: #F1ECE1;
+    --b-su-inchiostro: #141310;
+    --b-grafite: #A8A296;
+    --b-filetto: #3A372F;
+    --b-filetto-tenue: #2C2A24;
+    --b-bordo-campo: #4A463D;
+    --b-spento: #2E2B25;
+    --b-barra: #0B0A08;
+    --b-su-barra: #F3EFE6;
+    --b-barra-tenue: #24221D;
+    --b-barra-bordo: #45423A;
+
+    --b-st-accettare-sfondo: #3D2210; --b-st-accettare-testo: #FFB98C; --b-st-accettare-punto: #F07A33;
+    --b-st-preparare-sfondo: #2E2B25; --b-st-preparare-testo: #F1ECE1; --b-st-preparare-punto: #F1ECE1;
+    --b-st-preparazione-sfondo: #14264A; --b-st-preparazione-testo: #A9C6F5; --b-st-preparazione-punto: #5B8BE0;
+    --b-st-pronto-sfondo: #123020; --b-st-pronto-testo: #9EDDB0; --b-st-pronto-punto: #3FB766;
+    --b-st-ritardo-sfondo: #3E1512; --b-st-ritardo-testo: #F5A9A3; --b-st-ritardo-punto: #E5534A;
+
+    --b-pericolo-testo: #F5A9A3;
+    --b-pericolo-pieno: #F07068;
+    --b-accettare-pieno: #F59A5C;
+    --b-su-pieno: #141310;
+    --b-nota-sfondo: #3A2F0A;
+    --b-nota-testo: #F5DC8A;
+    --b-fuoco: #7FA6EC;
+  }
+}

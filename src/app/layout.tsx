@@ -1,8 +1,16 @@
 import type { Metadata, Viewport } from 'next'
+import { Archivo, JetBrains_Mono } from 'next/font/google'
 import '@/styles/ds/cupertino.css'
 import '@/styles/ds/tokens.css'
 import '@/styles/ds/bundle.css'
 import './globals.css'
+import '@/styles/banco/token.css'
+import '@/styles/banco/base.css'
+import '@/styles/banco/componenti.css'
+
+// Caratteri ospitati dal nostro dominio: il browser dei clienti non contatta Google.
+const testo = Archivo({ subsets: ['latin'],variable: '--b-font-testo',display: 'swap' })
+const numeri = JetBrains_Mono({ subsets: ['latin'],weight: ['500','700'],variable: '--b-font-numeri',display: 'swap' })
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -10,8 +18,8 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
   colorScheme: 'light dark',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f2f2f7' },
-    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+    { media: '(prefers-color-scheme: light)', color: '#F3EFE6' },
+    { media: '(prefers-color-scheme: dark)', color: '#141310' },
   ],
 }
 
@@ -22,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it">
+    <html lang="it" className={`${testo.variable} ${numeri.variable}`}>
       <body>{children}</body>
     </html>
   )
