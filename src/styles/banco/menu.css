@@ -1,0 +1,41 @@
+/* Banco — menù dei clienti (casa, tavolo, consultazione). */
+.b-testata-cliente { display: flex; align-items: center; gap: 12px; padding-block: 18px 6px; }
+.b-testata-cliente img { flex: none; width: 44px; height: 44px; object-fit: contain; border-radius: 10px; background: #FFFFFF; }
+.b-testata-cliente__testi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.b-testata-cliente__nome { font-size: 1.0625rem; font-weight: 700; }
+.b-pagina-cliente { display: flex; flex-direction: column; gap: 16px; padding-block: 10px 40px; }
+
+.b-menu-nav { position: relative; margin-inline: -16px; padding: 4px 16px 12px; border-bottom: 1.5px solid var(--b-filetto); }
+.b-menu-sezione { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; scroll-margin-top: 16px; }
+.b-menu-sezione__testa { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+
+.b-piatto { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto; gap: 12px; padding: 16px; align-items: start; }
+.b-piatto__numero { padding-top: 3px; font-size: .8125rem; color: var(--b-grafite); }
+.b-piatto__corpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.b-piatto__nome { font-size: 1.0625rem; font-weight: 700; }
+.b-piatto__desc { font-size: .9375rem; line-height: 1.45; color: var(--b-grafite); max-width: 60ch; }
+.b-piatto__etichette { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
+.b-piatto__allergeni { font-size: .8125rem; line-height: 1.4; color: var(--b-grafite); }
+.b-piatto__prezzo { padding-top: 4px; font-size: 1rem; }
+.b-piatto__azioni { align-self: end; }
+.b-piatto--esaurito .b-piatto__nome { color: var(--b-grafite); text-decoration: line-through; }
+.b-piatto--esaurito .b-piatto__prezzo, .b-piatto--esaurito .b-piatto__numero { color: var(--b-grafite); }
+.b-piatto__aggiungi { font-size: 1.5rem; font-weight: 500; line-height: 1; }
+
+.b-quantita { display: inline-flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: var(--b-inchiostro); color: var(--b-su-inchiostro); }
+.b-quantita .b-num { min-width: 1.4em; text-align: center; font-size: 1rem; }
+.b-quantita__btn { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: inherit; font: 700 1.375rem/1 var(--b-font-testo), system-ui, sans-serif; cursor: pointer; }
+.b-quantita__btn:disabled { opacity: .45; cursor: default; }
+.b-quantita--chiara { background: transparent; color: var(--b-inchiostro); border: 1.5px solid var(--b-inchiostro); padding: 2px; }
+
+.b-poke-card { display: flex; align-items: center; gap: 14px; width: 100%; padding: 18px 16px; border: 2px solid var(--b-inchiostro); border-radius: var(--b-r-card); background: var(--b-foglio); color: var(--b-inchiostro); text-align: left; cursor: pointer; font: inherit; }
+.b-poke-card__icona { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--b-carta); display: flex; align-items: center; justify-content: center; }
+.b-poke-card__icona svg { width: 28px; height: 28px; }
+.b-poke-card__testi { flex-grow: 1; display: flex; flex-direction: column; gap: 3px; font-size: .875rem; }
+.b-poke-card__titolo { font-size: 1.0625rem; font-weight: 800; }
+.b-poke-card__freccia { font-size: 1.375rem; font-weight: 700; }
+
+@media (max-width: 340px) {
+  .b-piatto { grid-template-columns: 1.8em minmax(0, 1fr); }
+  .b-piatto__azioni { grid-column: 2; justify-self: end; }
+}

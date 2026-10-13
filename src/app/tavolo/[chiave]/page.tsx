@@ -12,7 +12,7 @@ import { ordiniDellaSessione } from '@/tavoli/ordini-repo'
 import { AggiornamentoAutomatico } from '@/componenti/AggiornamentoAutomatico'
 import { MenuOrdinabile } from './MenuOrdinabile'
 import { OrdinatoFinora } from './OrdinatoFinora'
-import '@/styles/menu.css'
+import '@/styles/banco/menu.css'
 import './tavolo.css'
 
 export default async function TavoloPage({ params }: { params: Promise<{ chiave: string }> }) {

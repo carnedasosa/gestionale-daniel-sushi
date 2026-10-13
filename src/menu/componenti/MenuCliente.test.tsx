@@ -31,8 +31,9 @@ describe('MenuCliente', () => {
 
   it('piatto esaurito: classe, etichetta testuale e allergeni confermati', () => {
     const a = articolo(html, 'Esaurito con pesce')
-    expect(a).toContain('dish--esaurito')
-    expect(a).toContain('>Esaurito</span>')
+    expect(a).toContain('b-piatto--esaurito')
+    expect(a).toContain('>Esaurito stasera</span>')
+    expect(a).not.toContain('<button')
     expect(a).toContain('Allergeni: Pesce')
   })
 
@@ -40,7 +41,7 @@ describe('MenuCliente', () => {
     const a = articolo(html, 'Disponibile in verifica')
     expect(a).toContain('Allergeni in verifica: chiedi al personale prima di ordinare')
     expect(a).not.toContain('Esaurito')
-    expect(a).not.toContain('dish--esaurito')
+    expect(a).not.toContain('b-piatto--esaurito')
   })
 
   it('piatto disponibile confermato senza allergeni: dichiara l’assenza', () => {
@@ -50,10 +51,14 @@ describe('MenuCliente', () => {
   })
 
   it('mostra il prezzo con spazio non separabile prima di €', () => {
-    expect(html).toContain('10,50\u00a0€')
+    expect(html).toContain('<span class="b-num b-piatto__prezzo">10,50\u00a0€</span>')
+  })
+
+  it('in consultazione non ci sono bottoni per ordinare', () => {
+    expect(html).not.toContain('<button')
   })
 
   it('ha il link del chip verso la categoria', () => {
-    expect(html).toContain('href="#uramaki"')
+    expect(html).toContain('href="#uramaki"'); expect(html).toContain('8 pezzi')
   })
 })

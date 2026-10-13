@@ -12,7 +12,9 @@ export function OrdineInCorso() {
     } catch { /* Senza storage niente link. */ }
   },[])
   if (!ordine) return null
-  return <p className="casa-avviso"><Link className="ds-link" href={`/ordine/${ordine.token}`}>Hai un ordine in corso (n. {ordine.numero}): guarda lo stato</Link></p>
+  return <Link className="b-in-corso" href={`/ordine/${ordine.token}`} aria-label={`Hai un ordine in corso (n. ${ordine.numero}): guarda lo stato`}>
+    <span className="b-in-corso__testo">Il tuo ordine <span className="b-num">n. {ordine.numero}</span></span><span aria-hidden="true">Segui →</span>
+  </Link>
 }
 /** Salva l'ordine come «in corso» in questo browser (anche quando si arriva dal link dell'email). */
 export function RicordaOrdine({ token,numero }: { token: string; numero: number }) {

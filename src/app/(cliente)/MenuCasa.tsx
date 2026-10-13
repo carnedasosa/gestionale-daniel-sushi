@@ -5,7 +5,7 @@ import type { CategoriaConPiatti } from '@/menu/repo'
 import type { PokeConfig } from '@/menu/importa'
 import type { AllergeniVoci } from '@/domain/allergeni-poke'
 import type { SceltePoke } from '@/domain/poke'
-import { formatEuro } from '@/domain/soldi'
+import { CardPoke } from '@/ordinare/CardPoke'
 import { Pannello } from '@/componenti/Pannello'
 import { ComponiPoke } from '@/ordinare/ComponiPoke'
 import { Carrello } from '@/ordinare/Carrello'
@@ -24,9 +24,9 @@ export function MenuCasa({ categorie,poke }: { categorie: CategoriaConPiatti[]; 
   const modificaPiatto = (id: string,q: number) => { setErrore(c.modificaPiatto(id,q)) }
   const aggiungiPoke = (scelte: SceltePoke) => { const e = c.aggiungiPoke(scelte); setErrore(e); if (!e) setPokeAperta(false) }
   return <>
-    {errore && <p role="alert" className="tavolo-avviso">{errore}</p>}
+    {errore && <p role="alert" className="b-avviso b-avviso--ritardo">{errore}</p>}
     <SezioniMenu categorie={categorie} quantita={id => righe.find(r => r.piattoId === id)?.quantita ?? 0} modifica={modificaPiatto}
-      pokeCard={poke && <div className="ds-card tavolo-poke-card"><h3 className="heading-sm">Componi la tua poke</h3><p>Da {formatEuro(poke.config.prezzoBaseCent!)}, con ingredienti a tua scelta.</p><button className="ds-btn ds-btn--secondary" type="button" onClick={() => setPokeAperta(true)}>Componi la tua poke</button></div>} />
+      pokeCard={poke && <CardPoke config={poke.config} apri={() => setPokeAperta(true)} />} />
     {poke && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi poke"><ComponiPoke config={poke.config} allergeni={poke.allergeni} aggiungi={aggiungiPoke} /></Pannello>}
     <Carrello righe={vistaCarrello(righe,piatti,poke?.config ?? null)} modifica={(i,q) => c.modificaRighe(r => q === 0 ? r.filter((_,j) => j !== i) : r.map((v,j) => j === i ? { ...v,quantita: q } : v))}
       nota={(i,nota) => c.modificaRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={async () => { router.push('/ordina'); return true }} inCorso={!c.caricato} errore={null} azione="Vai al riepilogo" />

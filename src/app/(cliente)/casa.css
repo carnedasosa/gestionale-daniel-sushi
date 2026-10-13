@@ -13,3 +13,9 @@
 .casa-stato .heading-sm { margin: 0; }
 .casa-testo { max-width: 720px; }
 @media (max-width: 480px) { .casa-sezione { padding: var(--sp-16); } }
+
+/* Banco — pagina iniziale dei clienti */
+.b-in-corso { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 10px 16px; border-radius: 14px; background: var(--b-inchiostro); color: var(--b-su-inchiostro); text-decoration: none; font-weight: 600; }
+.b-aperti { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--b-foglio); }
+.b-aperti .b-punto { margin-top: 6px; }
+.b-aperti__titolo { font-weight: 700; }
