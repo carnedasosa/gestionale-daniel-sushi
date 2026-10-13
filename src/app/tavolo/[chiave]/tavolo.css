@@ -1,29 +1,19 @@
-.tavolo-pagina { padding-top: var(--sp-16); padding-bottom: calc(12rem + env(safe-area-inset-bottom)); }
-.tavolo-codice { display: grid; gap: var(--sp-16); padding: var(--sp-24); max-width: 480px; }
-.tavolo-codice input { min-width: 0; width: 100%; }
-.tavolo-dish-azioni { grid-column: 2 / 4; padding-top: var(--sp-12); }
-.tavolo-quantita { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-12); }
-.tavolo-quantita .ds-btn { min-width: var(--tap); min-height: var(--tap); padding-inline: var(--sp-16); }
-.tavolo-carrello-barra { position: fixed; bottom: max(var(--space-4), env(safe-area-inset-bottom)); left: max(var(--space-4), env(safe-area-inset-left)); right: max(var(--space-4), env(safe-area-inset-right)); width: min(640px, calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right))); margin-inline: auto; padding: var(--space-2); border: 0; border-radius: var(--radius-capsule); z-index: 3; display: flex; justify-content: center; }
-.tavolo-carrello-barra .ds-btn { width: min(640px, 100%); white-space: normal; }
-.tavolo-carrello-riga { border-bottom: var(--hairline) solid var(--filetto); padding-block: var(--sp-16); display: grid; gap: var(--sp-12); }
-.tavolo-carrello-riga textarea { min-width: 0; width: 100%; }
-.tavolo-poke { display: grid; gap: var(--sp-16); }
-.tavolo-poke fieldset { min-width: 0; border: 0; padding: var(--space-4); background: var(--bg-grouped-elevated-secondary); border-radius: var(--radius-lg); }
-.tavolo-scelta { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--tap); }
-.tavolo-scelta input { accent-color: var(--indaco); }
-.tavolo-poke-card, .tavolo-ordine { padding: var(--sp-24); }
-.tavolo-ordinato { margin-top: var(--sp-48); display: grid; gap: var(--sp-16); }
-.tavolo-righe { padding-left: var(--sp-24); display: grid; gap: var(--sp-16); }
-.tavolo-nota, .tavolo-avviso { border-left: var(--sp-4) solid var(--arancio); padding-left: var(--sp-12); overflow-wrap: anywhere; }
-.tavolo-pagina h1, .tavolo-pagina h3, .tavolo-righe li { overflow-wrap: anywhere; }
-@media (max-width: 480px) { .tavolo-pannello { padding: var(--sp-16); } .tavolo-pagina .dish { grid-template-columns: 24px minmax(0, 1fr) auto; } }
-
-.tavolo-carrello-barra { background: var(--glass); -webkit-backdrop-filter: var(--backdrop-glass); backdrop-filter: var(--backdrop-glass); box-shadow: var(--shadow-glass-rim); }
-.tavolo-carrello-barra .ds-btn { background: var(--accent); color: var(--on-accent); }
-.tavolo-pannello textarea { color: var(--inchiostro); background: var(--fill-tertiary); min-height: 88px; padding: 12px; border: 0; border-radius: var(--radius-input); }
-/* Lo stato resta nel flusso: leggibile senza coprire menu e carrello. */
-.tavolo-avviso { margin-block: 16px; padding: 16px; background: var(--bianco); border-radius: var(--radius-card); }
-@media (max-width: 40rem) { .tavolo-pagina .dish { grid-template-columns: 2em minmax(0, 1fr); } .tavolo-dish-azioni { grid-column: 2; } }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .tavolo-carrello-barra { background: var(--bg-elevated); } }
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .tavolo-carrello-barra { background: var(--bg-elevated); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+/* Banco — pagine del tavolo */
+.b-tavolo { display: flex; flex-direction: column; gap: 16px; padding-block: 18px 32px; }
+.b-tavolo--fuori { max-width: 480px; min-height: 100dvh; gap: 28px; }
+.b-tavolo__logo { display: flex; align-items: center; gap: 12px; font-weight: 700; }
+.b-tavolo__logo img { flex: none; object-fit: contain; border-radius: 12px; background: #FFFFFF; }
+.b-tavolo__benvenuto { display: flex; flex-direction: column; gap: 4px; padding-top: 24px; }
+.b-tavolo__nome { font-size: clamp(2.75rem, 2rem + 4vw, 4rem); font-weight: 800; letter-spacing: -.03em; line-height: .95; }
+.b-tavolo__testa { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; border-bottom: 1.5px solid var(--b-filetto); }
+.b-tavolo__schede { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.b-tavolo__schede .b-scheda { background: var(--b-foglio); }
+.b-tavolo__schede .b-badge { background: var(--b-inchiostro); color: var(--b-su-inchiostro); }
+.b-tavolo__menu { display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 12px; }
+.b-codice { display: flex; flex-direction: column; gap: 14px; }
+.b-codice__istruzione { font-size: 1.125rem; line-height: 1.45; }
+.b-codice .b-campo .b-codice__input:not([type=checkbox]) { min-height: 76px; text-align: center; font: 700 2.25rem/1 var(--b-font-numeri), monospace; letter-spacing: .5em; padding-left: .5em; border-width: 2px; border-color: var(--b-inchiostro); background: var(--b-foglio); }
+.b-ordinato { display: flex; flex-direction: column; gap: 12px; padding-top: 24px; scroll-margin-top: 12px; }
+.b-ordinato__testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.b-ordinato__totale { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 18px; border-radius: var(--b-r-card); background: var(--b-inchiostro); color: var(--b-su-inchiostro); }
+.b-ordinato__totale .b-num { font-size: 1.625rem; }

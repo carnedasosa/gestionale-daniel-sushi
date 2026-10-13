@@ -24,3 +24,8 @@ it('conferma: il bottone che apre ha lo stile scelto, la conferma è sempre pien
   const html = renderToStaticMarkup(<ConfermaAzione inCorso={false} domanda="Annullare?" conferma={() => {}} stile="discreto">Annulla</ConfermaAzione>)
   expect(html).toMatch(/<button[^>]*b-btn--discreto[^>]*>Annulla<\/button>/); expect(html).toMatch(/<button[^>]*b-btn--pieno-pericolo[^>]*>Annulla<\/button>/); expect(html).toContain('Conferma')
 })
+it('righe: il numero del piatto si vede in cucina, non al cliente', () => {
+  const righe = [{ id: 'a',numero: 26,nome: 'Salmone roll',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: false }]
+  expect(renderToStaticMarkup(<DettaglioRighe area="staff" righe={righe} />)).toContain('26 ')
+  expect(renderToStaticMarkup(<DettaglioRighe area="tavolo" righe={righe} />)).not.toContain('26 ')
+})

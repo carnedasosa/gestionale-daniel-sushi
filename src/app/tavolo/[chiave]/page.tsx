@@ -27,11 +27,19 @@ export default async function TavoloPage({ params }: { params: Promise<{ chiave:
   const dati = autorizzata && sessione ? await Promise.all([leggiMenu(db),leggiPokeConfig(db),ordiniDellaSessione(db,sessione.id)]) : null
   // Il saluto «tavolo chiuso» non va mostrato se nel frattempo il tavolo è stato riaperto.
   const tavoloAperto = !autorizzata && !!await sessioneDelTavolo(db,tavolo.id)
-  return <main className="contenitore tavolo-pagina">
-    <header className="intestazione"><Image src="/logo.png" alt="Daniel's Sushi" width={64} height={64} priority /><h1 className="heading">{tavolo.nome}</h1></header>
+  if (!dati || !sessione) return <main className="b-contenitore b-tavolo b-tavolo--fuori">
+    <div className="b-tavolo__logo"><Image src="/logo.png" alt="Daniel's Sushi" width={48} height={48} priority /><span>Daniel&apos;s Sushi</span></div>
+    <div className="b-tavolo__benvenuto"><p className="b-num b-secondario">Benvenuti al</p><h1 className="b-tavolo__nome">{tavolo.nome}</h1></div>
+    <ModuloCodice chiave={chiave} pulisci={accesso.pulisci} chiuso={accesso.chiuso} tavoloAperto={tavoloAperto} />
+  </main>
+  const ordini = dati[2].map(o => ({ ...o,creatoIl: o.creatoIl.toISOString() }))
+  return <main className="b-contenitore b-tavolo b-con-barra">
+    <header className="b-tavolo__testa">
+      <div className="b-tavolo__logo"><Image src="/logo.png" alt="Daniel's Sushi" width={40} height={40} priority /><h1 className="b-titolo-2">{tavolo.nome}</h1></div>
+      <nav aria-label="Sezioni del tavolo" className="b-schede b-tavolo__schede"><a className="b-scheda" href="#menu">Menù</a><a className="b-scheda" href="#ordinato">Ordinato <span className="b-badge">{ordini.length}</span></a></nav>
+    </header>
     <AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={new Date().toISOString()} />
-    {dati && sessione ? <><MenuOrdinabile key={sessione.id} categorie={dati[0]} config={dati[1]} sessioneId={sessione.id} chiave={chiave} /><OrdinatoFinora ordini={dati[2].map(o => ({ ...o,creatoIl: o.creatoIl.toISOString() }))} /></> : <>
-      <ModuloCodice chiave={chiave} pulisci={accesso.pulisci} chiuso={accesso.chiuso} tavoloAperto={tavoloAperto} />
-    </>}
+    <div id="menu" className="b-tavolo__menu"><MenuOrdinabile key={sessione.id} categorie={dati[0]} config={dati[1]} sessioneId={sessione.id} chiave={chiave} /></div>
+    <OrdinatoFinora ordini={ordini} />
   </main>
 }

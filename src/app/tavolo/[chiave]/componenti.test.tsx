@@ -22,7 +22,7 @@ import type { Piatto } from '@/menu/repo'
 it('ordini: stato, note, riga barrata e totale senza ordini annullati', () => {
   const o: OrdineClient = { id: 'o', numero: 1, stato: 'in_preparazione', totaleCent: 600, creatoIl: '2026-10-11T18:00:00Z', sessioneId: 's', tavoloNome: 'Uno',tavoloChiuso: false, righe: [{ id: 'r', numero: 1, nome: 'Salmone', prezzoUnitCent: 600, quantita: 1, nota: 'senza sesamo', poke: null, annullata: false }, { id: 'r2', numero: 2, nome: 'Tonno', prezzoUnitCent: 700, quantita: 1, nota: null, poke: null, annullata: true }] }
   const html = renderToStaticMarkup(<OrdinatoFinora ordini={[o,{ ...o,id: 'o2',numero: 2,stato: 'annullato',totaleCent: 600 }]} />)
-  expect(html).toContain('In preparazione'); expect(html).toContain('senza sesamo'); expect(html).toContain('<s>'); expect(html).toContain('annullato'); expect(html).toContain('Totale finora'); expect(html).toContain('6,00\u00a0€'); expect(html).not.toContain('12,00')
+  expect(html).toContain('In preparazione'); expect(html).toContain('senza sesamo'); expect(html).toContain('<s>'); expect(html).toContain('annullato'); expect(html).toContain('Totale del tavolo finora'); expect(html).toContain('Mandato alle'); expect(html).toContain('b-stato--preparazione'); expect(html).toContain('6,00\u00a0€'); expect(html).not.toContain('12,00')
 })
 it('piatto esaurito mostra allergeni e nessun bottone Aggiungi', () => {
   const p: Piatto = { id: 'p', categoriaId: 'x', numero: 1, nome: 'Salmone', descrizione: null, prezzoCent: 600, piccante: false, vegetariano: false, dellaCasa: false, allergeni: ['pesce'], allergeniConfermati: true, disponibile: false, posizione: 0 }
