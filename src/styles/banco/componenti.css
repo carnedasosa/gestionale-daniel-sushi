@@ -81,7 +81,7 @@
 input[type=checkbox], input[type=radio] { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--b-inchiostro); }
 
 /* Scelte a riquadro (radio e checkbox grandi) */
-.b-scelte { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; }
+.b-scelte { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: 10px; }
 .b-scelta {
   display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 14px;
   border: 1.5px solid var(--b-bordo-campo); border-radius: 14px; background: var(--b-foglio); font-size: 1rem; font-weight: 600; cursor: pointer;

@@ -14,11 +14,11 @@ import { useCarrelloSalvato } from '@/ordinare/useCarrelloSalvato'
 import { totaleVista, vistaCarrello } from '@/ordinare/vista-carrello'
 import { CHIAVE_CARRELLO_CASA, CHIAVE_ULTIMO_ORDINE } from '@/ordinare/archivio-casa'
 import { inviaOrdineCasa } from './azioni'
-export interface ServizioCheckout { aperto: boolean; motivo: string | null; fasce: string[] }
+export interface ServizioCheckout { aperto: boolean; motivo: string | null; fasce: string[]; piene: string[] }
 export interface DisponibilitaCheckout { servizi: Record<Servizio,ServizioCheckout>; zone: Zona[] }
 const ERRORE_INCERTO = 'Non siamo sicuri che l’ordine sia arrivato. Riprova: se era già arrivato non verrà duplicato.'
 function Errore({ campo,errori }: { campo: CampoCheckout; errori: ErroriCheckout }) {
-  return errori[campo] ? <p className="casa-errore" id={`errore-${campo}`}>{errori[campo]}</p> : null
+  return errori[campo] ? <p className="b-errore" id={`errore-${campo}`}>{errori[campo]}</p> : null
 }
 export function Checkout({ piatti,poke,disponibilita: d }: { piatti: Piatto[]; poke: PokeConfig | null; disponibilita: DisponibilitaCheckout }) {
   const c = useCarrelloSalvato(CHIAVE_CARRELLO_CASA,'local')
@@ -64,57 +64,71 @@ export function Checkout({ piatti,poke,disponibilita: d }: { piatti: Piatto[]; p
       finally { c.sblocca() }
     })
   }
-  if (inviato) return <p role="status" className="casa-avviso">Ordine inviato: ti portiamo alla pagina dell’ordine…</p>
-  if (c.caricato && !righe.length) return <div className="casa-avviso"><p>Il carrello è vuoto.</p><Link className="ds-link" href="/">Scegli i piatti dal menù</Link></div>
+  if (inviato) return <p role="status" className="b-avviso b-avviso--pronto">Ordine inviato: ti portiamo alla pagina dell’ordine…</p>
+  if (c.caricato && !righe.length) return <div className="b-avviso"><p>Il carrello è vuoto.</p><Link className="b-btn b-btn--secondario" href="/">Scegli i piatti dal menù</Link></div>
   const attesa = inCorso || !c.caricato
-  return <form className="casa-modulo" onSubmit={invia} noValidate>
-    <p><Link className="ds-link" href="/">← Torna al menù per modificare il carrello</Link></p>
-    <fieldset className="ds-card casa-sezione"><legend className="heading-sm">Come vuoi ricevere l’ordine?</legend>
-      {(['asporto','domicilio'] as const).map(s => <label key={s} className="tavolo-scelta"><input type="radio" name="tipo" value={s} checked={tipo === s} disabled={!d.servizi[s].aperto || attesa} onChange={() => setTipo(s)} />
-        {s === 'asporto' ? 'Ritiro al locale (asporto)' : 'Consegna a domicilio'}{!d.servizi[s].aperto && d.servizi[s].motivo && <span className="casa-nota"> · {d.servizi[s].motivo}</span>}</label>)}
+  const orari = [...fasce.map(f => ({ f,piena: false })),...(servizio.aperto ? servizio.piene : []).filter(f => !fasce.includes(f)).map(f => ({ f,piena: true }))].sort((a,b) => a.f.localeCompare(b.f))
+  const quando = tipo === 'domicilio' ? 'Consegna verso le' : 'Ritiro alle'
+  const passo = (n: number) => <span className="b-passo b-num" aria-hidden="true">{n}</span>
+  return <form className="b-checkout" onSubmit={invia} noValidate>
+    <fieldset className="b-card b-checkout__blocco"><legend className="b-checkout__titolo">{passo(1)}Come lo ricevi?</legend>
+      <div className="b-scelte">{(['asporto','domicilio'] as const).map(s => <label key={s} className="b-scelta">
+        <input type="radio" name="tipo" value={s} checked={tipo === s} disabled={!d.servizi[s].aperto || attesa} onChange={() => setTipo(s)} aria-label={s === 'asporto' ? 'Ritiro al locale (asporto)' : 'Consegna a domicilio'} />
+        <span className="b-scelta__testi"><span>{s === 'asporto' ? 'Ritiro al locale' : 'A domicilio'}</span>
+          <span className="b-scelta__sotto">{!d.servizi[s].aperto && d.servizi[s].motivo ? d.servizi[s].motivo : s === 'asporto' ? 'Via Beato Giacomo 72' : 'Paghi alla consegna'}</span></span>
+      </label>)}</div>
       <Errore campo="tipo" errori={errori} />
     </fieldset>
-    {tipo === 'domicilio' && <fieldset className="ds-card casa-sezione"><legend className="heading-sm">Dove lo consegniamo?</legend>
-      <label className="campo">Zona<select value={campi.zonaId} onChange={imposta('zonaId')} disabled={attesa} aria-invalid={!!errori.zonaId}>
+    {tipo === 'domicilio' && <fieldset className="b-card b-checkout__blocco"><legend className="b-checkout__titolo">{passo(2)}Dove lo portiamo?</legend>
+      <label className="b-campo">Zona<select value={campi.zonaId} onChange={imposta('zonaId')} disabled={attesa} aria-invalid={!!errori.zonaId}>
         <option value="">Scegli la zona</option>{d.zone.map(z => <option key={z.id} value={z.id}>{z.nome} · consegna {formatEuro(z.costoCent)} · minimo {formatEuro(z.minimoCent)}</option>)}</select></label>
       <Errore campo="zonaId" errori={errori} />
-      <label className="campo">Indirizzo e numero civico<input value={campi.indirizzo} onChange={imposta('indirizzo')} maxLength={200} autoComplete="street-address" disabled={attesa} aria-invalid={!!errori.indirizzo} /></label>
+      <label className="b-campo">Indirizzo e numero civico<input value={campi.indirizzo} onChange={imposta('indirizzo')} maxLength={200} autoComplete="street-address" disabled={attesa} aria-invalid={!!errori.indirizzo} /></label>
       <Errore campo="indirizzo" errori={errori} />
-      <label className="campo">Citofono, piano, note per il fattorino (facoltativo)<textarea value={campi.noteConsegna} onChange={imposta('noteConsegna')} maxLength={200} rows={2} disabled={attesa} /></label>
+      <label className="b-campo">Citofono, piano, note per il fattorino (facoltativo)<input value={campi.noteConsegna} onChange={imposta('noteConsegna')} maxLength={200} disabled={attesa} placeholder="Citofono Rossi, 2° piano" /></label>
       <Errore campo="noteConsegna" errori={errori} />
     </fieldset>}
-    <fieldset className="ds-card casa-sezione"><legend className="heading-sm">Quando?</legend>
-      {fasce.length ? <label className="campo">{tipo === 'domicilio' ? 'Consegna verso le' : 'Ritiro alle'}<select value={fascia} onChange={imposta('fascia')} disabled={attesa} aria-invalid={!!errori.fascia}>
-        <option value="">Scegli l’orario</option>{fasce.map(f => <option key={f} value={f}>{oraRoma(new Date(f))}</option>)}</select></label> : <p>Nessun orario libero per oggi.</p>}
+    <fieldset className="b-card b-checkout__blocco"><legend className="b-checkout__titolo">{passo(tipo === 'domicilio' ? 3 : 2)}A che ora, circa?</legend>
+      {!fasce.length && <p>Nessun orario libero per oggi.</p>}
+      {orari.length > 0 && <div className="b-orari" role="radiogroup" aria-label={quando} aria-invalid={!!errori.fascia}>{orari.map(({ f,piena }) => <label key={f} className={piena ? 'b-orario b-orario--pieno' : 'b-orario'}>
+        <input type="radio" name="fascia" value={f} checked={fascia === f} disabled={piena || attesa} onChange={imposta('fascia')} />
+        {piena ? <><s>{oraRoma(new Date(f))}</s><span className="b-nascosto"> pieno</span></> : <span className="b-num">{oraRoma(new Date(f))}</span>}
+      </label>)}</div>}
+      {orari.some(o => o.piena) && <p className="b-secondario b-piccolo">Gli orari barrati sono già pieni.</p>}
       <Errore campo="fascia" errori={errori} />
     </fieldset>
-    <fieldset className="ds-card casa-sezione"><legend className="heading-sm">I tuoi dati</legend>
-      <label className="campo">Nome<input value={campi.nome} onChange={imposta('nome')} maxLength={60} autoComplete="name" disabled={attesa} aria-invalid={!!errori.nome} /></label>
+    <fieldset className="b-card b-checkout__blocco"><legend className="b-checkout__titolo">{passo(tipo === 'domicilio' ? 4 : 3)}Chi sei?</legend>
+      <label className="b-campo">Nome<input value={campi.nome} onChange={imposta('nome')} maxLength={60} autoComplete="name" disabled={attesa} aria-invalid={!!errori.nome} /></label>
       <Errore campo="nome" errori={errori} />
-      <label className="campo">Telefono<input type="tel" value={campi.telefono} onChange={imposta('telefono')} maxLength={20} autoComplete="tel" disabled={attesa} aria-invalid={!!errori.telefono} /></label>
+      <label className="b-campo">Telefono<input type="tel" value={campi.telefono} onChange={imposta('telefono')} maxLength={20} autoComplete="tel" disabled={attesa} aria-invalid={!!errori.telefono} /></label>
       <Errore campo="telefono" errori={errori} />
-      <label className="campo">Email (per la conferma)<input type="email" value={campi.email} onChange={imposta('email')} maxLength={254} autoComplete="email" disabled={attesa} aria-invalid={!!errori.email} /></label>
+      <label className="b-campo">Email (per la conferma)<input type="email" value={campi.email} onChange={imposta('email')} maxLength={254} autoComplete="email" disabled={attesa} aria-invalid={!!errori.email} /></label>
       <Errore campo="email" errori={errori} />
     </fieldset>
-    <fieldset className="ds-card casa-sezione"><legend className="heading-sm">Come paghi {tipo === 'domicilio' ? 'alla consegna' : 'al ritiro'}?</legend>
-      <label className="tavolo-scelta"><input type="radio" name="pagamento" value="contanti" checked={campi.pagamento === 'contanti'} disabled={attesa} onChange={imposta('pagamento')} />Contanti</label>
-      <label className="tavolo-scelta"><input type="radio" name="pagamento" value="carta" checked={campi.pagamento === 'carta'} disabled={attesa} onChange={imposta('pagamento')} />Carta (POS)</label>
+    <fieldset className="b-card b-checkout__blocco"><legend className="b-checkout__titolo">{passo(tipo === 'domicilio' ? 5 : 4)}Come paghi {tipo === 'domicilio' ? 'alla consegna' : 'al ritiro'}?</legend>
+      <div className="b-scelte">
+        <label className="b-scelta"><input type="radio" name="pagamento" value="contanti" checked={campi.pagamento === 'contanti'} disabled={attesa} onChange={imposta('pagamento')} />Contanti</label>
+        <label className="b-scelta"><input type="radio" name="pagamento" value="carta" checked={campi.pagamento === 'carta'} disabled={attesa} onChange={imposta('pagamento')} />Carta (POS)</label>
+      </div>
       <Errore campo="pagamento" errori={errori} />
-      {campi.pagamento === 'contanti' && <label className="campo">Paghi con (facoltativo, per il resto)<input inputMode="decimal" value={campi.contantiDa} onChange={imposta('contantiDa')} placeholder="es. 50" disabled={attesa} aria-invalid={!!errori.contantiDa} /></label>}
+      {campi.pagamento === 'contanti' && <label className="b-campo">Paghi con (facoltativo, per il resto)<input inputMode="decimal" value={campi.contantiDa} onChange={imposta('contantiDa')} placeholder="50" disabled={attesa} aria-invalid={!!errori.contantiDa} /></label>}
       <Errore campo="contantiDa" errori={errori} />
     </fieldset>
-    <section className="ds-card casa-sezione" aria-labelledby="riepilogo-titolo"><h2 id="riepilogo-titolo" className="heading-sm">Riepilogo</h2>
-      <ul className="casa-riepilogo">{vista.map((r,i) => <li key={`${r.piattoId}-${i}`}><span>{r.quantita} × {r.nome}{r.nota && <span className="casa-nota"> · {r.nota}</span>}</span><span>{r.daRicomporre ? '—' : formatEuro(r.prezzoCent * r.quantita)}</span></li>)}
-        {tipo === 'domicilio' && zona && <li><span>Consegna · {zona.nome}</span><span>{formatEuro(totali.consegnaCent)}</span></li>}</ul>
-      <p className="casa-totale"><span>Totale</span><strong>{formatEuro(totali.totaleCent)}</strong></p>
-      <p>Paghi {tipo === 'domicilio' ? 'alla consegna' : 'al ritiro'}. Nessun pagamento online.</p>
-      {vista.some(r => r.daRicomporre) && <p role="alert" className="casa-errore">La poke composta non si può ordinare online in questo momento: tornando al menù, rimuovila dal carrello.</p>}
-      {nonDisponibili.length > 0 && <div role="alert"><p className="casa-errore">Alcuni piatti non sono più disponibili.</p><button type="button" className="ds-btn ds-btn--secondary" onClick={togliNonDisponibili}>Togli i piatti non disponibili</button></div>}
-      {totali.mancanteCent > 0 && zona && <p role="alert" className="casa-errore">Mancano {formatEuro(totali.mancanteCent)} per l’ordine minimo di {zona.nome}.</p>}
+    <section className="b-card" aria-labelledby="riepilogo-titolo"><h2 id="riepilogo-titolo" className="b-titolo-3">Il tuo ordine</h2>
+      <div className="b-scontrino">{vista.map((r,i) => <div className="b-scontrino__riga" key={`${r.piattoId}-${i}`}><span><span className="b-num">{r.quantita}×</span> {r.nome}{r.nota && <span className="b-secondario"> · {r.nota}</span>}</span><span className="b-num">{r.daRicomporre ? '—' : formatEuro(r.prezzoCent * r.quantita)}</span></div>)}
+        {tipo === 'domicilio' && zona && <div className="b-scontrino__riga b-secondario"><span>Consegna · {zona.nome}</span><span className="b-num">{formatEuro(totali.consegnaCent)}</span></div>}
+        <div className="b-scontrino__totale"><span>Totale</span><span className="b-num">{formatEuro(totali.totaleCent)}</span></div></div>
+      <p className="b-secondario b-piccolo">Paghi {tipo === 'domicilio' ? 'alla consegna' : 'al ritiro'}. Nessun pagamento online.</p>
+      <Link className="b-btn b-btn--discreto" href="/">Modifica il carrello</Link>
+      {vista.some(r => r.daRicomporre) && <p role="alert" className="b-errore">La poke composta non si può ordinare online in questo momento: tornando al menù, rimuovila dal carrello.</p>}
+      {nonDisponibili.length > 0 && <div role="alert" className="b-avviso b-avviso--ritardo"><p>Alcuni piatti non sono più disponibili.</p><button type="button" className="b-btn b-btn--secondario" onClick={togliNonDisponibili}>Togli i piatti non disponibili</button></div>}
+      {totali.mancanteCent > 0 && zona && <p role="alert" className="b-errore">Mancano {formatEuro(totali.mancanteCent)} per l’ordine minimo di {zona.nome}.</p>}
     </section>
-    <label className="tavolo-scelta"><input type="checkbox" checked={privacy} onChange={e => setPrivacy(e.target.checked)} disabled={attesa} aria-invalid={!!errori.privacy} /><span>Ho letto l’<Link className="ds-link" href="/privacy" target="_blank">informativa privacy</Link></span></label>
+    <label className="b-checkout__privacy"><input type="checkbox" checked={privacy} onChange={e => setPrivacy(e.target.checked)} disabled={attesa} aria-invalid={!!errori.privacy} /><span>Ho letto l’<Link href="/privacy" target="_blank">informativa privacy</Link></span></label>
     <Errore campo="privacy" errori={errori} />
-    {errore && <p role="alert" className="casa-avviso">{errore}</p>}
-    <button className="ds-btn ds-btn--primary" aria-busy={inCorso} disabled={attesa || bloccato}>{inCorso ? 'Invio in corso…' : `Conferma l’ordine · ${formatEuro(totali.totaleCent)}`}</button>
+    {errore && <p role="alert" className="b-avviso b-avviso--ritardo">{errore}</p>}
+    <div className="b-barra-basso"><div className="b-barra-basso__dentro">
+      <button className="b-btn b-btn--principale b-btn--barra" aria-busy={inCorso} disabled={attesa || bloccato} aria-label={inCorso ? undefined : `Conferma l’ordine · ${formatEuro(totali.totaleCent)}`}>{inCorso ? 'Invio in corso…' : <><span>Conferma l’ordine</span><span className="b-num">{formatEuro(totali.totaleCent)}</span></>}</button>
+    </div></div>
   </form>
 }

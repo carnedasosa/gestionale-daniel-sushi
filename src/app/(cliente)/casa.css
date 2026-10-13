@@ -19,3 +19,18 @@
 .b-aperti { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--b-foglio); }
 .b-aperti .b-punto { margin-top: 6px; }
 .b-aperti__titolo { font-weight: 700; }
+
+/* Banco — riepilogo e conferma */
+.b-checkout { display: flex; flex-direction: column; gap: 14px; max-width: 640px; }
+.b-checkout__intro { display: flex; flex-direction: column; gap: 6px; }
+.b-checkout__blocco { gap: 12px; }
+.b-checkout__titolo { display: flex; align-items: center; gap: 10px; float: left; width: 100%; margin-bottom: 4px; font-size: 1.1875rem; font-weight: 800; }
+.b-checkout__titolo + * { clear: both; }
+.b-passo { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--b-inchiostro); color: var(--b-su-inchiostro); font-size: .875rem; }
+.b-orari { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.b-orario { position: relative; display: flex; align-items: center; justify-content: center; min-height: 52px; border: 1.5px solid var(--b-bordo-campo); border-radius: 12px; background: var(--b-foglio); font-family: var(--b-font-numeri), monospace; font-weight: 700; cursor: pointer; }
+.b-orario input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.b-orario:has(input:checked) { background: var(--b-inchiostro); color: var(--b-su-inchiostro); border-color: var(--b-inchiostro); }
+.b-orario:has(input:focus-visible) { outline: 3px solid var(--b-fuoco); outline-offset: 2px; }
+.b-orario--pieno { background: var(--b-spento); border-color: var(--b-spento); color: var(--b-grafite); cursor: default; }
+.b-checkout__privacy { display: flex; align-items: flex-start; gap: 12px; padding: 4px 2px; line-height: 1.45; }

@@ -23,9 +23,15 @@ it('stato: confermato con orario e pagamento, rifiutato con motivo, anonimizzato
   expect(renderToStaticMarkup(<StatoOrdine ordine={{ ...ordine,anonimizzato: true }} telefono={null} ora="2026-10-12T16:05:00.000Z" />)).toContain('Ordine non più disponibile')
   expect(['rifiutato','annullato','completato','in_consegna'].map(ordineConcluso)).toEqual([true,true,true,false])
 })
-it('checkout: servizio chiuso con motivo, orari in ora di Roma, conferma bloccata finché il carrello non è pronto', () => {
+it('checkout: orari liberi e pieni in ordine, i pieni barrati e non selezionabili; servizio chiuso con motivo; conferma bloccata', () => {
   const html = renderToStaticMarkup(<Checkout piatti={[]} poke={null} disponibilita={{ zone: [],servizi: {
-    asporto: { aperto: true,motivo: null,fasce: ['2026-10-12T16:30:00.000Z'] },domicilio: { aperto: false,motivo: 'Consegne a domicilio non disponibili.',fasce: [] } } }} />)
-  expect(html).toContain('Consegne a domicilio non disponibili.'); expect(html).toContain('>18:30</option>'); expect(html).toContain('Ritiro alle')
-  expect(html).toContain('informativa privacy'); expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Conferma l’ordine/)
+    asporto: { aperto: true,motivo: null,fasce: ['2026-10-12T16:30:00.000Z'],piene: ['2026-10-12T16:15:00.000Z'] },domicilio: { aperto: false,motivo: 'Consegne a domicilio non disponibili.',fasce: [],piene: [] } } }} />)
+  expect(html.indexOf('18:15')).toBeLessThan(html.indexOf('18:30')); expect(html).toContain('<s>18:15</s>'); expect(html).toContain('pieno')
+  expect(html).toContain('Ritiro alle'); expect(html).toContain('Consegne a domicilio non disponibili.'); expect(html).toContain('informativa privacy')
+  expect(html).toMatch(/<button[^>]*disabled=""[^>]*>(<span>)?Conferma l’ordine/)
+})
+it('checkout: solo orari pieni', () => {
+  const html = renderToStaticMarkup(<Checkout piatti={[]} poke={null} disponibilita={{ zone: [],servizi: {
+    asporto: { aperto: true,motivo: null,fasce: [],piene: ['2026-10-12T16:15:00.000Z'] },domicilio: { aperto: false,motivo: null,fasce: [],piene: [] } } }} />)
+  expect(html).toContain('Nessun orario libero per oggi'); expect(html).toContain('<s>18:15</s>')
 })
