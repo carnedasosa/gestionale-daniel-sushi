@@ -1,8 +1,8 @@
 import type { RigaOrdine } from '@/tavoli/ordini-repo'
-// `area` resta per chi la passa; l'aspetto delle righe è lo stesso in cucina e al tavolo.
-export function DettaglioRighe({ righe,azioneRiga }: { righe: RigaOrdine[]; area: 'staff' | 'tavolo'; azioneRiga?: (riga: RigaOrdine) => React.ReactNode }) {
+// Stesso aspetto in cucina e per il cliente; il numero del piatto serve solo alla cucina (`area` staff).
+export function DettaglioRighe({ righe,area,azioneRiga }: { righe: RigaOrdine[]; area: 'staff' | 'tavolo'; azioneRiga?: (riga: RigaOrdine) => React.ReactNode }) {
   return <ul className="b-righe">{righe.map(r => {
-    const nome = <>{r.numero !== null && <span className="b-num b-secondario">{r.numero} </span>}{r.nome}</>
+    const nome = <>{area === 'staff' && r.numero !== null && <span className="b-num b-secondario">{r.numero} </span>}{r.nome}</>
     const poke = r.poke ? Object.entries(r.poke).filter(([,v]) => v.length > 0) : []
     return <li key={r.id} className={r.annullata ? 'b-riga b-riga__annullata' : 'b-riga'}>
       <div className="b-riga__testa">

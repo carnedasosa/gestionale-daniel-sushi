@@ -16,7 +16,7 @@ it('stato: in attesa, poi dopo 10 minuti il telefono del locale', () => {
 })
 it('stato: confermato con orario e pagamento, rifiutato con motivo, anonimizzato', () => {
   const ok = renderToStaticMarkup(<StatoOrdine ordine={{ ...ordine,stato: 'accettato' }} telefono={null} ora="2026-10-12T16:05:00.000Z" />)
-  expect(ok).toContain('Confermato'); expect(ok).toContain('Consegna verso le 19:15'); expect(ok).toContain('Via Roma 1 · Bitetto'); expect(ok).toContain('in contanti (con 50,00 €)'); expect(ok).toContain('Consegna: 2,00 €')
+  expect(ok).toContain('Confermato'); expect(ok).toContain('Consegna verso le 19:15'); expect(ok).toContain('Via Roma 1 · Bitetto'); expect(ok).toContain('in contanti (con 50,00 €)'); expect(ok).toContain('<span>Consegna</span><span class="b-num">2,00 €</span>')
   const asporto = renderToStaticMarkup(<StatoOrdine ordine={{ ...ordine,tipo: 'asporto',stato: 'pronto',consegnaCent: 0,indirizzo: null,zonaNome: null,pagamento: 'carta' }} telefono={null} ora="2026-10-12T16:05:00.000Z" />)
   expect(asporto).toContain('Pronto per il ritiro'); expect(asporto).toContain('Ritiro alle 19:15'); expect(asporto).toContain('con carta')
   expect(renderToStaticMarkup(<StatoOrdine ordine={{ ...ordine,stato: 'rifiutato',motivoRifiuto: 'Fascia piena' }} telefono={null} ora="2026-10-12T16:05:00.000Z" />)).toContain('Non possiamo accettare l’ordine: Fascia piena')
@@ -34,4 +34,9 @@ it('checkout: solo orari pieni', () => {
   const html = renderToStaticMarkup(<Checkout piatti={[]} poke={null} disponibilita={{ zone: [],servizi: {
     asporto: { aperto: true,motivo: null,fasce: [],piene: ['2026-10-12T16:15:00.000Z'] },domicilio: { aperto: false,motivo: null,fasce: [],piene: [] } } }} />)
   expect(html).toContain('Nessun orario libero per oggi'); expect(html).toContain('<s>18:15</s>')
+})
+it('stato: cronologia con ora d’arrivo e ora dello stato attuale; niente cronologia se rifiutato', () => {
+  const html = renderToStaticMarkup(<StatoOrdine ordine={{ ...ordine,stato: 'in_preparazione' }} telefono={null} ora="2026-10-12T16:05:00.000Z" />)
+  expect(html).toContain('Ordine ricevuto'); expect(html).toContain('aria-current="step"'); expect(html).toContain('18:00'); expect(html).toContain('18:03'); expect(html).toContain('In consegna')
+  expect(renderToStaticMarkup(<StatoOrdine ordine={{ ...ordine,stato: 'rifiutato',motivoRifiuto: 'Fascia piena' }} telefono={null} ora="2026-10-12T16:05:00.000Z" />)).not.toContain('Ordine ricevuto')
 })
