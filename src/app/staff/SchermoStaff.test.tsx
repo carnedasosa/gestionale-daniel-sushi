@@ -14,7 +14,7 @@ const casa: OrdineCasaClient = { id: 'c',numero: 9,tipo: 'domicilio',stato: 'in_
   righe: [{ id: 'rc',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 3,nota: null,poke: null,annullata: false }] }
 it('evidenzia note e poke, barra annullati e mostra tempo e stato', () => {
   const html = renderToStaticMarkup(<CardOrdine ordine={tavolo} ora="2026-10-11T18:05:00Z" nuovo={true} inCorso={false} leggi={() => {}} esegui={() => {}} />)
-  expect(html).toContain('staff-ordine--nuovo'); expect(html).toContain('senza sesamo'); expect(html).toContain('staff-nota'); expect(html).toContain('Tonno'); expect(html).toContain('<s>'); expect(html).toContain('5 min'); expect(html).toContain('In preparazione')
+  expect(html).toContain('staff-ordine--nuovo'); expect(html).toContain('senza sesamo'); expect(html).toContain('b-nota'); expect(html).toContain('Tonno'); expect(html).toContain('<s>'); expect(html).toContain('5 min'); expect(html).toContain('In preparazione')
 })
 it('senza dati e senza dati precedenti mostra il caricamento invece di smontarsi', async () => {
   const { SchermoStaff } = await import('./SchermoStaff')

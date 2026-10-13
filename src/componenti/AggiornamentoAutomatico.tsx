@@ -40,5 +40,5 @@ export function AggiornamentoAutomatico({ ogniSecondi,ultimoAggiornamento }: { o
     return () => { attivo = false; ferma(); richiesta?.abort(); document.removeEventListener('visibilitychange',riprendi); window.removeEventListener('online',riprendi); window.removeEventListener('offline',errore) }
   },[ogniSecondi,router])
   const data = ultimoAggiornamento ?? stato.ultimoAggiornamento
-  return stato.offline ? <p role="status" className="tavolo-connessione">Connessione assente: i dati potrebbero non essere aggiornati<br />{data ? `Ultimo aggiornamento riuscito alle ${new Date(data).toLocaleTimeString('it-IT',{ timeZone: 'Europe/Rome' })}` : 'Nessun aggiornamento riuscito in questa pagina.'}</p> : null
+  return stato.offline ? <p role="status" className="b-avviso b-avviso--accettare">Connessione assente: i dati potrebbero non essere aggiornati<br />{data ? `Ultimo aggiornamento riuscito alle ${new Date(data).toLocaleTimeString('it-IT',{ timeZone: 'Europe/Rome' })}` : 'Nessun aggiornamento riuscito in questa pagina.'}</p> : null
 }
