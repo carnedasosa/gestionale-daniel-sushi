@@ -20,3 +20,29 @@ Nessuno scostamento nel codice o negli esiti attesi. Adattamenti operativi per P
 `npm ci` ha segnalato la deprecazione della versione ESLint esistente e 5 vulnerabilità di severità alta; nessun aggiornamento di dipendenze effettuato, come richiesto dal piano. Playwright ha emesso avvisi NO_COLOR/FORCE_COLOR senza errori. Il fallimento iniziale del test TLS è riportato da Vitest come `Cannot find module './ca-supabase'`, equivalente al modulo mancante previsto.
 
 ## Parte 2 — pubblicazione e prova in sala
+
+Eseguita da Claude con l'utente il 13/10/2026.
+
+**Task 6 — Progetto e deploy.**
+
+- Progetto Vercel `gestionale-daniel-sushi` (`prj_AAaNc9HP2za8k13lz4ZRQMfc0aBw`) nel team `carnedasosas-projects`, framework Next.js, repo `carnedasosa/gestionale-daniel-sushi`.
+- Vercel Authentication era attiva su tutti i deploy tranne i domini personalizzati (`all_except_custom_domains`): l'app di produzione non sarebbe stata raggiungibile dai clienti. Portata a `preview`: produzione pubblica, anteprime solo per il team.
+- Variabili, tutte e sole in Production:
+  - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` e `APP_URL` = `https://gestionale-daniel-sushi.vercel.app`, impostate da Claude;
+  - `DATABASE_URL` e `CRON_SECRET` «Sensitive», inserite dall'utente.
+  - Nessuna variabile in Preview e Development. `RESEND_API_KEY`, `EMAIL_MITTENTE` e `ORDINI_CASA_PROVA` non impostate.
+- Deploy di produzione da `main` (`7847e17`): build riuscita in circa 30 s, regione `fra1`. Ripubblicato dopo `APP_URL` (`dpl_6XfPJUMfvzQagv3d2B2By9pybojK`).
+
+**Task 7 — Controlli dopo il deploy.**
+
+- `/`, `/accesso`, `/privacy`, `/ordina` → 200; `/stato` → 204; risposte servite da `fra1` (`X-Vercel-Id: fra1::fra1::…`).
+- Menù letto dal DB reale con TLS verificato: 139 piatti. A 375 px nessuno scroll orizzontale (larghezza pagina 375), console senza errori.
+- Ordini da casa chiusi con l'avviso sugli allergeni (0 confermati): comportamento voluto.
+- `GET /api/cron/anonimizza` senza segreto → 401.
+- Login admin dell'utente (password inserita da lui).
+  - `/admin/tavoli/stampa`: i QR puntano a `https://gestionale-daniel-sushi.vercel.app/tavolo/…`. Nel DB ci sono 2 tavoli.
+  - `/staff`: turno avviato, tavoli, cucina e «Ordini online: chiusi» visibili. «Schermo sempre acceso non disponibile» nel browser integrato: da verificare sul tablet.
+- Log delle funzioni nell'ultima ora: nessun errore o avviso (né TLS né `sslmode`).
+- Da fare: esecuzione notturna del cron (03:00 UTC) da controllare nei log il giorno dopo.
+
+**Task 8 — Prova in sala.** Da fare con l'utente e Daniel o lo staff, a locale chiuso.

@@ -966,14 +966,14 @@ E2E_PASSWORD=
   - una sezione «Scostamenti» con tutto ciò che non è andato esattamente come scritto (anche «nessuno»);
   - una sezione vuota `## Parte 2 — pubblicazione e prova in sala`, che compilerà Claude.
 
-- [ ] **Step 5: commit.**
+- [x] **Step 5: commit.**
 
 ```bash
 git add README.md .env.example docs/verifiche/2026-10-13-tappa-4-fase-a.md
 git commit -m "Documentazione: prove end-to-end e pubblicazione su Vercel"
 ```
 
-- [ ] **Step 6: PR, senza merge.**
+- [x] **Step 6: PR, senza merge.**
 
 ```bash
 git push -u origin tappa-4-online
@@ -990,23 +990,23 @@ Parte solo dopo il merge della PR della Parte 1 su `main`. Ogni passo con effett
 
 ### Task 6: Progetto Vercel e primo deploy
 
-- [ ] **Step 1 (Claude, dopo conferma):** crea nel team `carnedasosas-projects` il progetto Vercel collegato al repo `carnedasosa/gestionale-daniel-sushi`, framework Next.js, branch di produzione `main`.
-- [ ] **Step 2 (Claude):** variabili **solo Production**: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (dal progetto Supabase, chiave pubblica), `APP_URL` = `https://<progetto>.vercel.app` (dominio di produzione assegnato da Vercel). Nessuna variabile in Preview e Development.
-- [ ] **Step 3 (utente):** nel progetto Vercel → Settings → Environment Variables, solo Production, «Sensitive» attivo:
+- [x] **Step 1 (Claude, dopo conferma):** crea nel team `carnedasosas-projects` il progetto Vercel collegato al repo `carnedasosa/gestionale-daniel-sushi`, framework Next.js, branch di produzione `main`.
+- [x] **Step 2 (Claude):** variabili **solo Production**: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (dal progetto Supabase, chiave pubblica), `APP_URL` = `https://<progetto>.vercel.app` (dominio di produzione assegnato da Vercel). Nessuna variabile in Preview e Development.
+- [x] **Step 3 (utente):** nel progetto Vercel → Settings → Environment Variables, solo Production, «Sensitive» attivo:
   - `DATABASE_URL`: la stessa riga di `.env.local`, senza `?sslmode`;
   - `CRON_SECRET`: generato con `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"`.
   `RESEND_API_KEY`, `EMAIL_MITTENTE` e `ORDINI_CASA_PROVA` **non** si impostano.
-- [ ] **Step 4 (Claude):** deploy di produzione da `main`. Leggi i log di build: build riuscita, nessun errore.
+- [x] **Step 4 (Claude):** deploy di produzione da `main`. Leggi i log di build: build riuscita, nessun errore.
 
 ### Task 7: Controlli dopo il deploy
 
-- [ ] `/` risponde e il menù è leggibile su telefono (375 px).
-- [ ] Con il DB reale gli ordini da casa risultano **chiusi** (allergeni non confermati): è il comportamento voluto.
-- [ ] Login admin e staff sull'indirizzo `vercel.app`: le password le inserisce l'utente.
-- [ ] Log delle funzioni: regione `fra1`, nessun errore TLS (`self-signed certificate`, `Hostname/IP does not match`) né `sslmode`.
-- [ ] `GET /api/cron/anonimizza` senza segreto → **401**.
+- [x] `/` risponde e il menù è leggibile su telefono (375 px).
+- [x] Con il DB reale gli ordini da casa risultano **chiusi** (allergeni non confermati): è il comportamento voluto.
+- [x] Login admin e staff sull'indirizzo `vercel.app`: le password le inserisce l'utente.
+- [x] Log delle funzioni: regione `fra1`, nessun errore TLS (`self-signed certificate`, `Hostname/IP does not match`) né `sslmode`.
+- [x] `GET /api/cron/anonimizza` senza segreto → **401**.
 - [ ] Il giorno dopo: nei log c'è l'esecuzione del cron delle 03:00 UTC (05:00 di Roma con l'ora legale, 04:00 dal 25/10/2026).
-- [ ] Esiti nella sezione «Parte 2» del verbale `docs/verifiche/2026-10-13-tappa-4-fase-a.md`.
+- [x] Esiti nella sezione «Parte 2» del verbale `docs/verifiche/2026-10-13-tappa-4-fase-a.md`.
 
 ### Task 8: Prova in sala (locale chiuso)
 
