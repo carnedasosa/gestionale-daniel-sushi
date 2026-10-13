@@ -39,3 +39,19 @@
   .b-piatto { grid-template-columns: 1.8em minmax(0, 1fr); }
   .b-piatto__azioni { grid-column: 2; justify-self: end; }
 }
+
+/* Poke da comporre a passi */
+.b-poke { display: flex; flex-direction: column; gap: 14px; }
+.b-poke__passi { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.b-poke__segmento { height: 6px; border-radius: 3px; background: var(--b-bordo-campo); }
+.b-poke__segmento--fatto { background: var(--b-inchiostro); }
+.b-poke__fatti { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.b-poke__fatti li { display: flex; align-items: center; gap: 10px; padding: 4px 4px 4px 14px; border-radius: 12px; background: var(--b-foglio); }
+.b-poke__fatti svg { width: 20px; height: 20px; flex: none; color: var(--b-st-pronto-punto); }
+.b-poke__fatti span { flex-grow: 1; min-width: 0; }
+.b-poke__gruppo { display: flex; flex-direction: column; gap: 10px; }
+.b-poke__contatore { align-self: flex-start; padding: 4px 12px; border-radius: 999px; background: var(--b-inchiostro); color: var(--b-su-inchiostro); font-size: .8125rem; }
+.b-poke__allergeni { padding: 12px 14px; border-radius: 12px; border: 1.5px dashed var(--b-bordo-campo); font-size: .9375rem; }
+.b-poke__piede { position: sticky; bottom: calc(-1 * max(24px, env(safe-area-inset-bottom))); display: flex; align-items: center; gap: 14px; margin-inline: -4px; padding: 12px 4px max(4px, env(safe-area-inset-bottom)); background: var(--b-carta); border-top: 1.5px solid var(--b-filetto); }
+.b-poke__prezzo { display: flex; flex-direction: column; gap: 2px; }
+.b-poke__prezzo .b-num { font-size: 1.25rem; }

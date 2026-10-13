@@ -44,3 +44,15 @@ it('una poke da ricomporre non mostra un prezzo e il totale lo dice', () => {
   const html = renderToStaticMarkup(<Carrello righe={[{ piattoId: null,quantita: 1,nota: '',poke: { Base: ['Riso'] },nome: 'Poke composta',prezzoCent: 0,daRicomporre: true }]} modifica={() => {}} nota={() => {}} invia={async () => false} inCorso={false} errore={null} />)
   expect(html).toContain('Poke composta · —'); expect(html).toContain('senza le poke da ricomporre'); expect(html).not.toContain('Poke composta · 0,00')
 })
+it('poke a passi: un gruppo alla volta, avanti bloccato finché il gruppo non va', () => {
+  const config = { titolo: 'Poke',gruppi: [{ nome: 'Base',voci: ['Riso'],min: 1,max: 1,inclusi: 1 },{ nome: 'Salse',voci: ['Soia'],min: 0,max: 1,inclusi: 1 }],prezzoBaseCent: 900,prezzoExtraCent: 100 }
+  const html = renderToStaticMarkup(<ComponiPoke config={config} aggiungi={() => {}} />)
+  expect(html).toContain('Passo 1 di 2'); expect(html).toContain('Riso'); expect(html).not.toContain('Soia')
+  expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Avanti: Salse/); expect(html).toContain('Scegli almeno 1 in Base')
+  expect(html).not.toContain('Aggiungi al carrello')
+})
+it('poke a passi: l’ultimo passo facoltativo offre «Nessuno» e l’aggiunta al carrello', () => {
+  const config = { titolo: 'Poke',gruppi: [{ nome: 'Salse',voci: ['Soia','Teriyaki'],min: 0,max: 1,inclusi: 1 }],prezzoBaseCent: 900,prezzoExtraCent: 100 }
+  const html = renderToStaticMarkup(<ComponiPoke config={config} aggiungi={() => {}} />)
+  expect(html).toContain('Passo 1 di 1'); expect(html).toContain('Nessuno'); expect(html).toMatch(/<button[^>]*>Aggiungi al carrello/); expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Aggiungi al carrello/)
+})
