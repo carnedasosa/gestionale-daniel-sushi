@@ -16,3 +16,12 @@ it('rifiuta minimi, massimi, scelte inventate, doppioni e gruppi sconosciuti', (
   expect(validaPoke({ ...config, gruppi: [{ ...config.gruppi[1], max: 1 }] }, { Proteine: ['Tonno','Tofu'] })).toEqual({ ok: false, errore: 'Al massimo 1 in Proteine' })
   expect(pokeOrdinabile({ ...config, prezzoBaseCent: null })).toBe(false)
 })
+import { controllaGruppo } from './poke'
+it('controllaGruppo: minimo, massimo e gruppo facoltativo vuoto', () => {
+  const g = { nome: 'Proteine',voci: ['A','B','C'],min: 1,max: 2,inclusi: 1 }
+  expect(controllaGruppo(g,[])).toBe('Scegli almeno 1 in Proteine')
+  expect(controllaGruppo(g,undefined)).toBe('Scegli almeno 1 in Proteine')
+  expect(controllaGruppo(g,['A','B','C'])).toBe('Al massimo 2 in Proteine')
+  expect(controllaGruppo(g,['A'])).toBeNull()
+  expect(controllaGruppo({ ...g,min: 0,max: 1 },[])).toBeNull()
+})

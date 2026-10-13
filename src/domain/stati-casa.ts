@@ -42,3 +42,16 @@ export const MINUTI_ATTESA_LUNGA = 10
 export function attesaLunga(creatoIl: Date | string, adesso: Date): boolean {
   return adesso.getTime() - new Date(creatoIl).getTime() > MINUTI_ATTESA_LUNGA * 60000
 }
+export type Avanzamento = 'fatto' | 'attuale' | 'da_fare'
+export interface Passo { stato: StatoCasa; etichetta: string; avanzamento: Avanzamento }
+const FLUSSO: Record<Servizio,StatoCasa[]> = {
+  domicilio: ['in_attesa','accettato','in_preparazione','pronto','in_consegna','completato'],
+  asporto: ['in_attesa','accettato','in_preparazione','pronto','completato'],
+}
+const ETICHETTA_PASSO: Partial<Record<StatoCasa,string>> = { in_attesa: 'Ordine ricevuto',accettato: 'Confermato dal locale',in_preparazione: 'In preparazione',in_consegna: 'In consegna' }
+/** Passi della cronologia per il cliente; vuota se l'ordine è rifiutato o annullato. */
+export function passiOrdine(tipo: Servizio, stato: StatoCasa): Passo[] {
+  const flusso = FLUSSO[tipo], i = flusso.indexOf(stato)
+  if (i < 0) return []
+  return flusso.map((s,j) => ({ stato: s,etichetta: ETICHETTA_PASSO[s] ?? etichettaClienteCasa(tipo,s),avanzamento: j < i ? 'fatto' : j === i ? 'attuale' : 'da_fare' }))
+}

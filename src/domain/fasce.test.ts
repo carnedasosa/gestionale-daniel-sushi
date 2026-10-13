@@ -35,3 +35,11 @@ it('elenco delle prenotabili con l’occupazione del database', () => {
   expect(ore(fascePrenotabili('asporto',fasce,occupazione,regole,adesso))).toEqual(['19:00','19:15','19:45'])
   expect(ore(fascePrenotabili('domicilio',fasce,occupazione,regole,adesso))).toEqual(['19:00','19:45'])
 })
+import { fascePiene } from './fasce'
+it('fascePiene: solo le fasce dopo l’anticipo scartate per capacità', () => {
+  const adesso = new Date('2026-10-14T17:00:00.000Z'), r = { capacitaFascia: 2,capacitaConsegne: 1,anticipoMinuti: 30 }
+  const f = ['17:15','17:30','17:45','18:00'].map(o => new Date(`2026-10-14T${o}:00.000Z`))
+  const occ = [{ fascia: '2026-10-14T17:15:00.000Z',totale: 2,domicilio: 0 },{ fascia: '2026-10-14T17:30:00.000Z',totale: 2,domicilio: 1 },{ fascia: '2026-10-14T17:45:00.000Z',totale: 1,domicilio: 1 }]
+  expect(fascePiene('asporto',f,occ,r,adesso).map(d => d.toISOString())).toEqual(['2026-10-14T17:30:00.000Z'])
+  expect(fascePiene('domicilio',f,occ,r,adesso).map(d => d.toISOString())).toEqual(['2026-10-14T17:30:00.000Z','2026-10-14T17:45:00.000Z'])
+})

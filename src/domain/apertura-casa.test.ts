@@ -24,3 +24,11 @@ it('la prova salta solo gli allergeni, e mai in produzione', () => {
   expect(modalitaProva({ ORDINI_CASA_PROVA: 'true',NODE_ENV: 'development' })).toBe(false)
   expect(modalitaProva({ NODE_ENV: 'development' })).toBe(false)
 })
+import { requisitiCasa } from './apertura-casa'
+it('requisitiCasa: quattro voci, solo telefono e allergeni bloccano tutto', () => {
+  const r = requisitiCasa({ telefono: null,allergeniCompleti: false,pokeConfermati: false,zoneAttive: 0 })
+  expect(r.map(v => [v.chiave,v.ok,v.blocca])).toEqual([['telefono',false,true],['allergeni',false,true],['poke',false,false],['zone',false,false]])
+  expect(r.find(v => v.chiave === 'allergeni')!.link).toEqual({ href: '/admin/menu?filtro=allergeni',testo: 'Conferma nel menù' })
+  const ok = requisitiCasa({ telefono: '080 123',allergeniCompleti: true,pokeConfermati: null,zoneAttive: 2 })
+  expect(ok.map(v => v.chiave)).toEqual(['telefono','allergeni','zone']); expect(ok.every(v => v.ok && v.link === null)).toBe(true)
+})
