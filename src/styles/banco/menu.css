@@ -55,3 +55,10 @@
 .b-poke__piede { position: sticky; bottom: calc(-1 * max(24px, env(safe-area-inset-bottom))); display: flex; align-items: center; gap: 14px; margin-inline: -4px; padding: 12px 4px max(4px, env(safe-area-inset-bottom)); background: var(--b-carta); border-top: 1.5px solid var(--b-filetto); }
 .b-poke__prezzo { display: flex; flex-direction: column; gap: 2px; }
 .b-poke__prezzo .b-num { font-size: 1.25rem; }
+
+/* Carrello */
+.b-carrello__riga { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.b-carrello__nome { display: flex; justify-content: space-between; gap: 12px; font-size: 1.0625rem; font-weight: 700; }
+.b-carrello__nome .b-num { flex: none; }
+.b-barra-basso__testo { flex-grow: 1; text-align: left; }
+.b-btn--barra.b-btn--largo { justify-content: center; }

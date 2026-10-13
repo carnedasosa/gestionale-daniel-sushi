@@ -42,7 +42,7 @@ it('il saluto «tavolo chiuso» sparisce se il tavolo è stato riaperto', () => 
 })
 it('una poke da ricomporre non mostra un prezzo e il totale lo dice', () => {
   const html = renderToStaticMarkup(<Carrello righe={[{ piattoId: null,quantita: 1,nota: '',poke: { Base: ['Riso'] },nome: 'Poke composta',prezzoCent: 0,daRicomporre: true }]} modifica={() => {}} nota={() => {}} invia={async () => false} inCorso={false} errore={null} />)
-  expect(html).toContain('Poke composta · —'); expect(html).toContain('senza le poke da ricomporre'); expect(html).not.toContain('Poke composta · 0,00')
+  expect(html).toContain('Poke composta</span><span class="b-num">—</span>'); expect(html).toContain('senza le poke da ricomporre'); expect(html).not.toContain('Poke composta</span><span class="b-num">0,00')
 })
 it('poke a passi: un gruppo alla volta, avanti bloccato finché il gruppo non va', () => {
   const config = { titolo: 'Poke',gruppi: [{ nome: 'Base',voci: ['Riso'],min: 1,max: 1,inclusi: 1 },{ nome: 'Salse',voci: ['Soia'],min: 0,max: 1,inclusi: 1 }],prezzoBaseCent: 900,prezzoExtraCent: 100 }
@@ -55,4 +55,8 @@ it('poke a passi: l’ultimo passo facoltativo offre «Nessuno» e l’aggiunta 
   const config = { titolo: 'Poke',gruppi: [{ nome: 'Salse',voci: ['Soia','Teriyaki'],min: 0,max: 1,inclusi: 1 }],prezzoBaseCent: 900,prezzoExtraCent: 100 }
   const html = renderToStaticMarkup(<ComponiPoke config={config} aggiungi={() => {}} />)
   expect(html).toContain('Passo 1 di 1'); expect(html).toContain('Nessuno'); expect(html).toMatch(/<button[^>]*>Aggiungi al carrello/); expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Aggiungi al carrello/)
+})
+it('barra del carrello: nome accessibile con quantità e totale, testo scelto da chi la usa', () => {
+  const html = renderToStaticMarkup(<Carrello righe={[{ piattoId: 'p',quantita: 2,nota: '',poke: null,nome: 'Salmone',prezzoCent: 600,daRicomporre: false }]} modifica={() => {}} nota={() => {}} invia={async () => false} inCorso={false} errore={null} azione="Vai al riepilogo" etichettaBarra="Vedi il carrello" />)
+  expect(html).toContain('aria-label="Carrello · 2 piatti · 12,00\u00a0€"'); expect(html).toContain('Vedi il carrello'); expect(html).toContain('Nota per la cucina')
 })

@@ -29,6 +29,6 @@ export function MenuCasa({ categorie,poke }: { categorie: CategoriaConPiatti[]; 
       pokeCard={poke && <CardPoke config={poke.config} apri={() => setPokeAperta(true)} />} />
     {poke && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi poke"><ComponiPoke config={poke.config} allergeni={poke.allergeni} aggiungi={aggiungiPoke} /></Pannello>}
     <Carrello righe={vistaCarrello(righe,piatti,poke?.config ?? null)} modifica={(i,q) => c.modificaRighe(r => q === 0 ? r.filter((_,j) => j !== i) : r.map((v,j) => j === i ? { ...v,quantita: q } : v))}
-      nota={(i,nota) => c.modificaRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={async () => { router.push('/ordina'); return true }} inCorso={!c.caricato} errore={null} azione="Vai al riepilogo" />
+      nota={(i,nota) => c.modificaRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={async () => { router.push('/ordina'); return true }} inCorso={!c.caricato} errore={null} azione="Vai al riepilogo" etichettaBarra="Vedi il carrello" />
   </>
 }
