@@ -1005,7 +1005,7 @@ Parte solo dopo il merge della PR della Parte 1 su `main`. Ogni passo con effett
 - [x] Login admin e staff sull'indirizzo `vercel.app`: le password le inserisce l'utente.
 - [x] Log delle funzioni: regione `fra1`, nessun errore TLS (`self-signed certificate`, `Hostname/IP does not match`) né `sslmode`.
 - [x] `GET /api/cron/anonimizza` senza segreto → **401**.
-- [ ] Il giorno dopo: nei log c'è l'esecuzione del cron delle 03:00 UTC (05:00 di Roma con l'ora legale, 04:00 dal 25/10/2026).
+- [x] Il giorno dopo: nei log c'è l'esecuzione del cron delle 03:00 UTC (05:00 di Roma con l'ora legale, 04:00 dal 25/10/2026).
 - [x] Esiti nella sezione «Parte 2» del verbale `docs/verifiche/2026-10-13-tappa-4-fase-a.md`.
 
 ### Task 8: Prova in sala (locale chiuso)
