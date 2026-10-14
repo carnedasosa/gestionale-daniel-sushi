@@ -27,12 +27,12 @@ export function ChiudiTavolo({ sessioneId,contoVistoAlle = null,primaria = false
   const domanda = avviso ? avviso.motivo==='ordini_in_cucina'
     ? `${avviso.n===1 ? 'C’è 1 ordine ancora' : `Ci sono ${avviso.n} ordini ancora`} in cucina: chiudere comunque?`
     : `${avviso.n===1 ? 'C’è 1 ordine arrivato' : `Ci sono ${avviso.n} ordini arrivati`} dopo il conto: chiudere comunque?` : ''
-  return <div>
-    {primaria ? <button type="button" className="ds-btn ds-btn--destructive" disabled={inCorso} aria-busy={inCorso} onClick={() => esegui()}>{inCorso ? 'Chiusura in corso…' : 'Chiudi tavolo'}</button>
+  return <div className="b-chiudi-tavolo">
+    {primaria ? <button type="button" className="b-btn b-btn--pieno-pericolo b-btn--staff" disabled={inCorso} aria-busy={inCorso} onClick={() => esegui()}>{inCorso ? 'Chiusura in corso…' : 'Chiudi tavolo'}</button>
       : <ConfermaAzione inCorso={inCorso} domanda="Chiudere il tavolo? I clienti non potranno più ordinare." conferma={() => esegui()}>Chiudi tavolo</ConfermaAzione>}
-    {errore && <p role="alert">{errore}</p>}
+    {errore && <p role="alert" className="b-errore">{errore}</p>}
     <Pannello aperto={!!avviso} chiudi={() => setAvviso(undefined)} titolo="Chiudi tavolo">
-      <p>{domanda}</p><div className="conferma-azioni"><button type="button" className="ds-btn ds-btn--secondary" onClick={() => setAvviso(undefined)}>Annulla</button><button type="button" className="ds-btn ds-btn--destructive" disabled={inCorso} aria-busy={inCorso} onClick={() => esegui(true)}>{inCorso ? 'Chiusura in corso…' : 'Chiudi comunque'}</button></div>
+      <p>{domanda}</p><div className="b-azioni b-azioni--fine"><button type="button" className="b-btn b-btn--secondario" onClick={() => setAvviso(undefined)}>Annulla</button><button type="button" className="b-btn b-btn--pieno-pericolo" disabled={inCorso} aria-busy={inCorso} onClick={() => esegui(true)}>{inCorso ? 'Chiusura in corso…' : 'Chiudi comunque'}</button></div>
     </Pannello>
   </div>
 }
