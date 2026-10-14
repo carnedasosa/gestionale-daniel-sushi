@@ -43,6 +43,6 @@ Eseguita da Claude con l'utente il 13/10/2026.
   - `/admin/tavoli/stampa`: i QR puntano a `https://gestionale-daniel-sushi.vercel.app/tavolo/…`. Nel DB ci sono 2 tavoli.
   - `/staff`: turno avviato, tavoli, cucina e «Ordini online: chiusi» visibili. «Schermo sempre acceso non disponibile» nel browser integrato: da verificare sul tablet.
 - Log delle funzioni nell'ultima ora: nessun errore o avviso (né TLS né `sslmode`).
-- Da fare: esecuzione notturna del cron (03:00 UTC) da controllare nei log il giorno dopo.
+- Cron notturno: il 13/10 alle 03:00 UTC una chiamata a `/api/cron/anonimizza` con risposta 200 (metriche delle richieste di Vercel); nessun errore nei log. Le due risposte 401 delle 00:00 UTC sono i controlli manuali senza segreto.
 
 **Task 8 — Prova in sala.** Da fare con l'utente e Daniel o lo staff, a locale chiuso.
