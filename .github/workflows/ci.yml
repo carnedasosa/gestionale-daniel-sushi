@@ -67,11 +67,14 @@ jobs:
       - name: Serata simulata
         # --if-present: il comando arriva con la PR della serata; prima di allora il passo non fa nulla.
         run: npm run serata --if-present
-      - name: Risultati delle prove
+      - name: Registro della serata
+        # Solo il registro della serata (ordini e tempi di prova). Niente registrazioni, fotografie delle pagine
+        # né .env.local: potrebbero contenere la password dell'utente di prova, e gli allegati di un repository
+        # pubblico li può scaricare chiunque. Gli errori si leggono nel log del passo che è fallito.
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: risultati-e2e
-          path: test-results/
+          name: serata-simulata
+          path: test-results/serata/risultati.json
           if-no-files-found: ignore
           retention-days: 14
