@@ -20,9 +20,10 @@ import { avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, type EsitoStaff } f
 
 type Esegui = (azione: () => Promise<EsitoStaff>) => void
 export type TavoloStaff = Omit<TavoloConSessione,'sessione'> & { sessione: (Omit<NonNullable<TavoloConSessione['sessione']>,'apertaIl'> & { apertaIl: string }) | null }
+// Letta al clic (anche sul bottone, che arriva prima): alla pressione l’etichetta «Nuovo ordine» sparirebbe e sposterebbe il bottone sotto il dito.
 export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordine: OrdineClient; ora: string; nuovo: boolean; inCorso: boolean; leggi: () => void; esegui: Esegui }) {
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
-  return <article className={`b-comanda${nuovo ? ' b-comanda--nuovo' : ''}${o.stato === 'in_preparazione' ? ' b-comanda--preparazione' : ''}`} onPointerDown={leggi}>
+  return <article className={`b-comanda${nuovo ? ' b-comanda--nuovo' : ''}${o.stato === 'in_preparazione' ? ' b-comanda--preparazione' : ''}`} onClick={leggi}>
     <div className="b-comanda__testa">
       <h3 className="b-comanda__titolo"><span className="b-comanda__nome">{o.tavoloNome}</span> <span className="b-num b-comanda__numero">· n. {o.numero}</span></h3>
       <span className="b-num b-comanda__timer" aria-label={`${minuti} min`}>{minuti}′</span>

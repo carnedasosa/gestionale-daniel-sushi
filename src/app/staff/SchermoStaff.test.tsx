@@ -79,3 +79,7 @@ it('colonne della cucina: i punti di passaggio sono in em, così col carattere p
   const css = readFileSync(new URL('./staff.css',import.meta.url),'utf8')
   expect(css).toMatch(/@media \(max-width: [\d.]+em\) \{ \.b-colonne/); expect(css).not.toMatch(/@media \(max-width: \d+px\) \{ \.b-colonne/)
 })
+it('comanda nuova: si segna letta al clic, non alla pressione (l’etichetta che sparisce sposterebbe il bottone sotto il dito)', () => {
+  const card = CardOrdine({ ordine: tavolo,ora: '2026-10-11T18:05:00Z',nuovo: true,inCorso: false,leggi: () => {},esegui: () => {} }) as React.ReactElement<{ onClick?: unknown; onPointerDown?: unknown }>
+  expect(card.props.onPointerDown).toBeUndefined(); expect(card.props.onClick).toBeTypeOf('function')
+})
