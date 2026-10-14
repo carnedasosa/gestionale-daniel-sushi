@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 
 describe('design system', () => {
-  it('applica i token Cupertino attraverso gli alias del gestionale', () => {
-    const css = readFileSync('src/styles/ds/tokens.css', 'utf8')
-    const cupertino = readFileSync('src/styles/ds/cupertino.css', 'utf8')
-    expect(css).toContain('--indaco: var(--accent-text)')
-    expect(css).toContain('--carta: var(--bg-grouped)')
-    expect(cupertino).toContain('--accent: #1e6ef4')
-    expect(cupertino).toContain('--bg-grouped: #f2f2f7')
+  it('il layout carica i token Banco e la carta ha il suo colore', () => {
+    const layout = readFileSync('src/app/layout.tsx', 'utf8')
+    const token = readFileSync('src/styles/banco/token.css', 'utf8')
+    expect(layout).toContain("import '@/styles/banco/token.css'")
+    expect(layout).not.toContain('styles/ds/')
+    expect(token).toContain('--b-carta: #F3EFE6')
+    expect(token).toContain('--b-inchiostro: #1C1B18')
   })
 })

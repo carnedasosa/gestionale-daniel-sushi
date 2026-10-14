@@ -11,19 +11,19 @@ import { idValido } from '@/tavoli/validazione'
 import { leggiDisponibilita } from './disponibilita'
 
 export interface OrdineCasa {
-  id: string; numero: number; tipo: Servizio; stato: StatoCasa; token: string; totaleCent: number; consegnaCent: number; fascia: Date; creatoIl: Date
+  id: string; numero: number; tipo: Servizio; stato: StatoCasa; token: string; totaleCent: number; consegnaCent: number; fascia: Date; creatoIl: Date; aggiornatoIl: Date
   clienteNome: string | null; clienteTelefono: string | null; clienteEmail: string | null; zonaNome: string | null; indirizzo: string | null; noteConsegna: string | null
   pagamento: Pagamento; contantiDaCent: number | null; motivoRifiuto: string | null; anonimizzato: boolean; righe: RigaOrdine[]
 }
-export type OrdineCasaClient = Omit<OrdineCasa,'fascia' | 'creatoIl'> & { fascia: string; creatoIl: string }
-export function perClient(o: OrdineCasa): OrdineCasaClient { return { ...o,fascia: o.fascia.toISOString(),creatoIl: new Date(o.creatoIl).toISOString() } }
+export type OrdineCasaClient = Omit<OrdineCasa,'fascia' | 'creatoIl' | 'aggiornatoIl'> & { fascia: string; creatoIl: string; aggiornatoIl: string }
+export function perClient(o: OrdineCasa): OrdineCasaClient { return { ...o,fascia: o.fascia.toISOString(),creatoIl: new Date(o.creatoIl).toISOString(),aggiornatoIl: new Date(o.aggiornatoIl).toISOString() } }
 export type EsitoCasa = { ok: true; ordine: OrdineCasa } | {
   ok: false; errore: string; campo?: CampoCheckout | 'carrello'; nonDisponibili?: string[]; nonDisponibiliIds?: string[]; totaleCent?: number; fasce?: string[]
 }
 export const MASSIMO_IN_ATTESA_TELEFONO = 3
 export const MASSIMO_ORDINI_RETE_ORA = 10
 export function tokenValido(t: unknown): t is string { return typeof t === 'string' && /^[A-Za-z0-9_-]{32}$/.test(t) }
-const COLONNE = `o.id,o.numero,o.tipo,o.stato,o.token,o.totale_cent as "totaleCent",o.consegna_cent as "consegnaCent",o.fascia,o.creato_il as "creatoIl",
+const COLONNE = `o.id,o.numero,o.tipo,o.stato,o.token,o.totale_cent as "totaleCent",o.consegna_cent as "consegnaCent",o.fascia,o.creato_il as "creatoIl",o.aggiornato_il as "aggiornatoIl",
   o.cliente_nome as "clienteNome",o.cliente_telefono as "clienteTelefono",o.cliente_email as "clienteEmail",o.zona_nome as "zonaNome",o.indirizzo,
   o.note_consegna as "noteConsegna",o.pagamento,o.contanti_da_cent as "contantiDaCent",o.motivo_rifiuto as "motivoRifiuto",(o.anonimizzato_il is not null) as anonimizzato`
 const COLONNE_RIGA = `id,numero,nome,prezzo_unit_cent as "prezzoUnitCent",quantita,nota,poke,annullata`

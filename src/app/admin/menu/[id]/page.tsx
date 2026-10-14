@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
-import { leggiPiatto } from '@/menu/repo'
+import { leggiMenu, leggiPiatto } from '@/menu/repo'
 import { formatEuro } from '@/domain/soldi'
 import { ModuloPiatto } from './ModuloPiatto'
 
@@ -11,10 +11,12 @@ export default async function ModificaPiatto({ params }: { params: Promise<{ id:
   const { id } = await params
   const piatto = await leggiPiatto(db, id)
   if (!piatto) notFound()
+  const categoria = (await leggiMenu(db)).find((c) => c.id === piatto.categoriaId)
   return (
     <>
-      <Link className="ds-link" href="/admin/menu">← Torna al menù</Link>
-      <h1 className="heading">{piatto.numero ? `${piatto.numero}. ` : ''}{piatto.nome}</h1>
+      <Link className="b-btn b-btn--discreto" href="/admin/menu" style={{ alignSelf: 'flex-start' }}>← Menù{categoria ? ` · ${categoria.nome}` : ''}</Link>
+      <div className="b-admin-testa"><h1 className="b-titolo-1">{piatto.numero !== null && <span className="b-num b-secondario">{piatto.numero} </span>}{piatto.nome}</h1>
+        <span className={`b-stato ${piatto.allergeniConfermati ? 'b-stato--pronto' : 'b-stato--accettare'}`}>{piatto.allergeniConfermati ? 'Allergeni confermati' : 'Allergeni da confermare'}</span></div>
       <ModuloPiatto
         id={piatto.id}
         valori={{

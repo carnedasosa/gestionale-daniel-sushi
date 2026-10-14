@@ -13,5 +13,5 @@ it('segnala gli ordini arrivati dopo l’apertura del conto con il vecchio e il 
 })
 it('al primo render il riferimento è il conto attuale e la chiusura resta il bottone distruttivo', () => {
   const html = renderToStaticMarkup(<ChiusuraConto sessioneId="s" attuale={base} />)
-  expect(html).not.toContain('nuovo ordine'); expect(html).toContain('ds-btn--destructive'); expect(html).toContain('Chiudi tavolo')
+  expect(html).not.toContain('nuovo ordine'); expect(html).toContain('b-btn--pieno-pericolo'); expect(html).toContain('Chiudi tavolo')
 })

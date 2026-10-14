@@ -11,9 +11,11 @@ import { avviaInvioEmail } from '@/casa/avvia-email'
 import { modalitaProva, TESTO_MOTIVO, type StatoApertura } from '@/domain/apertura-casa'
 import { InizioTurno } from './InizioTurno'
 import { SchermoStaff } from './SchermoStaff'
+import { vistaStaff } from './vista'
 import './staff.css'
 
-export default async function AreaStaff() {
+export default async function AreaStaff({ searchParams }: { searchParams?: Promise<{ vista?: string }> } = {}) {
+  const vista = vistaStaff((await searchParams)?.vista)
   let dati = null
   try {
     // Anche il ruolo si legge dal DB: se il DB non risponde lo schermo resta montato con gli ultimi
@@ -37,13 +39,14 @@ export default async function AreaStaff() {
     casa: dati[4].map(perClient),
     ordiniOnline: { accesi: dati[5].apertiIl === dati[5].oggi,asporto: motivo(dati[5].servizi.asporto.apertura),domicilio: motivo(dati[5].servizi.domicilio.apertura) },
   } : null
+  const uscita = <form action={esci}><button className="b-btn b-btn--discreto">Esci</button></form>
   return (
-    <main className="contenitore staff-pagina">
-      <header className="staff-barra"><h1 className="heading">Area staff</h1><form action={esci}><button className="ds-btn ds-btn--secondary">Esci</button></form></header>
+    <main className="b-staff">
+      <h1 className="b-nascosto">Area staff</h1>
       <AggiornamentoAutomatico ogniSecondi={5} ultimoAggiornamento={dati ? ora : undefined} />
-      {!dati && <p role="status" className="staff-nota">Database non raggiungibile, riprovo da solo… Lo schermo mostra gli ultimi dati ricevuti.</p>}
+      {!dati && <p role="status" className="b-avviso b-avviso--accettare b-staff__avviso">Database non raggiungibile, riprovo da solo… Lo schermo mostra gli ultimi dati ricevuti.</p>}
       {/* Sempre montati, anche se la lettura fallisce: suono e ordini già visti non si perdono. */}
-      <InizioTurno><SchermoStaff ora={ora} dati={datiStaff} /></InizioTurno>
+      <InizioTurno uscita={uscita}><SchermoStaff ora={ora} dati={datiStaff} vista={vista} uscita={uscita} /></InizioTurno>
     </main>
   )
 }

@@ -4,7 +4,7 @@ export const SuonoTurno = createContext<(ripetizioni?: number) => void>(() => {}
 // Il contesto audio vive quanto la pagina del browser, non quanto il componente: se lo schermo
 // viene rimontato (navigazione nell'area staff, errore temporaneo) il suono resta attivo.
 let audioCondiviso: AudioContext | null = null
-export function InizioTurno({ children }: { children: React.ReactNode }) {
+export function InizioTurno({ children,uscita }: { children: React.ReactNode; uscita?: React.ReactNode }) {
   const [iniziato,setIniziato] = useState(false)
   // Sul server e alla prima idratazione audioCondiviso è null: nessuna differenza tra HTML e client.
   const [audioAttivo,setAudioAttivo] = useState(() => audioCondiviso?.state === 'running')
@@ -57,6 +57,17 @@ export function InizioTurno({ children }: { children: React.ReactNode }) {
     }
     catch { setAvviso('Audio non disponibile: controlla lo schermo per i nuovi ordini.') }
   }
-  if (!iniziato) return <div className="staff-inizio"><p>Attiva suono e schermo sempre acceso</p><button type="button" className="ds-btn ds-btn--primary" onClick={inizia}>Inizia turno</button></div>
-  return <SuonoTurno.Provider value={suona}>{!audioAttivo && <button type="button" className="ds-btn ds-btn--secondary" onClick={inizia}>Riattiva suono</button>}{avviso && <p role="status">{avviso}</p>}{children}</SuonoTurno.Provider>
+  if (!iniziato) return <div className="b-inizio"><div className="b-inizio__riquadro">
+    <div className="b-inizio__testa"><span className="b-num b-secondario" suppressHydrationWarning>{new Date().toLocaleString('it-IT',{ weekday: 'long',day: 'numeric',month: 'long',hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</span>
+      <h2 className="b-inizio__titolo">Buon turno</h2><p className="b-secondario">Prima di cominciare il tablet deve poter suonare e restare acceso.</p></div>
+    <ul className="b-inizio__voci">
+      <li><strong>Suono per i nuovi ordini</strong><span className="b-secondario">Tre bip a ogni ordine, e ogni 10 secondi finché c’è un ordine da casa da accettare</span></li>
+      <li><strong>Schermo sempre acceso</strong><span className="b-secondario">Il tablet non va in standby durante il turno</span></li>
+    </ul>
+    <p className="b-nascosto">Attiva suono e schermo sempre acceso</p>
+    <button type="button" className="b-btn b-btn--principale b-btn--grande" onClick={inizia}>Inizia turno</button>
+    <p className="b-secondario b-piccolo b-inizio__nota">Gli ordini online di stasera si aprono dopo, dalla barra in alto.</p>
+    {uscita}
+  </div></div>
+  return <SuonoTurno.Provider value={suona}>{!audioAttivo && <div className="b-avviso b-avviso--accettare b-staff__avviso"><p>Il suono è sospeso: senza, i nuovi ordini non suonano.</p><button type="button" className="b-btn b-btn--secondario" onClick={inizia}>Riattiva suono</button></div>}{avviso && <p role="status" className="b-avviso b-staff__avviso">{avviso}</p>}{children}</SuonoTurno.Provider>
 }

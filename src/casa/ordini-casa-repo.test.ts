@@ -151,3 +151,11 @@ it('anonimizzazione dopo 12 mesi, idempotente', async () => {
   expect(await db.query('select nota from righe_ordine where ordine_id=$1',[vecchio.id])).toEqual([{ nota: null }])
   expect(await db.query('select cliente_nome from ordini where id=$1',[recente.id])).toEqual([{ cliente_nome: 'Anna' }])
 })
+it('l’ordine riporta l’ora dell’ultimo cambio di stato, per la cronologia del cliente', async () => {
+  const { db } = ambiente
+  const o = await crea()
+  await accettaOrdine(db,o.id,0)
+  const letto = (await ordineCasaPerToken(db,o.token))!
+  expect(letto.aggiornatoIl).toBeInstanceOf(Date)
+  expect(letto.aggiornatoIl.getTime()).toBeGreaterThanOrEqual(new Date(letto.creatoIl).getTime())
+})

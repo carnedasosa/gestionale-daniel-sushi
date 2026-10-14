@@ -22,12 +22,19 @@ import type { Piatto } from '@/menu/repo'
 it('ordini: stato, note, riga barrata e totale senza ordini annullati', () => {
   const o: OrdineClient = { id: 'o', numero: 1, stato: 'in_preparazione', totaleCent: 600, creatoIl: '2026-10-11T18:00:00Z', sessioneId: 's', tavoloNome: 'Uno',tavoloChiuso: false, righe: [{ id: 'r', numero: 1, nome: 'Salmone', prezzoUnitCent: 600, quantita: 1, nota: 'senza sesamo', poke: null, annullata: false }, { id: 'r2', numero: 2, nome: 'Tonno', prezzoUnitCent: 700, quantita: 1, nota: null, poke: null, annullata: true }] }
   const html = renderToStaticMarkup(<OrdinatoFinora ordini={[o,{ ...o,id: 'o2',numero: 2,stato: 'annullato',totaleCent: 600 }]} />)
-  expect(html).toContain('In preparazione'); expect(html).toContain('senza sesamo'); expect(html).toContain('<s>'); expect(html).toContain('annullato'); expect(html).toContain('Totale finora'); expect(html).toContain('6,00\u00a0€'); expect(html).not.toContain('12,00')
+  expect(html).toContain('In preparazione'); expect(html).toContain('senza sesamo'); expect(html).toContain('<s>'); expect(html).toContain('annullato'); expect(html).toContain('Totale del tavolo finora'); expect(html).toContain('Mandato alle'); expect(html).toContain('b-stato--preparazione'); expect(html).toContain('6,00\u00a0€'); expect(html).not.toContain('12,00')
 })
 it('piatto esaurito mostra allergeni e nessun bottone Aggiungi', () => {
   const p: Piatto = { id: 'p', categoriaId: 'x', numero: 1, nome: 'Salmone', descrizione: null, prezzoCent: 600, piccante: false, vegetariano: false, dellaCasa: false, allergeni: ['pesce'], allergeniConfermati: true, disponibile: false, posizione: 0 }
   const html = renderToStaticMarkup(<CardPiatto piatto={p} quantita={0} modifica={() => {}} />)
   expect(html).toContain('Esaurito'); expect(html).toContain('Allergeni: Pesce'); expect(html).not.toContain('Aggiungi')
+})
+it('piatto disponibile: «+» con nome accessibile, poi «− n +»; al massimo 20', () => {
+  const p: Piatto = { id: 'p', categoriaId: 'x', numero: 1, nome: 'Salmone', descrizione: 'Tartare', prezzoCent: 600, piccante: true, vegetariano: false, dellaCasa: true, allergeni: [], allergeniConfermati: true, disponibile: true, posizione: 0 }
+  const zero = renderToStaticMarkup(<CardPiatto piatto={p} quantita={0} modifica={() => {}} />)
+  expect(zero).toContain('aria-label="Aggiungi Salmone"'); expect(zero).toContain('Della casa'); expect(zero).toContain('Piccante')
+  const venti = renderToStaticMarkup(<CardPiatto piatto={p} quantita={20} modifica={() => {}} />)
+  expect(venti).toContain('aria-label="Riduci Salmone"'); expect(venti).toMatch(/<button[^>]*disabled=""[^>]*aria-label="Aumenta Salmone"|<button[^>]*aria-label="Aumenta Salmone"[^>]*disabled=""/); expect(venti).toContain('>20<')
 })
 it('il saluto «tavolo chiuso» sparisce se il tavolo è stato riaperto', () => {
   expect(renderToStaticMarkup(<ModuloCodice chiave="abcdefghijkl" chiuso />)).toContain('Il tavolo è chiuso')
@@ -35,5 +42,21 @@ it('il saluto «tavolo chiuso» sparisce se il tavolo è stato riaperto', () => 
 })
 it('una poke da ricomporre non mostra un prezzo e il totale lo dice', () => {
   const html = renderToStaticMarkup(<Carrello righe={[{ piattoId: null,quantita: 1,nota: '',poke: { Base: ['Riso'] },nome: 'Poke composta',prezzoCent: 0,daRicomporre: true }]} modifica={() => {}} nota={() => {}} invia={async () => false} inCorso={false} errore={null} />)
-  expect(html).toContain('Poke composta · —'); expect(html).toContain('senza le poke da ricomporre'); expect(html).not.toContain('Poke composta · 0,00')
+  expect(html).toContain('Poke composta</span><span class="b-num">—</span>'); expect(html).toContain('senza le poke da ricomporre'); expect(html).not.toContain('Poke composta</span><span class="b-num">0,00')
+})
+it('poke a passi: un gruppo alla volta, avanti bloccato finché il gruppo non va', () => {
+  const config = { titolo: 'Poke',gruppi: [{ nome: 'Base',voci: ['Riso'],min: 1,max: 1,inclusi: 1 },{ nome: 'Salse',voci: ['Soia'],min: 0,max: 1,inclusi: 1 }],prezzoBaseCent: 900,prezzoExtraCent: 100 }
+  const html = renderToStaticMarkup(<ComponiPoke config={config} aggiungi={() => {}} />)
+  expect(html).toContain('Passo 1 di 2'); expect(html).toContain('Riso'); expect(html).not.toContain('Soia')
+  expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Avanti: Salse/); expect(html).toContain('Scegli almeno 1 in Base')
+  expect(html).not.toContain('Aggiungi al carrello')
+})
+it('poke a passi: l’ultimo passo facoltativo offre «Nessuno» e l’aggiunta al carrello', () => {
+  const config = { titolo: 'Poke',gruppi: [{ nome: 'Salse',voci: ['Soia','Teriyaki'],min: 0,max: 1,inclusi: 1 }],prezzoBaseCent: 900,prezzoExtraCent: 100 }
+  const html = renderToStaticMarkup(<ComponiPoke config={config} aggiungi={() => {}} />)
+  expect(html).toContain('Passo 1 di 1'); expect(html).toContain('Nessuno'); expect(html).toMatch(/<button[^>]*>Aggiungi al carrello/); expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Aggiungi al carrello/)
+})
+it('barra del carrello: nome accessibile che comincia con il testo visibile (WCAG 2.5.3), poi quantità e totale', () => {
+  const html = renderToStaticMarkup(<Carrello righe={[{ piattoId: 'p',quantita: 2,nota: '',nome: 'Salmone',prezzoCent: 600,daRicomporre: false }]} modifica={() => {}} nota={() => {}} invia={async () => false} inCorso={false} errore={null} azione="Vai al riepilogo" etichettaBarra="Vedi il carrello" />)
+  expect(html).toContain('aria-label="Vedi il carrello · 2 piatti · 12,00\u00a0€"'); expect(html).toContain('Vedi il carrello'); expect(html).toContain('Nota per la cucina')
 })

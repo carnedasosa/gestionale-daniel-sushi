@@ -1,5 +1,8 @@
-.accesso-pagina { display: grid; justify-items: center; gap: var(--sp-16); padding-block: var(--sp-56); }
-.accesso { display: grid; gap: var(--sp-16); width: min(400px, 100%); padding: var(--sp-24); }
-.accesso__errore { margin: 0; color: var(--distruttivo); font-weight: 700; }
-
-.accesso-pagina h1 { text-align: center; }
+/* Banco — accesso */
+.b-accesso { min-height: 100dvh; display: flex; justify-content: center; padding: 32px 16px; background: var(--b-barra); color: var(--b-su-barra); }
+.b-accesso__dentro { width: min(420px, 100%); display: flex; flex-direction: column; gap: 32px; padding-top: 6vh; }
+.b-accesso__testa { display: flex; flex-direction: column; gap: 6px; }
+.b-accesso__marchio { font-size: .875rem; opacity: .8; }
+.b-accesso__titolo { font-size: clamp(2.75rem, 2rem + 3vw, 3.5rem); font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.b-accesso__modulo { display: flex; flex-direction: column; gap: 16px; padding: 22px; border-radius: 22px; background: var(--b-carta); color: var(--b-inchiostro); }
+.b-accesso__nota { font-size: .875rem; opacity: .8; line-height: 1.45; }

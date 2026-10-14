@@ -7,3 +7,7 @@ export function puoAnnullare(s: StatoOrdineTavolo): boolean { return s === 'invi
 export function etichettaStato(s: StatoOrdineTavolo): string {
   return { inviato: 'Inviato', in_preparazione: 'In preparazione', servito: 'Servito', annullato: 'Annullato' }[s]
 }
+/** Ordini ancora in cucina di una sessione, dagli ordini attivi già letti dallo schermo staff. */
+export function riassuntoTavolo(ordini: readonly { sessioneId: string; stato: string }[], sessioneId: string): { inCucina: number } {
+  return { inCucina: ordini.filter(o => o.sessioneId === sessioneId && (o.stato === 'inviato' || o.stato === 'in_preparazione')).length }
+}

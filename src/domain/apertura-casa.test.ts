@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { aperturaServizio, modalitaProva, type DatiApertura } from './apertura-casa'
+import { aperturaServizio, modalitaProva, statoCasa, type DatiApertura } from './apertura-casa'
 const aperto: DatiApertura = { allergeniCompleti: true,telefono: '0801234567',apertiIl: '2026-10-12',oggi: '2026-10-12',chiusoOggi: false,zoneAttive: 1,fasceLibere: 3,prova: false }
 it('aperto quando tutte le condizioni valgono', () => {
   expect(aperturaServizio('asporto',aperto)).toEqual({ aperto: true })
@@ -23,4 +23,21 @@ it('la prova salta solo gli allergeni, e mai in produzione', () => {
   expect(modalitaProva({ ORDINI_CASA_PROVA: '1',NODE_ENV: 'production' })).toBe(false)
   expect(modalitaProva({ ORDINI_CASA_PROVA: 'true',NODE_ENV: 'development' })).toBe(false)
   expect(modalitaProva({ NODE_ENV: 'development' })).toBe(false)
+})
+import { requisitiCasa } from './apertura-casa'
+it('requisitiCasa: quattro voci, solo telefono e allergeni bloccano tutto', () => {
+  const r = requisitiCasa({ telefono: null,allergeniCompleti: false,pokeConfermati: false,zoneAttive: 0 })
+  expect(r.map(v => [v.chiave,v.ok,v.blocca])).toEqual([['telefono',false,true],['allergeni',false,true],['poke',false,false],['zone',false,false]])
+  expect(r.find(v => v.chiave === 'allergeni')!.link).toEqual({ href: '/admin/menu?filtro=allergeni',testo: 'Conferma nel menù' })
+  const ok = requisitiCasa({ telefono: '080 123',allergeniCompleti: true,pokeConfermati: null,zoneAttive: 2 })
+  expect(ok.map(v => v.chiave)).toEqual(['telefono','allergeni','zone']); expect(ok.every(v => v.ok && v.link === null)).toBe(true)
+})
+it('stato della casa: aperto se un servizio lo è, pieno se chiusi ma con orari pieni da mostrare, altrimenti chiuso', () => {
+  const aperto = { apertura: { aperto: true as const },piene: [] }
+  const pieno = { apertura: { aperto: false as const,motivo: 'fasce' as const },piene: ['2026-10-12T16:15:00.000Z'] }
+  const finito = { apertura: { aperto: false as const,motivo: 'fasce' as const },piene: [] }
+  const spento = { apertura: { aperto: false as const,motivo: 'spenti' as const },piene: [] }
+  expect(statoCasa([aperto,pieno])).toBe('aperto')
+  expect(statoCasa([pieno,spento])).toBe('pieno')
+  expect(statoCasa([finito,spento])).toBe('chiuso')
 })

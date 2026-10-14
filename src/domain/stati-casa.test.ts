@@ -34,3 +34,12 @@ it('attesa lunga oltre i 10 minuti', () => {
   expect(attesaLunga('2026-10-12T18:00:00Z',new Date('2026-10-12T18:10:00Z'))).toBe(false)
   expect(attesaLunga('2026-10-12T18:00:00Z',new Date('2026-10-12T18:10:01Z'))).toBe(true)
 })
+import { passiOrdine } from './stati-casa'
+it('passiOrdine: flusso del domicilio e dell’asporto, nessun passo per rifiutato o annullato', () => {
+  expect(passiOrdine('domicilio','in_preparazione').map(p => `${p.etichetta}:${p.avanzamento}`)).toEqual([
+    'Ordine ricevuto:fatto','Confermato dal locale:fatto','In preparazione:attuale','Pronto, sta per partire:da_fare','In consegna:da_fare','Consegnato:da_fare'])
+  expect(passiOrdine('asporto','completato').map(p => p.etichetta)).toEqual(['Ordine ricevuto','Confermato dal locale','In preparazione','Pronto per il ritiro','Ritirato'])
+  expect(passiOrdine('asporto','completato').at(-1)!.avanzamento).toBe('attuale')
+  expect(passiOrdine('asporto','in_attesa')[0].avanzamento).toBe('attuale')
+  expect(passiOrdine('domicilio','rifiutato')).toEqual([]); expect(passiOrdine('asporto','annullato')).toEqual([])
+})

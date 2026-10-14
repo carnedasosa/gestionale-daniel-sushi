@@ -1,4 +1,4 @@
-import type { PokeConfig } from '@/menu/importa'
+import type { GruppoPoke, PokeConfig } from '@/menu/importa'
 
 export type SceltePoke = Record<string, string[]>
 export type EsitoPoke = { ok: true; scelte: SceltePoke; prezzoCent: number } | { ok: false; errore: string }
@@ -23,4 +23,11 @@ export function validaPoke(c: PokeConfig, input: unknown): EsitoPoke {
   const prezzoCent = c.prezzoBaseCent! + extra * c.prezzoExtraCent!
   if (!Number.isSafeInteger(prezzoCent) || prezzoCent < 0 || prezzoCent > 2147483647) return { ok: false, errore: 'Prezzo della poke non valido' }
   return { ok: true, scelte, prezzoCent }
+}
+/** Errore del singolo gruppo, per non far avanzare il passo; null se il gruppo va bene. Stessi messaggi di validaPoke. */
+export function controllaGruppo(g: GruppoPoke, scelte: readonly string[] | undefined): string | null {
+  const n = scelte?.length ?? 0
+  if (n < g.min) return `Scegli almeno ${g.min} in ${g.nome}`
+  if (n > g.max) return `Al massimo ${g.max} in ${g.nome}`
+  return null
 }

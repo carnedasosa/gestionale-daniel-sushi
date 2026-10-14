@@ -18,5 +18,5 @@ export function RiprovaAutomatico({ retry }: { retry: () => void }) {
     },1000)
     return () => { attivo = false; clearInterval(timer) }
   },[riprova])
-  return <><button type="button" className="ds-btn ds-btn--primary" onClick={() => { void riprova() }}>Riprova</button><p role="status">Nuovo tentativo tra {secondi} s</p>{offline && <p className="tavolo-connessione">Connessione assente: riproverò da solo.</p>}</>
+  return <><button type="button" className="b-btn b-btn--principale" onClick={() => { void riprova() }}>Riprova</button><p role="status">Nuovo tentativo tra {secondi} s</p>{offline && <p className="b-avviso b-avviso--accettare">Connessione assente: riproverò da solo.</p>}</>
 }

@@ -3,7 +3,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CategoriaConPiatti } from '@/menu/repo'
 import type { PokeConfig } from '@/menu/importa'
-import { formatEuro } from '@/domain/soldi'
+import { CardPoke } from '@/ordinare/CardPoke'
 import { aggiornaCarrello, pokeDaRicomporre } from '@/domain/carrello-salvato'
 import { pokeOrdinabile, type SceltePoke } from '@/domain/poke'
 import { Pannello } from '@/componenti/Pannello'
@@ -55,10 +55,10 @@ export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categor
   })
   const ordinabile = config && pokeOrdinabile(config)
   return <>
-    {messaggio && <div className="tavolo-avviso"><p role="status">{messaggio}</p><button type="button" className="ds-btn ds-btn--secondary" onClick={() => setMessaggio(null)}>Fine</button></div>}{errore && <p role="alert" className="tavolo-avviso">{errore}</p>}
+    {messaggio && <div className="b-avviso b-avviso--pronto"><p role="status">{messaggio}</p><button type="button" className="b-btn b-btn--secondario" onClick={() => setMessaggio(null)}>Fine</button></div>}{errore && <p role="alert" className="b-avviso b-avviso--ritardo">{errore}</p>}
     <SezioniMenu categorie={categorie} quantita={id => righe.find(r => r.piattoId === id)?.quantita ?? 0} modifica={modificaPiatto}
-      pokeCard={ordinabile && <div className="ds-card tavolo-poke-card"><h3 className="heading-sm">Componi la tua poke</h3><p>Da {formatEuro(config.prezzoBaseCent!)}, con ingredienti a tua scelta.</p><button className="ds-btn ds-btn--secondary" type="button" onClick={() => setPokeAperta(true)}>Componi la tua poke</button></div>} />
+      pokeCard={ordinabile && <CardPoke config={config} apri={() => setPokeAperta(true)} />} />
     {ordinabile && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi poke"><ComponiPoke config={config} aggiungi={aggiungiPoke} /></Pannello>}
-    <Carrello righe={vistaCarrello(righe,piatti,config)} modifica={(i,q) => modificaRighe(r => q === 0 ? r.filter((_,j) => j !== i) : r.map((v,j) => j === i ? { ...v,quantita: q } : v))} nota={(i,nota) => modificaRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={invia} inCorso={inCorso || !c.caricato} errore={errore} />
+    <Carrello righe={vistaCarrello(righe,piatti,config)} modifica={(i,q) => modificaRighe(r => q === 0 ? r.filter((_,j) => j !== i) : r.map((v,j) => j === i ? { ...v,quantita: q } : v))} nota={(i,nota) => modificaRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={invia} inCorso={inCorso || !c.caricato} errore={errore} etichettaBarra="Rivedi e manda in cucina" />
   </>
 }

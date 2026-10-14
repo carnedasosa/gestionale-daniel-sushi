@@ -1,12 +1,30 @@
 import type { Piatto } from '@/menu/repo'
 import { testoAllergeni } from '@/menu/testo-allergeni'
 import { formatEuro } from '@/domain/soldi'
-export function CardPiatto({ piatto: p,quantita,modifica }: { piatto: Piatto; quantita: number; modifica: (q: number) => void }) {
-  return <article className={p.disponibile ? 'dish' : 'dish dish--esaurito'}>
-    <span className="dish__num">{p.numero ?? ''}</span><h3 className="dish__name">{p.nome}</h3><span className="dish__price">{formatEuro(p.prezzoCent)}</span>
-    {p.descrizione && <p className="dish__desc">{p.descrizione}</p>}
-    <div className="dish__tags">{p.dellaCasa && <span className="ds-badge ds-badge--new">Della casa</span>}{p.piccante && <span className="ds-badge ds-badge--spicy">Piccante</span>}{p.vegetariano && <span className="ds-badge ds-badge--veg">Vegetariano</span>}{!p.disponibile && <span className="ds-badge">Esaurito</span>}</div>
-    <p className="dish__allergeni">{testoAllergeni(p)}</p>
-    {p.disponibile && <div className="tavolo-dish-azioni">{quantita ? <div className="tavolo-quantita"><button type="button" className="ds-btn ds-btn--secondary" aria-label={`Riduci ${p.nome}`} onClick={() => modifica(quantita-1)}>−</button><span aria-live="polite">{quantita}</span><button type="button" className="ds-btn ds-btn--secondary" aria-label={`Aumenta ${p.nome}`} disabled={quantita >= 20} onClick={() => modifica(quantita+1)}>+</button></div> : <button className="ds-btn ds-btn--secondary" type="button" onClick={() => modifica(1)}>Aggiungi<span className="visually-hidden"> {p.nome}</span></button>}</div>}
+/** Piatto del menù. Senza `modifica` è solo da consultare (nessun bottone). */
+export function CardPiatto({ piatto: p,quantita = 0,modifica }: { piatto: Piatto; quantita?: number; modifica?: (q: number) => void }) {
+  const etichette = p.dellaCasa || p.piccante || p.vegetariano || !p.disponibile
+  return <article className={p.disponibile ? 'b-piatto' : 'b-piatto b-piatto--esaurito'}>
+    <span className="b-num b-piatto__numero">{p.numero ?? ''}</span>
+    <div className="b-piatto__corpo">
+      <h3 className="b-piatto__nome">{p.nome}</h3>
+      {p.descrizione && <p className="b-piatto__desc">{p.descrizione}</p>}
+      {etichette && <div className="b-piatto__etichette">
+        {p.dellaCasa && <span className="b-etichetta">Della casa</span>}
+        {p.piccante && <span className="b-etichetta b-etichetta--accettare">Piccante</span>}
+        {p.vegetariano && <span className="b-etichetta b-etichetta--pronto">Vegetariano</span>}
+        {!p.disponibile && <span className="b-etichetta">Esaurito stasera</span>}
+      </div>}
+      <p className="b-piatto__allergeni">{testoAllergeni(p)}</p>
+      <span className="b-num b-piatto__prezzo">{formatEuro(p.prezzoCent)}</span>
+    </div>
+    {p.disponibile && modifica && <div className="b-piatto__azioni">{quantita
+      ? <div className="b-quantita" role="group" aria-label={`Quantità di ${p.nome}`}>
+          <button type="button" className="b-quantita__btn" aria-label={`Riduci ${p.nome}`} onClick={() => modifica(quantita - 1)}>−</button>
+          <span className="b-num" aria-live="polite">{quantita}</span>
+          <button type="button" className="b-quantita__btn" aria-label={`Aumenta ${p.nome}`} disabled={quantita >= 20} onClick={() => modifica(quantita + 1)}>+</button>
+        </div>
+      : <button type="button" className="b-btn b-btn--secondario b-btn--tondo b-piatto__aggiungi" aria-label={`Aggiungi ${p.nome}`} onClick={() => modifica(1)}>+</button>}
+    </div>}
   </article>
 }

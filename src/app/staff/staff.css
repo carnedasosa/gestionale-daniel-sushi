@@ -1,42 +1,108 @@
-.staff-pagina { display: grid; gap: var(--sp-24); padding-block: var(--sp-24); }
-.staff-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-16); }
-.staff-colonne { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--sp-24); }
-.staff-tavoli { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,280px),1fr)); gap: var(--sp-24); }
-.staff-ordine, .staff-tavolo { padding: var(--sp-24); margin-bottom: var(--sp-16); overflow-wrap: anywhere; }
-.staff-ordine--nuovo { border: var(--sp-4) solid var(--arancio); }
-.staff-azioni { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
-.staff-azioni .ds-btn { min-height: var(--tap); }
-.staff-righe { padding-left: var(--sp-24); display: grid; gap: var(--sp-16); }
-.staff-nota { border-left: var(--sp-4) solid var(--arancio); padding-left: var(--sp-12); color: var(--inchiostro); }
-.staff-nota p { margin-block: var(--sp-4); }
-.staff-codice { margin-block: var(--sp-24); font-variant-numeric: tabular-nums; }
-.staff-conto { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.staff-conto th, .staff-conto td { padding: var(--sp-8); border-bottom: var(--hairline) solid var(--filetto); text-align: left; overflow-wrap: anywhere; }
-.staff-conto th:first-child { width: 12%; }
-.staff-conto-poke { color: var(--inchiostro-tenue); font-size: .8125rem; }
-.staff-conto-poke p { margin-block: var(--sp-4); }
-.staff-conto .ds-btn { white-space: normal; padding-inline: var(--sp-8); }
-.staff-conti-recenti { display: grid; gap: var(--sp-16); padding-left: var(--sp-24); overflow-wrap: anywhere; }
-@media (max-width: 640px) { .staff-colonne { grid-template-columns: minmax(0,1fr); } .staff-ordine, .staff-tavolo { padding: var(--sp-16); } .staff-conto { font-size: 1rem; } .staff-conto th, .staff-conto td { padding: var(--sp-4); } }
+/* Banco — schermo dello staff (tablet) */
+.b-staff { min-height: 100dvh; display: flex; flex-direction: column; }
+.b-staff__vista { padding: 18px 20px 28px; }
+.b-staff__vista[hidden] { display: none; }
+.b-staff__avviso { margin: 12px 20px 0; }
+.b-staff__vuoto { padding: 24px 20px; }
 
-.staff-conto { background: var(--bianco); }
-.staff-conto th, .staff-conto td { padding: 12px; }
-.staff-conto th { font-size: .9375rem; color: var(--inchiostro-tenue); }
-.staff-navigazione { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.staff-navigazione .ds-link { padding-inline: 12px; }
-.staff-codice { font-variant-numeric: tabular-nums; letter-spacing: .08em; font-size: 2.125rem; }
-@media (max-width: 50rem) { .staff-colonne { grid-template-columns: minmax(0,1fr); } }
-@media (max-width: 40rem) { .staff-conto { font-size: 1rem; } .staff-conto th, .staff-conto td { padding: 4px; } }
+.b-staff-barra { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; min-height: 76px; padding: 10px 20px; background: var(--b-barra); color: var(--b-su-barra); }
+.b-staff-barra__marchio { font-size: 1.0625rem; font-weight: 800; }
+.b-staff-barra__schede { display: flex; flex-wrap: wrap; max-width: 100%; gap: 4px; padding: 4px; border-radius: 14px; background: var(--b-barra-tenue); }
+.b-staff-barra__scheda { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: 10px; color: var(--b-su-barra); font-size: 1.0625rem; font-weight: 600; text-decoration: none; }
+.b-staff-barra__scheda[aria-current="page"] { background: var(--b-su-barra); color: #1C1B18; font-weight: 700; }
+.b-staff-barra__spazio { flex-grow: 1; }
+.b-staff-barra__bottone { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border: 1.5px solid var(--b-barra-bordo); border-radius: 12px; background: transparent; color: var(--b-su-barra); font: 600 .9375rem/1.2 var(--b-font-testo), system-ui, sans-serif; cursor: pointer; }
+.b-staff-barra__ora { font-size: 1.25rem; }
+.b-staff-barra .b-punto--spento { background: #8F8A80; }
 
+.b-online { display: flex; flex-direction: column; gap: 12px; }
+.b-online__stato { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.b-online__uscita { padding-top: 12px; border-top: 1.5px solid var(--b-filetto); }
 
-@media print { .staff-navigazione, .staff-barra, .staff-conto button, .staff-conto dialog { display: none; } .staff-conto tr { break-inside: avoid; } }
-.staff-colonne--tre { grid-template-columns: repeat(3,minmax(0,1fr)); }
-.staff-ordine--attesa { border: var(--sp-4) solid var(--distruttivo); }
-.staff-online { display: grid; gap: var(--sp-12); padding: var(--sp-24); }
-.staff-online-stato { margin: 0; padding-left: var(--sp-24); }
-.staff-motivi { display: grid; gap: var(--sp-8); border: 0; padding: 0; margin: 0 0 var(--sp-16); min-width: 0; }
-.staff-motivi label { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--tap); }
-.staff-motivi input { accent-color: var(--indaco); }
-.staff-motivi + .campo textarea { min-width: 0; width: 100%; }
-@media (max-width: 64rem) { .staff-colonne--tre { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-@media (max-width: 50rem) { .staff-colonne--tre { grid-template-columns: minmax(0,1fr); } }
+/* Colonne della cucina */
+.b-colonne { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.b-colonna { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.b-colonna__titolo { display: flex; align-items: center; gap: 8px; font-size: 1.125rem; font-weight: 800; }
+@media (max-width: 56.25em) { .b-colonne { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 37.5em) { .b-colonne { grid-template-columns: minmax(0, 1fr); } }
+
+.b-comanda { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--b-r-card); background: var(--b-foglio); border: 2.5px solid transparent; overflow-wrap: anywhere; }
+.b-comanda--nuovo, .b-comanda--accettare { border-color: var(--b-st-accettare-punto); }
+.b-comanda--ritardo { border-color: var(--b-st-ritardo-punto); }
+.b-comanda--preparazione { box-shadow: inset 0 4px 0 var(--b-st-preparazione-punto); }
+.b-comanda--pronto { box-shadow: inset 0 4px 0 var(--b-st-pronto-punto); }
+.b-comanda__testa { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.b-comanda__titolo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; }
+.b-comanda__tipo { flex-basis: 100%; font-size: .8125rem; font-weight: 700; color: var(--b-grafite); }
+.b-comanda__nome { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+.b-comanda__numero { font-size: .875rem; color: var(--b-grafite); }
+.b-comanda__timer { flex: none; padding: 4px 9px; border-radius: 8px; background: var(--b-spento); font-size: .9375rem; }
+.b-comanda--accettare .b-comanda__timer { background: var(--b-st-accettare-sfondo); color: var(--b-st-accettare-testo); }
+.b-comanda--ritardo .b-comanda__timer { background: var(--b-st-ritardo-sfondo); color: var(--b-st-ritardo-testo); }
+.b-comanda--preparazione .b-comanda__timer { background: var(--b-st-preparazione-sfondo); color: var(--b-st-preparazione-testo); }
+.b-comanda__meta { font-size: .875rem; line-height: 1.45; color: var(--b-grafite); }
+.b-comanda .b-righe { padding-top: 8px; border-top: 1.5px dashed var(--b-filetto-tenue); }
+.b-comanda__azioni { display: flex; flex-direction: column; gap: 8px; }
+.b-comanda__coppia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
+/* Tavoli */
+.b-vista-tavoli { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.b-vista-tavoli__mappa { flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.b-legenda { list-style: none; display: flex; flex-wrap: wrap; gap: 16px; font-size: .875rem; color: var(--b-grafite); }
+.b-legenda li { display: inline-flex; align-items: center; gap: 6px; }
+.b-legenda__segno { width: 12px; height: 12px; border-radius: 3px; }
+.b-legenda__segno--aperto { background: var(--b-inchiostro); }
+.b-legenda__segno--libero { border: 1.5px dashed var(--b-grafite); }
+.b-legenda__segno--blocco { background: var(--b-st-ritardo-punto); }
+.b-tavoli-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 14px; }
+.b-tavolo-tile { position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 180px; padding: 16px; border-radius: 18px; background: var(--b-foglio); border: 1.5px solid var(--b-filetto); }
+.b-tavolo-tile--scelto { border: 3px solid var(--b-inchiostro); }
+.b-tavolo-tile--blocco { border: 2.5px solid var(--b-st-ritardo-punto); }
+.b-tavolo-tile--libero { background: transparent; border: 2px dashed var(--b-bordo-campo); }
+.b-tavolo-tile--libero .b-btn { margin-top: auto; }
+.b-tavolo-tile__nome { font-size: 1.5rem; font-weight: 800; }
+.b-tavolo-tile__codice { font-size: 2.5rem; letter-spacing: .1em; line-height: 1.1; }
+.b-tavolo-tile .b-etichetta { margin-top: auto; align-self: flex-start; }
+.b-tavolo-tile__apri { position: absolute; inset: 0; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
+.b-tavolo-tile__apri:focus-visible { outline-offset: -3px; }
+.b-dettaglio-tavolo { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 20px; background: var(--b-foglio); }
+.b-dettaglio-tavolo__testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 10px; }
+.b-dettaglio-tavolo__codice { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px; border-radius: 16px; background: var(--b-inchiostro); color: var(--b-su-inchiostro); }
+.b-dettaglio-tavolo__codice .b-num { font-size: clamp(2rem, 14vw, 3.5rem); letter-spacing: .14em; line-height: 1.1; }
+.b-dettaglio-tavolo__azioni { display: flex; flex-direction: column; gap: 10px; }
+.b-chiudi-tavolo, .b-chiudi-tavolo > .b-btn { width: 100%; }
+
+/* Conti */
+.b-conti { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.b-elenco-conti { flex: 1 1 260px; max-width: 320px; display: flex; flex-direction: column; gap: 8px; }
+.b-elenco-conti__sezione { margin-top: 12px; }
+.b-elenco-conti__voce { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 60px; padding: 0 16px; border-radius: 14px; background: var(--b-foglio); color: var(--b-inchiostro); font-size: 1.0625rem; font-weight: 800; text-decoration: none; }
+.b-elenco-conti__voce--chiuso { background: transparent; border: 1.5px solid var(--b-filetto); font-weight: 700; }
+.b-elenco-conti__voce[aria-current="page"] { background: var(--b-inchiostro); color: var(--b-su-inchiostro); }
+.b-elenco-conti__voce[aria-current="page"] .b-secondario { color: inherit; }
+.b-conti__vuoto { flex: 999 1 400px; padding: 40px 20px; border-radius: 20px; border: 2px dashed var(--b-filetto); text-align: center; }
+.b-conto { flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: 20px; background: var(--b-foglio); }
+.b-conto__testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.b-conto__tabella td:first-child, .b-conto__tabella th:first-child { width: 3.5em; }
+.b-conto__piatto { font-weight: 600; margin-right: 8px; }
+.b-conto__poke { font-size: .8125rem; color: var(--b-grafite); }
+.b-conto .b-tabella-scorre { background: transparent; }
+.b-conto__piede { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 2px solid var(--b-inchiostro); }
+.b-conto__totale { font-size: 2.75rem; line-height: 1; }
+.b-conto__chiusura { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+
+/* Inizio turno */
+.b-inizio { flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 32px 16px; background: var(--b-barra); }
+.b-inizio__riquadro { width: min(620px, 100%); display: flex; flex-direction: column; gap: 24px; padding: 40px; border-radius: 28px; background: var(--b-carta); }
+.b-inizio__testa { display: flex; flex-direction: column; gap: 8px; }
+.b-inizio__titolo { font-size: clamp(2.5rem, 2rem + 2vw, 3.5rem); font-weight: 800; letter-spacing: -.03em; }
+.b-inizio__voci { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.b-inizio__voci li { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 16px; background: var(--b-foglio); }
+.b-inizio__nota { text-align: center; }
+@media (max-width: 30em) { .b-inizio__riquadro { padding: 24px 18px; } }
+
+@media print {
+  .b-staff-barra, .b-elenco-conti, .b-conto .b-btn, .b-conto dialog, .b-staff__avviso { display: none !important; }
+  .b-conto { padding: 0; }
+  .b-conto tr { break-inside: avoid; }
+}

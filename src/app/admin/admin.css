@@ -1,53 +1,111 @@
-.admin__barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-16); padding: var(--sp-16); background: var(--material-bar); -webkit-backdrop-filter: var(--backdrop-bar); backdrop-filter: var(--backdrop-bar); border-bottom: var(--hairline) solid var(--filetto); }
-.admin__nav { display: flex; flex-wrap: wrap; gap: var(--sp-16); margin-right: auto; }
-.admin__contenuto { padding-block: var(--sp-24); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-24); }
-.admin-avviso { padding: var(--sp-16); border: 2px solid var(--arancio); border-radius: 8px; background: var(--bianco); }
-.admin-tabella-scroll { position: relative; overflow-x: auto; }
-.admin-tabella-piatti { width: 100%; border-collapse: collapse; background: var(--bianco); }
-.admin-tabella-piatti th, .admin-tabella-piatti td { text-align: left; padding: 10px 12px; border-bottom: var(--hairline) solid var(--filetto); vertical-align: middle; }
-.admin-tabella-piatti .num { font-variant-numeric: tabular-nums; width: 3.5em; }
-.admin-stato-allergeni--no { color: var(--arancio-ink); font-weight: 700; }
-.admin-griglia-allergeni { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--sp-8); }
-.admin-modulo-piatto { display: grid; gap: var(--sp-16); max-width: 720px; padding: var(--sp-24); }
-.admin-modulo-piatto fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
-.admin-errore-campo { color: var(--distruttivo); font-size: .9375rem; margin: 0; }
-@media (max-width: 640px) { .admin-tabella-piatti .admin-colonna-secondaria { display: none; } }
-.admin-poke-regole { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-8); }
-.admin-poke-regole input { min-width: 0; width: 100%; }
-.admin-tavoli { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,300px),1fr)); gap: var(--sp-24); }
-.admin-tavolo { display: grid; gap: var(--sp-16); padding: var(--sp-24); min-width: 0; }
-.admin-tavolo input:not([type=checkbox]) { min-width: 0; width: 100%; }
-.admin-tavolo p, .admin-tavolo h2 { overflow-wrap: anywhere; }
-.admin-tavolo-check { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--tap); }
-.admin-qr-griglia { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--sp-24); }
-.admin-qr-card { display: grid; justify-items: center; text-align: center; padding: var(--sp-24); border: var(--hairline) solid var(--filetto); border-radius: var(--radius-card); break-inside: avoid; }
-.admin-qr { width: min(100%,200px); }
-.admin-qr svg { display: block; width: 100%; height: auto; }
-.admin-qr-url { font-size: .8125rem; overflow-wrap: anywhere; }
-@media (max-width: 640px) { .admin-qr-griglia { grid-template-columns: minmax(0,1fr); } }
+/* Banco — area admin: barra laterale su computer, barra in basso su telefono. */
+.b-admin { min-height: 100dvh; display: flex; flex-wrap: wrap; align-items: stretch; }
+.b-admin__contenuto { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 32px clamp(16px, 4vw, 48px) 48px; }
+
+.b-nav-admin { flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 4px; padding: 24px 16px; background: var(--b-foglio); border-right: 1.5px solid var(--b-filetto); }
+.b-nav-admin__marchio { display: flex; flex-direction: column; gap: 2px; padding: 0 12px 20px; font-size: 1.25rem; font-weight: 800; }
+.b-nav-admin__voce { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 0 12px; border-radius: 12px; color: var(--b-inchiostro); font-weight: 600; text-decoration: none; }
+.b-nav-admin__voce[aria-current="page"] { background: var(--b-inchiostro); color: var(--b-su-inchiostro); font-weight: 700; }
+.b-nav-admin__filetto { height: 1.5px; margin: 14px 12px; background: var(--b-filetto-tenue); }
+.b-nav-admin__esterno { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 12px; border-radius: 12px; color: var(--b-grafite); font-size: .9375rem; font-weight: 600; text-decoration: none; }
+.b-nav-admin__spazio { flex-grow: 1; min-height: 24px; }
+.b-nav-admin-basso { display: none; }
+@media (max-width: 50em) {
+  .b-nav-admin { display: none; }
+  .b-admin__contenuto { padding-bottom: calc(var(--b-nav-altezza, 76px + env(safe-area-inset-bottom)) + 24px); }
+  .b-nav-admin-basso { position: fixed; z-index: 3; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 8px 8px max(14px, env(safe-area-inset-bottom)); background: var(--b-foglio); border-top: 1.5px solid var(--b-filetto); }
+  .b-nav-admin-basso__voce { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 54px; border: 0; border-radius: 12px; background: transparent; color: var(--b-grafite); font: 600 .75rem/1.2 var(--b-font-testo), system-ui, sans-serif; text-decoration: none; cursor: pointer; text-align: center; overflow-wrap: anywhere; }
+  .b-nav-admin-basso__voce svg { width: 22px; height: 22px; }
+  .b-nav-admin-basso__voce[aria-current="page"] { background: var(--b-inchiostro); color: var(--b-su-inchiostro); font-weight: 700; }
+  .b-nav-admin-basso__punto { position: absolute; top: 6px; right: calc(50% - 18px); width: 9px; height: 9px; border-radius: 50%; background: var(--b-accettare-pieno); }
+}
+.b-nav-admin__esterno, .b-altre > .b-nav-admin__esterno { background: transparent; }
+
+/* Intestazioni e superfici delle pagine */
+.b-admin-testa { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.b-admin-testa__testi { display: flex; flex-direction: column; gap: 6px; max-width: 640px; }
+.b-admin-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px; align-items: start; }
+.b-admin-due { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.b-admin-due > * { flex: 1 1 340px; min-width: 0; }
+.b-admin-due > .b-admin-largo { flex: 1.6 1 460px; }
+.b-admin-modulo { display: flex; flex-direction: column; gap: 14px; }
+.b-admin-sezione { display: flex; flex-direction: column; gap: 12px; }
+.b-admin-sezione__testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.b-barra-salva { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 0 18px; border-top: 1.5px solid var(--b-filetto); background: var(--b-carta); }
+.b-barra-salva__testo { flex-grow: 1; }
+/* La barra in basso del telefono è misurata da NavAdmin: col testo grande cresce e la barra «salva» le resta sopra. */
+@media (max-width: 50em) { .b-barra-salva { bottom: var(--b-nav-altezza, calc(76px + env(safe-area-inset-bottom))); } }
+
+/* Menù */
+.b-admin-cerca { flex: 0 1 320px; }
+.b-tabella-piatti { min-width: 640px; }
+.b-tabella-piatti td:first-child, .b-tabella-piatti th:first-child { width: 3.5em; color: var(--b-grafite); }
+.b-tabella-piatti tr.b-esaurito td { background: var(--b-campo); }
+.b-righe-piatti { display: none; }
+@media (max-width: 40em) {
+  .b-tabella-scorre:has(.b-tabella-piatti) { display: none; }
+  .b-righe-piatti { display: flex; }
+  .b-riga-piatto { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+  .b-riga-piatto__testo { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; min-height: 44px; justify-content: center; text-decoration: none; color: var(--b-inchiostro); }
+}
+.b-griglia-allergeni { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px; }
+.b-griglia-allergeni .b-scelta { min-height: 48px; font-weight: 500; }
+.b-conferma-allergeni { display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 14px; background: var(--b-st-accettare-sfondo); color: var(--b-st-accettare-testo); line-height: 1.45; }
+.b-conferma-allergeni--ok { background: var(--b-st-pronto-sfondo); color: var(--b-st-pronto-testo); }
+.b-conferma-allergeni input { width: 26px; height: 26px; }
+.b-pillole-scelta { display: flex; flex-wrap: wrap; gap: 8px; }
+.b-pillole-scelta .b-scelta { min-height: 48px; border-radius: 999px; padding: 0 16px; }
+.b-campo--prezzo { max-width: 220px; }
+
+/* Tavoli e QR */
+.b-tavolo-admin__testa { display: flex; gap: 16px; align-items: center; }
+.b-qr-mini { flex: none; width: 96px; height: 96px; padding: 6px; border-radius: 10px; border: 1.5px solid var(--b-filetto); background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: .75rem; color: #5E5A52; text-align: center; }
+.b-qr-mini svg { width: 100%; height: auto; display: block; }
+.b-tavolo-admin--spento { background: transparent; border: 1.5px dashed var(--b-bordo-campo); }
+.b-campi-riga { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 10px; }
+.b-link-qr { font-family: var(--b-font-numeri), monospace; font-size: .75rem; color: var(--b-grafite); overflow-wrap: anywhere; }
+.b-qr-griglia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.b-qr-card { display: grid; justify-items: center; gap: 8px; padding: 24px; text-align: center; border: 1.5px solid #DCD6C8; border-radius: var(--b-r-card); background: #FFFFFF; color: #1C1B18; break-inside: avoid; }
+.b-qr { width: min(100%, 200px); }
+.b-qr svg { display: block; width: 100%; height: auto; }
+@media (max-width: 40em) { .b-qr-griglia { grid-template-columns: minmax(0, 1fr); } }
+
+/* Poke */
+.b-tabella-gruppi { min-width: 560px; }
+.b-tabella-gruppi input { width: 88px; }
+.b-ingredienti { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 10px; }
+.b-ingrediente { border-radius: 12px; border: 1.5px solid var(--b-filetto-tenue); background: var(--b-foglio); }
+.b-ingrediente summary { display: flex; justify-content: space-between; gap: 10px; align-items: center; min-height: 48px; padding: 0 14px; cursor: pointer; font-weight: 700; }
+.b-ingrediente summary span { font-weight: 400; color: var(--b-grafite); font-size: .875rem; }
+.b-ingrediente .b-griglia-allergeni { padding: 0 12px 12px; }
+
+/* Domicilio */
+.b-requisiti { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.b-requisito { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 44px; }
+.b-requisito__segno { flex: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 800; }
+.b-requisito__segno svg { width: 14px; height: 14px; }
+.b-requisito--ok .b-requisito__segno { background: var(--b-st-pronto-punto); }
+.b-requisito--da-fare .b-requisito__segno { background: var(--b-accettare-pieno); color: var(--b-su-pieno); }
+.b-requisito__testo { flex: 1 1 240px; }
+.b-requisito a { font-weight: 700; min-height: 44px; display: inline-flex; align-items: center; }
+.b-turni { display: flex; flex-wrap: wrap; gap: 6px; }
+.b-turno { display: inline-flex; align-items: center; gap: 2px; padding: 2px 2px 2px 12px; border-radius: 999px; background: var(--b-carta); font-family: var(--b-font-numeri), monospace; font-weight: 700; font-size: .875rem; }
+.b-turno .b-btn { min-width: 40px; min-height: 40px; padding: 0; border-radius: 50%; }
+.b-zona { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--b-filetto-tenue); background: var(--b-foglio); color: var(--b-inchiostro); font: inherit; text-align: left; cursor: pointer; }
+.b-zona--spenta { border-style: dashed; color: var(--b-grafite); }
+.b-zona__testa { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; }
+.b-chiusure { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.b-chiusura { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 8px 8px 14px; border-radius: 12px; border: 1.5px solid var(--b-filetto-tenue); }
+.b-chiusura > span:nth-child(2) { flex-grow: 1; }
+.b-impostazioni .b-campo { flex-direction: row; align-items: center; justify-content: space-between; font-weight: 500; font-size: .9375rem; }
+.b-impostazioni .b-campo input[type=number] { width: 96px; flex: none; }
+.b-impostazioni .b-campo--pieno { flex-direction: column; align-items: stretch; }
+
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
-  .admin__barra, .admin-stampa-nav { display: none; }
-  .admin__contenuto { width: 100%; padding: 0; display: block; }
-  .admin-qr-griglia { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0; }
-  .admin-qr-card { height: 134mm; padding: 8mm; break-inside: avoid; border-radius: 0; }
-  .admin-qr-card:nth-child(4n) { break-after: page; }
+  .b-nav-admin, .b-nav-admin-basso, .b-stampa-nav { display: none !important; }
+  .b-admin__contenuto { padding: 0; display: block; }
+  .b-qr-griglia { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
+  .b-qr-card { height: 134mm; padding: 8mm; border-radius: 0; }
+  .b-qr-card:nth-child(4n) { break-after: page; }
 }
-
-/* Superfici e navigazione HIG, mantenendo tutte le sezioni accessibili. */
-.admin__barra { padding-top: max(16px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
-.admin__nav { gap: 12px; }
-.admin__nav .ds-link { padding-inline: 16px; background: var(--fill-tertiary); border-radius: var(--radius-capsule); text-decoration: none; }
-.admin-modulo-piatto { width: 100%; }
-.admin-tabella-scroll { border-radius: var(--radius-cell); background: var(--bianco); }
-.admin-tabella-piatti { border: 0; }
-.admin-tabella-piatti th { color: var(--inchiostro-tenue); font-weight: 600; }
-.admin-tabella-piatti th, .admin-tabella-piatti td { padding: 16px; }
-.admin-griglia-allergeni label { display: flex; align-items: center; gap: 12px; }
-.admin-qr-card { background: #fff; color: #1c1c1e; }
-@media (max-width: 40rem) { .admin-poke-regole { grid-template-columns: minmax(0, 1fr); } .admin-modulo-piatto { padding: 16px; } }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .admin__barra { background: var(--bg-elevated); } }
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .admin__barra { background: var(--bg-elevated); -webkit-backdrop-filter: none; backdrop-filter: none; } }
-.admin-turni { display: grid; gap: var(--sp-8); padding: 0; margin: 0; list-style: none; }
-.admin-turni li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-8); overflow-wrap: anywhere; }
-.admin-tavolo select, .admin-tavolo input[type=time], .admin-tavolo input[type=date] { min-width: 0; width: 100%; }
