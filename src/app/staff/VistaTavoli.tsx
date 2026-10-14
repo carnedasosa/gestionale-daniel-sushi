@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { formatEuro } from '@/domain/soldi'
 import { LIMITE_SESSIONE } from '@/domain/limiti-tentativi'
 import { riassuntoTavolo } from '@/domain/stati-tavolo'
@@ -11,11 +11,19 @@ import { apriTavolo, sbloccaTavolo, type EsitoStaff } from './azioni'
 type Esegui = (azione: () => Promise<EsitoStaff>) => void
 const ora = (iso: string) => new Date(iso).toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })
 
+/** Tavolo del dettaglio: quello scelto finché è aperto (poi nessuno, mai un altro da solo); senza scelta il primo aperto. */
+export function tavoloDelDettaglio(visibili: TavoloStaff[], scelto: string | null): TavoloStaff | null {
+  if (scelto) return visibili.find(t => t.id === scelto && t.sessione) ?? null
+  return visibili.find(t => t.sessione) ?? null
+}
 /** Piantina dei tavoli: aperti con codice e riassunto, liberi da aprire; il tocco su un aperto mostra il dettaglio. */
 export function VistaTavoli({ tavoli,riepiloghi,ordini,inCorso,esegui }: { tavoli: TavoloStaff[]; riepiloghi: RiepilogoTavolo[]; ordini: OrdineClient[]; inCorso: boolean; esegui: Esegui }) {
   const visibili = tavoli.filter(t => t.attivo || t.sessione)
   const [scelto,setScelto] = useState<string | null>(null)
-  const selezionato = visibili.find(t => t.id === scelto && t.sessione) ?? visibili.find(t => t.sessione) ?? null
+  const selezionato = tavoloDelDettaglio(visibili,scelto)
+  const titolo = useRef<HTMLHeadingElement>(null)
+  // Su un tablet verticale il dettaglio sta sotto la piantina: dopo il tocco lo si porta in vista e gli si dà il fuoco.
+  const mostra = (id: string) => { setScelto(id); requestAnimationFrame(() => { titolo.current?.scrollIntoView({ block: 'nearest' }); titolo.current?.focus({ preventScroll: true }) }) }
   if (!tavoli.length) return <p className="b-avviso">Nessun tavolo configurato. Chiedi all’admin di aggiungerli.</p>
   const dati = (t: TavoloStaff) => {
     const r = riepiloghi.find(x => x.sessioneId === t.sessione?.id)
@@ -39,12 +47,12 @@ export function VistaTavoli({ tavoli,riepiloghi,ordini,inCorso,esegui }: { tavol
           {sess.tentativi > 0 ? <span className="b-etichetta b-etichetta--ritardo">{sess.tentativi} codici sbagliati</span>
             : x.inCucina > 0 ? <span className="b-etichetta b-etichetta--preparazione">{x.inCucina} in cucina</span>
             : x.ordini > 0 ? <span className="b-etichetta b-etichetta--pronto">Tutto servito</span> : null}
-          <button type="button" className="b-tavolo-tile__apri" aria-pressed={selezionato?.id === t.id} onClick={() => setScelto(t.id)}><span className="b-nascosto">Dettaglio di {t.nome}</span></button>
+          <button type="button" className="b-tavolo-tile__apri" aria-pressed={selezionato?.id === t.id} aria-controls="dettaglio-tavolo" onClick={() => mostra(t.id)}><span className="b-nascosto">Dettaglio di {t.nome}</span></button>
         </article>
       })}</div>
     </div>
-    {selezionato && s && d && <aside className="b-dettaglio-tavolo" aria-label={`Dettaglio di ${selezionato.nome}`}>
-      <div className="b-dettaglio-tavolo__testa"><h2 className="b-titolo-2">{selezionato.nome}</h2><span className="b-num b-secondario">dalle {ora(s.apertaIl)}</span></div>
+    {selezionato && s && d && <aside id="dettaglio-tavolo" className="b-dettaglio-tavolo" aria-label={`Dettaglio di ${selezionato.nome}`}>
+      <div className="b-dettaglio-tavolo__testa"><h2 ref={titolo} tabIndex={-1} className="b-titolo-2">{selezionato.nome}</h2><span className="b-num b-secondario">dalle {ora(s.apertaIl)}</span></div>
       <div className="b-dettaglio-tavolo__codice"><span className="b-piccolo">Codice da dare ai clienti</span><span className="b-num">{s.codice}</span></div>
       <div className="b-scontrino">
         <div className="b-scontrino__riga"><span>Ordini mandati</span><span className="b-num">{d.ordini}</span></div>
@@ -54,7 +62,7 @@ export function VistaTavoli({ tavoli,riepiloghi,ordini,inCorso,esegui }: { tavol
       {s.tentativi > 0 && <div className="b-avviso b-avviso--ritardo"><p>{s.tentativi} tentativi sbagliati{s.tentativi >= LIMITE_SESSIONE && ': nessun nuovo telefono può entrare finché non sblocchi'}</p><button type="button" className="b-btn b-btn--secondario" disabled={inCorso} onClick={() => esegui(() => sbloccaTavolo(s.id))}>Sblocca</button></div>}
       <div className="b-dettaglio-tavolo__azioni">
         <Link className="b-btn b-btn--principale b-btn--staff b-btn--largo" href={`/staff/conto/${s.id}`}>Apri il conto</Link>
-        <ChiudiTavolo sessioneId={s.id} />
+        <ChiudiTavolo key={s.id} sessioneId={s.id} nome={selezionato.nome} />
       </div>
     </aside>}
   </div>

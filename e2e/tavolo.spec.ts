@@ -16,12 +16,12 @@ test('tavolo: QR, codice, ordini da due telefoni, cucina e chiusura del conto', 
     await telefono.goto(`/tavolo/${TAVOLO_E2E.chiave}`)
     await telefono.getByLabel('Codice del tavolo').fill(codice)
     await telefono.getByRole('button',{ name: 'Entra al tavolo' }).click()
-    await expect(telefono.getByRole('button',{ name: /^Carrello · / })).toBeVisible()
+    await expect(telefono.getByRole('button',{ name: /^Rivedi e manda in cucina · / })).toBeVisible()
   }
 
   // Anna: una tartare di salmone (6,00 €).
   await anna.locator('#tartare').getByRole('button',{ name: 'Aggiungi Salmone',exact: true }).click()
-  await anna.getByRole('button',{ name: /^Carrello · 1 piatti/ }).click()
+  await anna.getByRole('button',{ name: /^Rivedi e manda in cucina · 1 piatti/ }).click()
   await anna.getByRole('button',{ name: 'Invia ordine' }).click()
   const inviatoAnna = anna.getByRole('status').filter({ hasText: /^Ordine n\. \d+ inviato in cucina$/ })
   await expect(inviatoAnna).toBeVisible()
@@ -37,7 +37,7 @@ test('tavolo: QR, codice, ordini da due telefoni, cucina e chiusura del conto', 
   const aggiungi = poke.getByRole('button',{ name: 'Aggiungi al carrello' })
   while (!await aggiungi.isVisible()) await poke.getByRole('button',{ name: /^Avanti: / }).click()
   await aggiungi.click()
-  await bruno.getByRole('button',{ name: /^Carrello · 1 piatti/ }).click()
+  await bruno.getByRole('button',{ name: /^Rivedi e manda in cucina · 1 piatti/ }).click()
   await bruno.getByRole('button',{ name: 'Invia ordine' }).click()
   const inviatoBruno = bruno.getByRole('status').filter({ hasText: /^Ordine n\. \d+ inviato in cucina$/ })
   await expect(inviatoBruno).toBeVisible()
@@ -69,5 +69,5 @@ test('tavolo: QR, codice, ordini da due telefoni, cucina e chiusura del conto', 
   await carlo.getByLabel('Codice del tavolo').fill(codice)
   await carlo.getByRole('button',{ name: 'Entra al tavolo' }).click()
   await expect(carlo.getByRole('alert').filter({ hasText: 'Il tavolo non è ancora aperto' })).toBeVisible()
-  await expect(carlo.getByRole('button',{ name: /^Carrello · / })).toHaveCount(0)
+  await expect(carlo.getByRole('button',{ name: /^Rivedi e manda in cucina · / })).toHaveCount(0)
 })

@@ -57,3 +57,25 @@ it('conti: tavoli aperti con totale e chiusi di recente, ognuno porta al suo con
   const html = renderToStaticMarkup(<ElencoConti aperti={[{ id: 'a',nome: 'Tavolo 4',totaleCent: 5850 }]} recenti={[{ id: 'b',nome: 'Tavolo 1',chiusaIl: '2026-10-11T18:30:00.000Z' }]} corrente="a" />)
   expect(html).toMatch(/<a[^>]*aria-current="page"[^>]*href="\/staff\/conto\/a"|<a[^>]*href="\/staff\/conto\/a"[^>]*aria-current="page"/); expect(html).toContain('58,50'); expect(html).toContain('href="/staff/conto/b"'); expect(html).toContain('chiuso 20:30')
 })
+it('dettaglio del tavolo: la conferma di chiusura nomina il tavolo; tocco sul tavolo collegato al dettaglio, titolo che riceve il fuoco', async () => {
+  const { VistaTavoli } = await import('./VistaTavoli')
+  const sessione = { id: 's2',tavoloId: 't2',codice: '1593',apertaIl: '2026-10-11T18:05:00.000Z',tentativi: 0 }
+  const tavoli = [{ id: 't2',nome: 'Tavolo 2',slug: 'tavolo-2',chiave: 'k2',posizione: 2,attivo: true,sessione }]
+  const html = renderToStaticMarkup(<VistaTavoli tavoli={tavoli} riepiloghi={[]} ordini={[]} inCorso={false} esegui={() => {}} />)
+  expect(html).toContain('Chiudere Tavolo 2? I clienti non potranno più ordinare.')
+  expect(html).toMatch(/<aside[^>]*id="dettaglio-tavolo"/); expect(html).toMatch(/aria-controls="dettaglio-tavolo"/); expect(html).toMatch(/<h2[^>]*tabindex="-1"[^>]*>Tavolo 2<\/h2>/)
+})
+it('dettaglio del tavolo: se il tavolo scelto non è più aperto non si passa da soli a un altro', async () => {
+  const { tavoloDelDettaglio } = await import('./VistaTavoli')
+  const aperto = (id: string) => ({ id,nome: id,slug: id,chiave: id,posizione: 1,attivo: true,sessione: { id: `s-${id}`,tavoloId: id,codice: '1111',apertaIl: '2026-10-11T18:05:00.000Z',tentativi: 0 } })
+  const libero = { ...aperto('t3'),sessione: null }
+  expect(tavoloDelDettaglio([aperto('t1'),aperto('t2')],null)?.id).toBe('t1')
+  expect(tavoloDelDettaglio([aperto('t1'),aperto('t2')],'t2')?.id).toBe('t2')
+  expect(tavoloDelDettaglio([aperto('t1'),libero],'t3')).toBeNull()
+  expect(tavoloDelDettaglio([aperto('t1')],'sparito')).toBeNull()
+})
+it('colonne della cucina: i punti di passaggio sono in em, così col carattere più grande le colonne diventano meno', async () => {
+  const { readFileSync } = await import('node:fs')
+  const css = readFileSync(new URL('./staff.css',import.meta.url),'utf8')
+  expect(css).toMatch(/@media \(max-width: [\d.]+em\) \{ \.b-colonne/); expect(css).not.toMatch(/@media \(max-width: \d+px\) \{ \.b-colonne/)
+})

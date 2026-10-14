@@ -56,7 +56,7 @@ it('poke a passi: l’ultimo passo facoltativo offre «Nessuno» e l’aggiunta 
   const html = renderToStaticMarkup(<ComponiPoke config={config} aggiungi={() => {}} />)
   expect(html).toContain('Passo 1 di 1'); expect(html).toContain('Nessuno'); expect(html).toMatch(/<button[^>]*>Aggiungi al carrello/); expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Aggiungi al carrello/)
 })
-it('barra del carrello: nome accessibile con quantità e totale, testo scelto da chi la usa', () => {
+it('barra del carrello: nome accessibile che comincia con il testo visibile (WCAG 2.5.3), poi quantità e totale', () => {
   const html = renderToStaticMarkup(<Carrello righe={[{ piattoId: 'p',quantita: 2,nota: '',nome: 'Salmone',prezzoCent: 600,daRicomporre: false }]} modifica={() => {}} nota={() => {}} invia={async () => false} inCorso={false} errore={null} azione="Vai al riepilogo" etichettaBarra="Vedi il carrello" />)
-  expect(html).toContain('aria-label="Carrello · 2 piatti · 12,00\u00a0€"'); expect(html).toContain('Vedi il carrello'); expect(html).toContain('Nota per la cucina')
+  expect(html).toContain('aria-label="Vedi il carrello · 2 piatti · 12,00\u00a0€"'); expect(html).toContain('Vedi il carrello'); expect(html).toContain('Nota per la cucina')
 })

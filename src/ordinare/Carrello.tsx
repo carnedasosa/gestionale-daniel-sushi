@@ -31,7 +31,7 @@ export function Carrello({ righe,modifica,nota,invia,inCorso,errore,azione = 'In
   const quantita = righe.reduce((s,r) => s + r.quantita,0)
   return <>
     <BarraBasso>
-      <button type="button" className="b-btn b-btn--principale b-btn--barra" aria-label={`Carrello · ${quantita} piatti · ${formatEuro(totale)}`} onClick={() => setAperto(true)}>
+      <button type="button" className="b-btn b-btn--principale b-btn--barra" aria-label={`${etichettaBarra} · ${quantita} piatti · ${formatEuro(totale)}`} onClick={() => setAperto(true)}>
         <span className="b-badge" aria-hidden="true">{quantita}</span><span className="b-barra-basso__testo">{etichettaBarra}</span><span className="b-num">{formatEuro(totale)}</span>
       </button>
     </BarraBasso>

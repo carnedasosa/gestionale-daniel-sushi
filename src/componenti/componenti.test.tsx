@@ -37,7 +37,7 @@ it('barra in basso: l’altezza misurata passa alla radice e segue i cambi; via 
   const stile = new Map<string,string>()
   const radice = { style: { setProperty: (k: string,v: string) => stile.set(k,v),removeProperty: (k: string) => stile.delete(k) } }
   const barra = { getBoundingClientRect: () => ({ height: altezza }) }
-  const stacca = seguiAltezza(barra as unknown as HTMLElement,radice as unknown as HTMLElement,Osservatore as unknown as typeof ResizeObserver)
+  const stacca = seguiAltezza(barra as unknown as HTMLElement,radice as unknown as HTMLElement,'--b-barra-altezza',Osservatore as unknown as typeof ResizeObserver)
   expect(stile.get('--b-barra-altezza')).toBe('201px')
   altezza = 150; richiamo()
   expect(stile.get('--b-barra-altezza')).toBe('150px')

@@ -1,8 +1,9 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Pannello } from '@/componenti/Pannello'
+import { seguiAltezza } from '@/componenti/BarraBasso'
 
 const ICONE: Record<string,React.ReactNode> = {
   menu: <path d="M4 6h16M4 12h16M4 18h10" />,
@@ -17,6 +18,9 @@ const Icona = ({ nome }: { nome: string }) => <svg viewBox="0 0 24 24" fill="non
 export function NavAdmin({ daConfermare,uscita }: { daConfermare: number; uscita: React.ReactNode }) {
   const percorso = usePathname()
   const [altro,setAltro] = useState(false)
+  // Altezza vera della barra del telefono (0 quando è nascosta): l'admin.css lascia sopra il contenuto e la barra «salva».
+  const basso = useRef<HTMLElement>(null)
+  useEffect(() => seguiAltezza(basso.current!,document.documentElement,'--b-nav-altezza'),[])
   const voci = [
     { href: '/admin/menu',testo: 'Menù',breve: 'Menù',icona: 'menu',badge: daConfermare },
     { href: '/admin/poke',testo: 'Poke',breve: 'Poke',icona: 'poke',badge: 0 },
@@ -35,7 +39,7 @@ export function NavAdmin({ daConfermare,uscita }: { daConfermare: number; uscita
       <span className="b-nav-admin__spazio" />
       {uscita}
     </nav>
-    <nav aria-label="Area admin (telefono)" className="b-nav-admin-basso">
+    <nav ref={basso} aria-label="Area admin (telefono)" className="b-nav-admin-basso">
       {voci.map(v => <Link key={v.href} href={v.href} className="b-nav-admin-basso__voce" aria-current={attiva(v.href) ? 'page' : undefined}><Icona nome={v.icona} />{v.breve}{v.badge > 0 && <span className="b-nav-admin-basso__punto" aria-label={`${v.badge} da confermare`} />}</Link>)}
       <button type="button" className="b-nav-admin-basso__voce" onClick={() => setAltro(true)}><Icona nome="altro" />Altro</button>
     </nav>

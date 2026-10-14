@@ -18,7 +18,7 @@ test('da casa: ordine a domicilio, accettato +15’, seguito dal cliente fino al
   await cliente.locator('#tartare').getByRole('button',{ name: 'Aggiungi Salmone',exact: true }).click()
   await cliente.locator('#tartare').getByRole('button',{ name: 'Aumenta Salmone',exact: true }).click()
   await cliente.locator('#tartare').getByRole('button',{ name: 'Aumenta Salmone',exact: true }).click()
-  await cliente.getByRole('button',{ name: /^Carrello · 3 piatti/ }).click()
+  await cliente.getByRole('button',{ name: /^Vedi il carrello · 3 piatti/ }).click()
   await cliente.getByRole('button',{ name: 'Vai al riepilogo' }).click()
   await cliente.waitForURL('**/ordina')
 

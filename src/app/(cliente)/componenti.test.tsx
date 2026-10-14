@@ -4,6 +4,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(),push: v
 vi.mock('./ordina/azioni', () => ({ inviaOrdineCasa: vi.fn() }))
 import { StatoOrdine, ordineConcluso } from './ordine/[token]/StatoOrdine'
 import { Checkout } from './ordina/Checkout'
+import { etichettaOrdineInCorso } from './OrdineInCorso'
 import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 const ordine: OrdineCasaClient = { id: 'o',numero: 12,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-12T17:15:00.000Z',creatoIl: '2026-10-12T16:00:00.000Z',aggiornatoIl: '2026-10-12T16:03:00.000Z',
   clienteNome: 'Anna',clienteTelefono: '3331234567',clienteEmail: 'anna@esempio.it',zonaNome: 'Bitetto',indirizzo: 'Via Roma 1',noteConsegna: null,pagamento: 'contanti',contantiDaCent: 5000,motivoRifiuto: null,anonimizzato: false,
@@ -39,4 +40,7 @@ it('stato: cronologia con ora d’arrivo e ora dello stato attuale; niente crono
   const html = renderToStaticMarkup(<StatoOrdine ordine={{ ...ordine,stato: 'in_preparazione' }} telefono={null} ora="2026-10-12T16:05:00.000Z" />)
   expect(html).toContain('Ordine ricevuto'); expect(html).toContain('aria-current="step"'); expect(html).toContain('18:00'); expect(html).toContain('18:03'); expect(html).toContain('In consegna')
   expect(renderToStaticMarkup(<StatoOrdine ordine={{ ...ordine,stato: 'rifiutato',motivoRifiuto: 'Fascia piena' }} telefono={null} ora="2026-10-12T16:05:00.000Z" />)).not.toContain('Ordine ricevuto')
+})
+it('ordine in corso: il nome accessibile contiene il testo visibile («Il tuo ordine n. 7», «Segui»)', () => {
+  expect(etichettaOrdineInCorso(7)).toBe('Il tuo ordine n. 7 · Segui lo stato')
 })
