@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest'
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(),push: vi.fn() }) }))
 vi.mock('./ordina/azioni', () => ({ inviaOrdineCasa: vi.fn() }))
 import { StatoOrdine, ordineConcluso } from './ordine/[token]/StatoOrdine'
-import { Checkout } from './ordina/Checkout'
+import { Checkout, siSceglie } from './ordina/Checkout'
 import { etichettaOrdineInCorso } from './OrdineInCorso'
 import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 const ordine: OrdineCasaClient = { id: 'o',numero: 12,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-12T17:15:00.000Z',creatoIl: '2026-10-12T16:00:00.000Z',aggiornatoIl: '2026-10-12T16:03:00.000Z',
@@ -31,10 +31,13 @@ it('checkout: orari liberi e pieni in ordine, i pieni barrati e non selezionabil
   expect(html).toContain('Ritiro alle'); expect(html).toContain('Consegne a domicilio non disponibili.'); expect(html).toContain('informativa privacy')
   expect(html).toMatch(/<button[^>]*disabled=""[^>]*>(<span>)?Conferma l’ordine/)
 })
-it('checkout: solo orari pieni', () => {
+it('checkout: tutti gli orari pieni (servizio chiuso per «fasce») si sceglie lo stesso e mostra gli orari barrati; conferma bloccata', () => {
   const html = renderToStaticMarkup(<Checkout piatti={[]} poke={null} disponibilita={{ zone: [],servizi: {
-    asporto: { aperto: true,motivo: null,fasce: [],piene: ['2026-10-12T16:15:00.000Z'] },domicilio: { aperto: false,motivo: null,fasce: [],piene: [] } } }} />)
+    asporto: { aperto: false,motivo: 'Nessuna fascia libera per oggi.',fasce: [],piene: ['2026-10-12T16:15:00.000Z'] },domicilio: { aperto: false,motivo: 'Consegne a domicilio non disponibili.',fasce: [],piene: [] } } }} />)
   expect(html).toContain('Nessun orario libero per oggi'); expect(html).toContain('<s>18:15</s>')
+  expect(html).toMatch(/<input(?=[^>]*value="asporto")(?=[^>]*checked="")[^>]*>/)
+  expect(siSceglie({ aperto: false,motivo: 'x',fasce: [],piene: ['2026-10-12T16:15:00.000Z'] })).toBe(true); expect(siSceglie({ aperto: false,motivo: 'x',fasce: [],piene: [] })).toBe(false)
+  expect(html).toMatch(/<button[^>]*disabled=""[^>]*>(<span>)?Conferma l’ordine/)
 })
 it('stato: cronologia con ora d’arrivo e ora dello stato attuale; niente cronologia se rifiutato', () => {
   const html = renderToStaticMarkup(<StatoOrdine ordine={{ ...ordine,stato: 'in_preparazione' }} telefono={null} ora="2026-10-12T16:05:00.000Z" />)

@@ -83,3 +83,11 @@ it('disponibilità: allergeni, interruttore di ieri e giorno di chiusura', async
   await impostaApertura(db,'2026-10-12'); await aggiungiChiusura(db,'2026-10-12',null)
   expect((await leggiDisponibilita(db,ADESSO,true)).servizi.domicilio.apertura).toEqual({ aperto: false,motivo: 'chiusura' })
 })
+it('disponibilità: con tutte le fasce piene il servizio è chiuso per «fasce» ma le piene restano, da mostrare barrate', async () => {
+  const { db } = ambiente
+  await prepara()
+  await db.query(`insert into ordini (tipo,stato,totale_cent,token,fascia,cliente_nome,cliente_telefono,cliente_email,zona_nome,consegna_cent,indirizzo,pagamento,privacy_il)
+    values ('domicilio','accettato',1700,$1,'2026-10-12T16:30:00Z','A','3331234567','a@b.it','Bitetto',200,'Via Roma 1','carta',now()),
+           ('domicilio','in_attesa',1700,$2,'2026-10-12T16:45:00Z','A','3331234567','a@b.it','Bitetto',200,'Via Roma 1','carta',now())`,['C'.repeat(32),'D'.repeat(32)])
+  expect((await leggiDisponibilita(db,ADESSO,true)).servizi.domicilio).toEqual({ apertura: { aperto: false,motivo: 'fasce' },fasce: [],piene: ['2026-10-12T16:30:00.000Z','2026-10-12T16:45:00.000Z'] })
+})

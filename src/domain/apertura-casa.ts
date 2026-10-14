@@ -23,6 +23,11 @@ export function aperturaServizio(servizio: Servizio, d: DatiApertura): StatoAper
   if (d.fasceLibere === 0) return { aperto: false,motivo: 'fasce' }
   return { aperto: true }
 }
+/** Da casa: «aperto» se un servizio accetta ordini; «pieno» se sono chiusi ma ci sono orari pieni da mostrare barrati; altrimenti «chiuso». */
+export function statoCasa(servizi: { apertura: StatoApertura; piene: string[] }[]): 'aperto' | 'pieno' | 'chiuso' {
+  if (servizi.some(s => s.apertura.aperto)) return 'aperto'
+  return servizi.some(s => s.piene.length > 0) ? 'pieno' : 'chiuso'
+}
 /** Prova in locale senza allergeni confermati: mai in produzione. */
 export function modalitaProva(env: { NODE_ENV?: string; ORDINI_CASA_PROVA?: string }): boolean {
   return env.ORDINI_CASA_PROVA === '1' && env.NODE_ENV !== 'production'

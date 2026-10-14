@@ -17,6 +17,8 @@ import { inviaOrdineCasa } from './azioni'
 import { BarraBasso } from '@/componenti/BarraBasso'
 export interface ServizioCheckout { aperto: boolean; motivo: string | null; fasce: string[]; piene: string[] }
 export interface DisponibilitaCheckout { servizi: Record<Servizio,ServizioCheckout>; zone: Zona[] }
+// Con tutti gli orari pieni il servizio è chiuso ma si può scegliere per vederli barrati (la conferma resta bloccata).
+export const siSceglie = (s: ServizioCheckout) => s.aperto || s.piene.length > 0
 const ERRORE_INCERTO = 'Non siamo sicuri che l’ordine sia arrivato. Riprova: se era già arrivato non verrà duplicato.'
 function Errore({ campo,errori }: { campo: CampoCheckout; errori: ErroriCheckout }) {
   return errori[campo] ? <p className="b-errore" id={`errore-${campo}`}>{errori[campo]}</p> : null
@@ -24,7 +26,7 @@ function Errore({ campo,errori }: { campo: CampoCheckout; errori: ErroriCheckout
 export function Checkout({ piatti,poke,disponibilita: d }: { piatti: Piatto[]; poke: PokeConfig | null; disponibilita: DisponibilitaCheckout }) {
   const c = useCarrelloSalvato(CHIAVE_CARRELLO_CASA,'local')
   const router = useRouter()
-  const [tipo,setTipo] = useState<Servizio>(d.servizi.asporto.aperto || !d.servizi.domicilio.aperto ? 'asporto' : 'domicilio')
+  const [tipo,setTipo] = useState<Servizio>(d.servizi.asporto.aperto || (!d.servizi.domicilio.aperto && (siSceglie(d.servizi.asporto) || !siSceglie(d.servizi.domicilio))) ? 'asporto' : 'domicilio')
   const [campi,setCampi] = useState({ zonaId: '',indirizzo: '',noteConsegna: '',fascia: '',nome: '',telefono: '',email: '',pagamento: '',contantiDa: '' })
   const [privacy,setPrivacy] = useState(false)
   const [fasceNuove,setFasceNuove] = useState<Partial<Record<Servizio,string[]>>>({})
@@ -68,13 +70,13 @@ export function Checkout({ piatti,poke,disponibilita: d }: { piatti: Piatto[]; p
   if (inviato) return <p role="status" className="b-avviso b-avviso--pronto">Ordine inviato: ti portiamo alla pagina dell’ordine…</p>
   if (c.caricato && !righe.length) return <div className="b-avviso"><p>Il carrello è vuoto.</p><Link className="b-btn b-btn--secondario" href="/">Scegli i piatti dal menù</Link></div>
   const attesa = inCorso || !c.caricato
-  const orari = [...fasce.map(f => ({ f,piena: false })),...(servizio.aperto ? servizio.piene : []).filter(f => !fasce.includes(f)).map(f => ({ f,piena: true }))].sort((a,b) => a.f.localeCompare(b.f))
+  const orari = [...fasce.map(f => ({ f,piena: false })),...servizio.piene.filter(f => !fasce.includes(f)).map(f => ({ f,piena: true }))].sort((a,b) => a.f.localeCompare(b.f))
   const quando = tipo === 'domicilio' ? 'Consegna verso le' : 'Ritiro alle'
   const passo = (n: number) => <span className="b-passo b-num" aria-hidden="true">{n}</span>
   return <form className="b-checkout" onSubmit={invia} noValidate>
     <fieldset className="b-card b-checkout__blocco"><legend className="b-checkout__titolo">{passo(1)}Come lo ricevi?</legend>
       <div className="b-scelte">{(['asporto','domicilio'] as const).map(s => <label key={s} className="b-scelta">
-        <input type="radio" name="tipo" value={s} checked={tipo === s} disabled={!d.servizi[s].aperto || attesa} onChange={() => setTipo(s)} aria-label={s === 'asporto' ? 'Ritiro al locale (asporto)' : 'Consegna a domicilio'} />
+        <input type="radio" name="tipo" value={s} checked={tipo === s} disabled={!siSceglie(d.servizi[s]) || attesa} onChange={() => setTipo(s)} aria-label={s === 'asporto' ? 'Ritiro al locale (asporto)' : 'Consegna a domicilio'} />
         <span className="b-scelta__testi"><span>{s === 'asporto' ? 'Ritiro al locale' : 'A domicilio'}</span>
           <span className="b-scelta__sotto">{!d.servizi[s].aperto && d.servizi[s].motivo ? d.servizi[s].motivo : s === 'asporto' ? 'Via Beato Giacomo 72' : 'Paghi alla consegna'}</span></span>
       </label>)}</div>

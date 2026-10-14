@@ -8,7 +8,7 @@ import type { AllergeniVoci } from '@/domain/allergeni-poke'
 import type { PokeConfig } from '@/menu/importa'
 import { leggiAllergeniPoke, leggiPokeConfig } from '@/tavoli/poke-repo'
 import { allergeniCompleti, chiusoIl, elencoZone, leggiImpostazioni, turniDelGiorno, type Zona } from './impostazioni-repo'
-/** `piene`: fasce dopo l'anticipo già al completo, da mostrare barrate nel checkout. */
+/** `piene`: fasce dopo l'anticipo già al completo, da mostrare barrate nel checkout (anche col servizio chiuso perché sono tutte piene). */
 export interface DisponibilitaServizio { apertura: StatoApertura; fasce: string[]; piene: string[] }
 export interface DisponibilitaCasa {
   oggi: string; telefono: string | null; apertiIl: string | null; regole: RegoleFasce; zone: Zona[]
@@ -39,7 +39,7 @@ export async function leggiDisponibilita(db: Db, adesso: Date, prova: boolean): 
     const fasce = fascePrenotabili(s,tutte,occupazione,regole,adesso).map(f => f.toISOString())
     const piene = fascePiene(s,tutte,occupazione,regole,adesso).map(f => f.toISOString())
     const apertura = aperturaServizio(s,{ allergeniCompleti: completi,telefono: impostazioni.telefono,apertiIl: impostazioni.apertiIl,oggi,chiusoOggi: chiuso,zoneAttive: zone.length,fasceLibere: fasce.length,prova })
-    return [s,{ apertura,fasce: apertura.aperto ? fasce : [],piene: apertura.aperto ? piene : [] }]
+    return [s,{ apertura,fasce: apertura.aperto ? fasce : [],piene: apertura.aperto || apertura.motivo === 'fasce' ? piene : [] }]
   })) as Record<Servizio,DisponibilitaServizio>
   return { oggi,telefono: impostazioni.telefono,apertiIl: impostazioni.apertiIl,regole,zone,servizi }
 }
