@@ -12,8 +12,15 @@ export async function apriSchermoStaff(browser: Browser): Promise<Page> {
   await page.waitForURL('**/admin')
   await page.goto('/staff')
   await page.getByRole('button',{ name: 'Inizia turno' }).click()
-  await expect(page.getByRole('heading',{ name: 'Cucina' })).toBeVisible()
+  await expect(page.getByRole('heading',{ name: /^Da preparare/ })).toBeVisible()
   return page
+}
+
+/** Passa a una scheda dello schermo staff (Ordini, Tavoli, Conti): le altre restano montate ma nascoste. */
+export async function scheda(staff: Page, nome: 'Ordini' | 'Tavoli' | 'Conti') {
+  await staff.getByRole('navigation',{ name: 'Sezioni dello staff' }).getByRole('link',{ name: nome }).click()
+  await staff.waitForURL(`**/staff?vista=${nome.toLowerCase()}`)
+  await expect(staff.getByRole('region',{ name: nome,exact: true })).toBeVisible()
 }
 
 /** Telefono del cliente: viewport da 375×812 con touch. */
