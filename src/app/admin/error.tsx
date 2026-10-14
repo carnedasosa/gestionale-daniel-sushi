@@ -11,12 +11,12 @@ export default function ErroreAdmin({ error, retry }: { error: Error & { digest?
 
   return (
     <>
-      <h1 className="heading">Qualcosa è andato storto</h1>
-      <p>Non è stato possibile caricare questa pagina. Riprova tra qualche istante.</p>
+      <h1 className="b-titolo-1">Qualcosa è andato storto</h1>
+      <p className="b-secondario">Non è stato possibile caricare questa pagina. Riprova tra qualche istante.</p>
       <div>
-        <button type="button" className="ds-btn ds-btn--primary" onClick={() => retry()}>Riprova</button>
+        <button type="button" className="b-btn b-btn--principale" onClick={() => retry()}>Riprova</button>
       </div>
-      <Link className="ds-link" href="/admin/menu">Torna al menù</Link>
+      <Link className="b-btn b-btn--discreto" href="/admin/menu">Torna al menù</Link>
     </>
   )
 }

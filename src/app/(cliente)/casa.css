@@ -1,8 +1,3 @@
-/* Privacy (migra al Task 17) */
-.casa-pagina { display: grid; gap: 24px; padding-block: 16px 48px; }
-.casa-avviso { margin: 0; padding: 16px; border-radius: 14px; background: var(--b-st-accettare-sfondo); color: var(--b-st-accettare-testo); }
-.casa-testo { max-width: 720px; }
-
 /* Banco — pagina iniziale dei clienti */
 .b-in-corso { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 10px 16px; border-radius: 14px; background: var(--b-inchiostro); color: var(--b-su-inchiostro); text-decoration: none; font-weight: 600; }
 .b-aperti { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--b-foglio); }

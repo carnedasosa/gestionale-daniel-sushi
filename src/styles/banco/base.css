@@ -33,3 +33,8 @@ legend { padding: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Pagine di servizio (errori, pagina non trovata) e testi lunghi */
+.b-servizio { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding-block: 56px; }
+.b-testo-lungo { max-width: 720px; }
+.b-testo-lungo h2 { padding-top: 8px; }
