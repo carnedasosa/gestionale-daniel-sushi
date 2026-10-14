@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { formatEuro } from '@/domain/soldi'
 import { Pannello } from '@/componenti/Pannello'
 import type { RigaVista } from './vista-carrello'
+import { BarraBasso } from '@/componenti/BarraBasso'
 
 function RigaCarrello({ r,i,modifica,nota,inCorso }: { r: RigaVista; i: number; modifica: (i: number,q: number) => void; nota: (i: number,testo: string) => void; inCorso: boolean }) {
   const [notaAperta,setNotaAperta] = useState(!!r.nota)
@@ -29,11 +30,11 @@ export function Carrello({ righe,modifica,nota,invia,inCorso,errore,azione = 'In
   const totale = righe.reduce((s,r) => s + r.prezzoCent * r.quantita,0)
   const quantita = righe.reduce((s,r) => s + r.quantita,0)
   return <>
-    <div className="b-barra-basso"><div className="b-barra-basso__dentro">
+    <BarraBasso>
       <button type="button" className="b-btn b-btn--principale b-btn--barra" aria-label={`Carrello · ${quantita} piatti · ${formatEuro(totale)}`} onClick={() => setAperto(true)}>
         <span className="b-badge" aria-hidden="true">{quantita}</span><span className="b-barra-basso__testo">{etichettaBarra}</span><span className="b-num">{formatEuro(totale)}</span>
       </button>
-    </div></div>
+    </BarraBasso>
     <Pannello aperto={aperto} chiudi={() => setAperto(false)} titolo="Il tuo carrello">
       {!righe.length ? <p>Il carrello è vuoto. Scegli i piatti dal menù.</p> : <div className="b-lista">{righe.map((r,i) => <RigaCarrello key={`${r.piattoId}-${i}`} r={r} i={i} modifica={modifica} nota={nota} inCorso={inCorso} />)}</div>}
       <div className="b-scontrino__totale"><span>Totale stimato</span><span className="b-num">{formatEuro(totale)}</span></div>

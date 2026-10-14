@@ -14,6 +14,7 @@ import { useCarrelloSalvato } from '@/ordinare/useCarrelloSalvato'
 import { totaleVista, vistaCarrello } from '@/ordinare/vista-carrello'
 import { CHIAVE_CARRELLO_CASA, CHIAVE_ULTIMO_ORDINE } from '@/ordinare/archivio-casa'
 import { inviaOrdineCasa } from './azioni'
+import { BarraBasso } from '@/componenti/BarraBasso'
 export interface ServizioCheckout { aperto: boolean; motivo: string | null; fasce: string[]; piene: string[] }
 export interface DisponibilitaCheckout { servizi: Record<Servizio,ServizioCheckout>; zone: Zona[] }
 const ERRORE_INCERTO = 'Non siamo sicuri che l’ordine sia arrivato. Riprova: se era già arrivato non verrà duplicato.'
@@ -127,8 +128,8 @@ export function Checkout({ piatti,poke,disponibilita: d }: { piatti: Piatto[]; p
     <label className="b-checkout__privacy"><input type="checkbox" checked={privacy} onChange={e => setPrivacy(e.target.checked)} disabled={attesa} aria-invalid={!!errori.privacy} /><span>Ho letto l’<Link href="/privacy" target="_blank">informativa privacy</Link></span></label>
     <Errore campo="privacy" errori={errori} />
     {errore && <p role="alert" className="b-avviso b-avviso--ritardo">{errore}</p>}
-    <div className="b-barra-basso"><div className="b-barra-basso__dentro">
+    <BarraBasso>
       <button className="b-btn b-btn--principale b-btn--barra" aria-busy={inCorso} disabled={attesa || bloccato} aria-label={inCorso ? undefined : `Conferma l’ordine · ${formatEuro(totali.totaleCent)}`}>{inCorso ? 'Invio in corso…' : <><span>Conferma l’ordine</span><span className="b-num">{formatEuro(totali.totaleCent)}</span></>}</button>
-    </div></div>
+    </BarraBasso>
   </form>
 }

@@ -7,7 +7,7 @@
 
 .b-staff-barra { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; min-height: 76px; padding: 10px 20px; background: var(--b-barra); color: var(--b-su-barra); }
 .b-staff-barra__marchio { font-size: 1.0625rem; font-weight: 800; }
-.b-staff-barra__schede { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--b-barra-tenue); }
+.b-staff-barra__schede { display: flex; flex-wrap: wrap; max-width: 100%; gap: 4px; padding: 4px; border-radius: 14px; background: var(--b-barra-tenue); }
 .b-staff-barra__scheda { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: 10px; color: var(--b-su-barra); font-size: 1.0625rem; font-weight: 600; text-decoration: none; }
 .b-staff-barra__scheda[aria-current="page"] { background: var(--b-su-barra); color: #1C1B18; font-weight: 700; }
 .b-staff-barra__spazio { flex-grow: 1; }
@@ -65,10 +65,10 @@
 .b-tavolo-tile .b-etichetta { margin-top: auto; align-self: flex-start; }
 .b-tavolo-tile__apri { position: absolute; inset: 0; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
 .b-tavolo-tile__apri:focus-visible { outline-offset: -3px; }
-.b-dettaglio-tavolo { flex: 1 1 320px; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 20px; background: var(--b-foglio); }
-.b-dettaglio-tavolo__testa { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.b-dettaglio-tavolo { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 20px; background: var(--b-foglio); }
+.b-dettaglio-tavolo__testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 10px; }
 .b-dettaglio-tavolo__codice { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px; border-radius: 16px; background: var(--b-inchiostro); color: var(--b-su-inchiostro); }
-.b-dettaglio-tavolo__codice .b-num { font-size: 3.5rem; letter-spacing: .14em; line-height: 1.1; }
+.b-dettaglio-tavolo__codice .b-num { font-size: clamp(2rem, 14vw, 3.5rem); letter-spacing: .14em; line-height: 1.1; }
 .b-dettaglio-tavolo__azioni { display: flex; flex-direction: column; gap: 10px; }
 .b-chiudi-tavolo, .b-chiudi-tavolo > .b-btn { width: 100%; }
 
