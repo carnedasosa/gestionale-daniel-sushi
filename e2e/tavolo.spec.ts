@@ -37,6 +37,11 @@ test('tavolo: QR, codice, ordini da due telefoni, cucina e chiusura del conto', 
   const aggiungi = poke.getByRole('button',{ name: 'Aggiungi al carrello' })
   while (!await aggiungi.isVisible()) await poke.getByRole('button',{ name: /^Avanti: / }).click()
   await aggiungi.click()
+  // Una seconda poke riparte dalla base, senza le scelte di quella appena aggiunta.
+  await bruno.getByRole('button',{ name: 'Componi la tua poke' }).click()
+  await expect(poke.getByText('Passo 1 di',{ exact: false })).toBeVisible()
+  await expect(poke.getByLabel('Riso bianco')).not.toBeChecked()
+  await poke.getByRole('button',{ name: 'Chiudi' }).click()
   await bruno.getByRole('button',{ name: /^Rivedi e manda in cucina · 1 piatti/ }).click()
   await bruno.getByRole('button',{ name: 'Invia ordine' }).click()
   const inviatoBruno = bruno.getByRole('status').filter({ hasText: /^Ordine n\. \d+ inviato in cucina$/ })

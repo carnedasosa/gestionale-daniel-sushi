@@ -18,16 +18,18 @@ export function MenuCasa({ categorie,poke }: { categorie: CategoriaConPiatti[]; 
   const c = useCarrelloSalvato(CHIAVE_CARRELLO_CASA,'local')
   const righe = c.carrello.righe
   const [pokeAperta,setPokeAperta] = useState(false)
+  // Cambia a ogni poke aggiunta: la successiva riparte dalla base invece che dalle scelte di prima.
+  const [pokeAggiunte,setPokeAggiunte] = useState(0)
   const [errore,setErrore] = useState<string | null>(null)
   const router = useRouter()
   const piatti = categorie.flatMap(c => c.piatti)
   const modificaPiatto = (id: string,q: number) => { setErrore(c.modificaPiatto(id,q)) }
-  const aggiungiPoke = (scelte: SceltePoke) => { const e = c.aggiungiPoke(scelte); setErrore(e); if (!e) setPokeAperta(false) }
+  const aggiungiPoke = (scelte: SceltePoke) => { const e = c.aggiungiPoke(scelte); setErrore(e); if (!e) { setPokeAperta(false); setPokeAggiunte(n => n + 1) } }
   return <>
     {errore && <p role="alert" className="b-avviso b-avviso--ritardo">{errore}</p>}
     <SezioniMenu categorie={categorie} quantita={id => righe.find(r => r.piattoId === id)?.quantita ?? 0} modifica={modificaPiatto}
       pokeCard={poke && <CardPoke config={poke.config} apri={() => setPokeAperta(true)} />} />
-    {poke && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi poke"><ComponiPoke config={poke.config} allergeni={poke.allergeni} aggiungi={aggiungiPoke} /></Pannello>}
+    {poke && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi poke"><ComponiPoke key={pokeAggiunte} config={poke.config} allergeni={poke.allergeni} aggiungi={aggiungiPoke} /></Pannello>}
     <Carrello righe={vistaCarrello(righe,piatti,poke?.config ?? null)} modifica={(i,q) => c.modificaRighe(r => q === 0 ? r.filter((_,j) => j !== i) : r.map((v,j) => j === i ? { ...v,quantita: q } : v))}
       nota={(i,nota) => c.modificaRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={async () => { router.push('/ordina'); return true }} inCorso={!c.caricato} errore={null} azione="Vai al riepilogo" etichettaBarra="Vedi il carrello" />
   </>

@@ -18,6 +18,8 @@ export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categor
   const c = useCarrelloSalvato(`carrello_${sessioneId}`,'session')
   const righe = c.carrello.righe
   const [pokeAperta,setPokeAperta] = useState(false)
+  // Cambia a ogni poke aggiunta: la successiva riparte dalla base invece che dalle scelte di prima.
+  const [pokeAggiunte,setPokeAggiunte] = useState(0)
   const [messaggio,setMessaggio] = useState<string | null>(null)
   const [errore,setErrore] = useState<string | null>(null)
   const [inCorso,startTransition] = useTransition()
@@ -34,7 +36,7 @@ export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categor
     if (c.bloccato.current || !c.caricato) return
     setMessaggio(null)
     const e = c.aggiungiPoke(poke)
-    if (e) setErrore(e); else setPokeAperta(false)
+    if (e) setErrore(e); else { setPokeAperta(false); setPokeAggiunte(n => n + 1) }
   }
   const invia = () => new Promise<boolean>(risolvi => {
     if (c.bloccato.current || !c.caricato || !c.ref.current.chiaveInvio) { risolvi(false); return }
@@ -58,7 +60,7 @@ export function MenuOrdinabile({ categorie,config,sessioneId,chiave }: { categor
     {messaggio && <div className="b-avviso b-avviso--pronto"><p role="status">{messaggio}</p><button type="button" className="b-btn b-btn--secondario" onClick={() => setMessaggio(null)}>Fine</button></div>}{errore && <p role="alert" className="b-avviso b-avviso--ritardo">{errore}</p>}
     <SezioniMenu categorie={categorie} quantita={id => righe.find(r => r.piattoId === id)?.quantita ?? 0} modifica={modificaPiatto}
       pokeCard={ordinabile && <CardPoke config={config} apri={() => setPokeAperta(true)} />} />
-    {ordinabile && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi poke"><ComponiPoke config={config} aggiungi={aggiungiPoke} /></Pannello>}
+    {ordinabile && <Pannello aperto={pokeAperta} chiudi={() => setPokeAperta(false)} titolo="Componi poke"><ComponiPoke key={pokeAggiunte} config={config} aggiungi={aggiungiPoke} /></Pannello>}
     <Carrello righe={vistaCarrello(righe,piatti,config)} modifica={(i,q) => modificaRighe(r => q === 0 ? r.filter((_,j) => j !== i) : r.map((v,j) => j === i ? { ...v,quantita: q } : v))} nota={(i,nota) => modificaRighe(r => r.map((v,j) => j === i ? { ...v,nota } : v))} invia={invia} inCorso={inCorso || !c.caricato} errore={errore} etichettaBarra="Rivedi e manda in cucina" />
   </>
 }
