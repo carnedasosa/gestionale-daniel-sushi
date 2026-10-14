@@ -15,7 +15,8 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   reporter: 'list',
-  use: { baseURL: `http://127.0.0.1:${PORTA_APP}`,locale: 'it-IT',timezoneId: 'Europe/Rome',trace: 'retain-on-failure' },
+  // Niente registrazioni in CI: conterrebbero la password dell'utente di prova, e gli allegati di un repository pubblico sono scaricabili.
+  use: { baseURL: `http://127.0.0.1:${PORTA_APP}`,locale: 'it-IT',timezoneId: 'Europe/Rome',trace: process.env.CI ? 'off' : 'retain-on-failure' },
   projects: [{ name: 'chromium',use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     { command: 'npx tsx --env-file=.env.local e2e/db-locale.ts',port: PORTA_DB,timeout: 120_000,reuseExistingServer: false,stdout: 'pipe' },

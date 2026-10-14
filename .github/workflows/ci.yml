@@ -1,0 +1,80 @@
+# Controlli automatici di ogni pull request: tipi, stile, test, prove end-to-end e serata simulata.
+# Le prove end-to-end e la serata girano sul database finto (PGlite), mai su quello reale.
+# Il login dello staff usa l'utente di prova di Supabase Auth: servono quattro segreti del repository
+# (Settings → Secrets and variables → Actions): SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, E2E_EMAIL, E2E_PASSWORD.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un nuovo push sulla stessa PR ferma il giro precedente.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  test:
+    name: Tipi, stile e test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Controllo dei tipi
+        run: npm run typecheck
+      - name: Stile del codice
+        run: npm run lint
+      - name: Test
+        run: npm test
+
+  e2e:
+    name: Prove end-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Variabili dell'utente di prova
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: |
+          for v in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY E2E_EMAIL E2E_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error::Manca il segreto $v (Settings → Secrets and variables → Actions)"; exit 1; fi
+          done
+          umask 077
+          printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\nE2E_EMAIL=%s\nE2E_PASSWORD=%s\n' "$SUPABASE_URL" "$SUPABASE_PUBLISHABLE_KEY" "$E2E_EMAIL" "$E2E_PASSWORD" > .env.local
+      - name: Prove end-to-end
+        run: npm run e2e
+      - name: Serata simulata
+        # --if-present: il comando arriva con la PR della serata; prima di allora il passo non fa nulla.
+        run: npm run serata --if-present
+      - name: Registro della serata
+        # Solo il registro della serata (ordini e tempi di prova). Niente registrazioni, fotografie delle pagine
+        # né .env.local: potrebbero contenere la password dell'utente di prova, e gli allegati di un repository
+        # pubblico li può scaricare chiunque. Gli errori si leggono nel log del passo che è fallito.
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: serata-simulata
+          path: test-results/serata/risultati.json
+          if-no-files-found: ignore
+          retention-days: 14
