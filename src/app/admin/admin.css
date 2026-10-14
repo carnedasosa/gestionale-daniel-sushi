@@ -102,7 +102,7 @@
 
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
-  .b-nav-admin, .b-nav-admin-basso, .b-stampa-nav, .b-avviso { display: none !important; }
+  .b-nav-admin, .b-nav-admin-basso, .b-stampa-nav { display: none !important; }
   .b-admin__contenuto { padding: 0; display: block; }
   .b-qr-griglia { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
   .b-qr-card { height: 134mm; padding: 8mm; border-radius: 0; }
