@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "serata": "playwright test -c playwright.serata.config.ts",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/genera-seed.ts",
     "ruolo": "tsx --env-file=.env.local scripts/assegna-ruolo.ts"
