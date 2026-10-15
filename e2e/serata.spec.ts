@@ -93,7 +93,7 @@ async function entra(tel: Page, chiave: string, codice: string, chi: string) {
 }
 
 async function aggiungi(tel: Page, [categoria,nome]: [string,string], quanti: number) {
-  const sezione = tel.locator(`#${categoria}`)
+  const sezione = tel.locator(`#sez-${categoria}`)
   await sezione.getByRole('button',{ name: `Aggiungi ${nome}`,exact: true }).click()
   for (let i = 1; i < quanti; i++) await sezione.getByRole('button',{ name: `Aumenta ${nome}`,exact: true }).click()
 }
