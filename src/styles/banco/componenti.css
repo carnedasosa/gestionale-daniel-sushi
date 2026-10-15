@@ -103,6 +103,13 @@ input[type=checkbox], input[type=radio] { width: 22px; height: 22px; margin: 0; 
 .b-pillole::-webkit-scrollbar { display: none; }
 .b-pillola { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 999px; background: var(--b-foglio); color: var(--b-inchiostro); font-size: .9375rem; font-weight: 600; text-decoration: none; }
 .b-pillola[aria-current="true"] { background: var(--b-inchiostro); color: var(--b-su-inchiostro); }
+/* Fila delle categorie (BarraCategorie): sfumata dal lato in cui continua; sul telefono si nasconde scorrendo in giù. */
+.b-fila-categorie { transition: transform var(--b-base) ease-out; }
+.b-fila-categorie .b-pillole { padding-bottom: 0; }
+.b-fila-categorie[data-coda="destra"] .b-pillole { mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+.b-fila-categorie[data-coda="sinistra"] .b-pillole { mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); }
+.b-fila-categorie[data-coda="entrambe"] .b-pillole { mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
+.b-fila-categorie[data-nascosta] { transform: translateY(calc(-100% - 2px)); }
 
 /* Interruttore: button[role=switch] oppure label con checkbox role=switch */
 .b-interruttore { display: inline-flex; align-items: center; gap: 10px; min-height: var(--b-tap); padding: 0 8px 0 2px; border: 0; background: transparent; color: var(--b-inchiostro); font: 600 .9375rem/1.2 var(--b-font-testo), system-ui, sans-serif; cursor: pointer; text-align: left; }

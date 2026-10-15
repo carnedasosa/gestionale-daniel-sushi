@@ -15,9 +15,9 @@ test('da casa: ordine a domicilio, accettato +15’, seguito dal cliente fino al
   // Il cliente sceglie dal menù: 3 tartare di salmone (18,00 €), sopra il minimo di 15,00 € della zona.
   const cliente = await apriTelefono(browser)
   await cliente.goto('/')
-  await cliente.locator('#tartare').getByRole('button',{ name: 'Aggiungi Salmone',exact: true }).click()
-  await cliente.locator('#tartare').getByRole('button',{ name: 'Aumenta Salmone',exact: true }).click()
-  await cliente.locator('#tartare').getByRole('button',{ name: 'Aumenta Salmone',exact: true }).click()
+  await cliente.locator('#sez-tartare').getByRole('button',{ name: 'Aggiungi Salmone',exact: true }).click()
+  await cliente.locator('#sez-tartare').getByRole('button',{ name: 'Aumenta Salmone',exact: true }).click()
+  await cliente.locator('#sez-tartare').getByRole('button',{ name: 'Aumenta Salmone',exact: true }).click()
   await cliente.getByRole('button',{ name: /^Vedi il carrello · 3 piatti/ }).click()
   await cliente.getByRole('button',{ name: 'Vai al riepilogo' }).click()
   await cliente.waitForURL('**/ordina')

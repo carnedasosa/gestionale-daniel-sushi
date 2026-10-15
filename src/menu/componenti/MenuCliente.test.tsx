@@ -58,7 +58,11 @@ describe('MenuCliente', () => {
     expect(html).not.toContain('<button')
   })
 
-  it('ha il link del chip verso la categoria', () => {
-    expect(html).toContain('href="#uramaki"'); expect(html).toContain('8 pezzi')
+  it('fila delle categorie: una pillola per categoria che porta alla sua sezione, una sola evidenziata', () => {
+    const due = renderToStaticMarkup(<MenuCliente categorie={[...categorie,{ id: 'nigiri',nome: 'Nigiri',pezzi: null,posizione: 1,piatti: [] }]} />)
+    expect(due).toContain('aria-label="Vai alla categoria"')
+    for (const id of ['uramaki','nigiri']) { expect(due).toContain(`href="#sez-${id}"`); expect(due).toContain(`id="sez-${id}"`) }
+    expect(due.match(/aria-current="true"/g)).toHaveLength(1)
+    expect(html).toContain('8 pezzi')
   })
 })
