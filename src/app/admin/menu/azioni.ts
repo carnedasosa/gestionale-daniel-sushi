@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
-import { aggiornaPiatto, impostaDisponibile } from '@/menu/repo'
+import { aggiornaPiatto } from '@/menu/repo'
+import { cambiaDisponibilitaPiatto, type EsitoDisponibilita } from '@/menu/cambia-disponibilita'
 import { inputDaForm, validaPiatto, type InputPiatto } from '@/menu/valida-piatto'
 
 export type StatoModulo = {
@@ -37,16 +38,7 @@ export async function salvaPiatto(id: string, stato: StatoModulo, fd: FormData):
   return { salvato: true, errori: {}, erroreGenerale: null, valori: null, invii }
 }
 
-export async function cambiaDisponibilita(id: string, disponibile: boolean): Promise<void> {
+export async function cambiaDisponibilita(id: string, disponibile: boolean): Promise<EsitoDisponibilita> {
   await richiediRuolo('admin')
-  if (typeof disponibile !== 'boolean') return
-  try {
-    // Se il piatto non esiste più (false) si rivalida comunque: la pagina mostra lo stato reale.
-    await impostaDisponibile(db, id, disponibile)
-  } catch (err) {
-    console.error('cambiaDisponibilita non riuscito:', err instanceof Error ? err.message : 'errore sconosciuto')
-    return
-  }
-  revalidatePath('/admin/menu')
-  revalidatePath('/')
+  return cambiaDisponibilitaPiatto(id, disponibile)
 }

@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it, vi } from 'vitest'
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 vi.mock('./azioni', () => ({ apriTavolo: vi.fn(), chiudiTavolo: vi.fn(), avanzaOrdine: vi.fn(), annullaOrdineStaff: vi.fn(), annullaRigaStaff: vi.fn() }))
+vi.mock('./azioni-menu', () => ({ cambiaDisponibilitaStaff: vi.fn() }))
 vi.mock('./azioni-casa', () => ({ apriOrdiniOnline: vi.fn(), chiudiOrdiniOnline: vi.fn(), accettaOrdineStaff: vi.fn(), rifiutaOrdineStaff: vi.fn(), avanzaOrdineCasaStaff: vi.fn(), annullaOrdineCasaStaff: vi.fn() }))
 import { CardOrdine } from './SchermoStaff'
 import { CardOrdineCasa } from './OrdiniCasa'
@@ -82,4 +83,18 @@ it('colonne della cucina: i punti di passaggio sono in em, così col carattere p
 it('comanda nuova: si segna letta al clic, non alla pressione (l’etichetta che sparisce sposterebbe il bottone sotto il dito)', () => {
   const card = CardOrdine({ ordine: tavolo,ora: '2026-10-11T18:05:00Z',nuovo: true,inCorso: false,leggi: () => {},esegui: () => {} }) as React.ReactElement<{ onClick?: unknown; onPointerDown?: unknown }>
   expect(card.props.onPointerDown).toBeUndefined(); expect(card.props.onClick).toBeTypeOf('function')
+})
+it('tavolo chiuso: la comanda si prepara ancora ma non offre annullamenti', () => {
+  const html = renderToStaticMarkup(<CardOrdine ordine={{ ...tavolo,tavoloChiuso: true }} ora="2026-10-11T18:05:00Z" nuovo={false} inCorso={false} leggi={() => {}} esegui={() => {}} />)
+  expect(html).toContain('Inizia a preparare'); expect(html).toContain('Tavolo chiuso')
+  expect(html).not.toContain('Annulla tutto l’ordine')
+  expect(renderToStaticMarkup(<CardOrdine ordine={tavolo} ora="2026-10-11T18:05:00Z" nuovo={false} inCorso={false} leggi={() => {}} esegui={() => {}} />)).toContain('Annulla tutto l’ordine')
+})
+it('scheda «Menù»: interruttori Disponibile/Esaurito per lo staff, con il numero di esauriti', async () => {
+  const { SchermoStaff } = await import('./SchermoStaff')
+  const menu = [{ id: 'nigiri',nome: 'Nigiri',pezzi: null,piatti: [{ id: 'a',numero: 1,nome: 'Salmone',prezzoCent: 600,allergeniConfermati: true,disponibile: true },{ id: 'b',numero: 2,nome: 'Tonno',prezzoCent: 700,allergeniConfermati: true,disponibile: false }] }]
+  const html = renderToStaticMarkup(<SchermoStaff ora="2026-10-11T18:05:00Z" vista="menu" dati={{ tavoli: [],ordini: [],riepiloghi: [],contiRecenti: [],casa: [],ordiniOnline: online,menu }} />)
+  expect(html).toMatch(/href="\/staff\?vista=menu"[^>]*aria-current="page"|aria-current="page"[^>]*href="\/staff\?vista=menu"/)
+  expect(html.match(/role="switch"/g)).toHaveLength(2); expect(html).toContain('aria-checked="false"'); expect(html).toContain('1 piatto esaurito stasera')
+  expect(html).not.toContain('/admin/')
 })

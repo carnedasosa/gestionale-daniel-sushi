@@ -112,6 +112,10 @@ input[type=checkbox], input[type=radio] { width: 22px; height: 22px; margin: 0; 
 .b-interruttore[aria-checked="true"] .b-interruttore__binario::after, .b-interruttore__input:checked + .b-interruttore__binario::after { transform: translateX(20px); }
 .b-interruttore__input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .b-interruttore:has(.b-interruttore__input:focus-visible) .b-interruttore__binario { outline: 3px solid var(--b-fuoco); outline-offset: 2px; }
+.b-interruttore[aria-busy="true"] { cursor: progress; }
+.b-interruttore[aria-busy="true"] .b-interruttore__binario { opacity: .6; }
+.b-interruttore__stato { color: var(--b-grafite); font-weight: 500; }
+.b-interruttore-campo { display: flex; flex-direction: column; gap: 2px; }
 
 /* Avvisi */
 .b-avviso { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 14px 16px; border-radius: 14px; background: var(--b-foglio); color: var(--b-inchiostro); font-size: 1rem; line-height: 1.45; overflow-wrap: anywhere; }

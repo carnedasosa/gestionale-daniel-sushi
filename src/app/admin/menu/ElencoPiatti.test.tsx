@@ -12,11 +12,11 @@ it('ricerca per nome (senza accenti e maiuscole) o per numero esatto, categorie 
   expect(filtraCategorie(categorie,'zzz')).toEqual([])
 })
 it('interruttore e stato degli allergeni per ogni piatto', () => {
-  const html = renderToStaticMarkup(<ElencoPiatti categorie={categorie} cambia={async () => {}} />)
+  const html = renderToStaticMarkup(<ElencoPiatti categorie={categorie} cambia={async () => ({ ok: true })} />)
   expect(html).toContain('aria-checked="false"'); expect(html).toContain('Esaurito'); expect(html).toContain('Da confermare'); expect(html).toContain('href="/admin/menu/a"'); expect(html).toContain('Cerca un piatto')
 })
 it('fila delle categorie: una pillola per categoria che porta alla sua sezione', () => {
-  const html = renderToStaticMarkup(<ElencoPiatti categorie={categorie} cambia={async () => {}} />)
+  const html = renderToStaticMarkup(<ElencoPiatti categorie={categorie} cambia={async () => ({ ok: true })} />)
   expect(html).toContain('aria-label="Vai alla categoria"')
   for (const id of ['tartare','sashimi','dessert']) { expect(html).toContain(`href="#sez-${id}"`); expect(html).toContain(`id="sez-${id}"`) }
   expect(html.match(/aria-current="true"/g)).toHaveLength(1)

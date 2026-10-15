@@ -5,10 +5,12 @@ vi.mock('@/server/db', () => ({ db: {} }))
 vi.mock('@/tavoli/repo', () => ({ apriSessione: m.apriSessione, chiudiSessione: m.chiudiSessione, sbloccaSessione: m.sbloccaSessione }))
 vi.mock('@/tavoli/ordini-repo', () => ({ avanzaStato: m.avanzaStato, annullaOrdine: m.annullaOrdine, annullaRiga: m.annullaRiga, annullaVoceConto: m.annullaVoceConto }))
 vi.mock('next/cache', () => ({ revalidatePath: m.revalidatePath }))
-import { apriTavolo, chiudiTavolo, sbloccaTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff } from './azioni'
+import { apriTavolo, chiudiTavolo, sbloccaTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, annullaVoceStaff } from './azioni'
 const id = '11111111-1111-4111-8111-111111111111'
-const coppie = [[apriTavolo,m.apriSessione],[chiudiTavolo,m.chiudiSessione],[sbloccaTavolo,m.sbloccaSessione],[avanzaOrdine,m.avanzaStato],[annullaOrdineStaff,m.annullaOrdine],[annullaRigaStaff,m.annullaRiga]] as const
-beforeEach(() => { vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {}) })
+const avanzaDaInviato = (ordineId: string) => avanzaOrdine(ordineId,'inviato')
+const coppie = [[apriTavolo,m.apriSessione],[chiudiTavolo,m.chiudiSessione],[sbloccaTavolo,m.sbloccaSessione],[avanzaDaInviato,m.avanzaStato],[annullaOrdineStaff,m.annullaOrdine],[annullaRigaStaff,m.annullaRiga]] as const
+const utente = '22222222-2222-4222-8222-222222222222'
+beforeEach(() => { vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {}); m.richiediRuolo.mockResolvedValue({ userId: utente,ruolo: 'staff' }) })
 it('ogni azione verifica staff prima del repo, valida id e rivalida dopo successo', async () => {
   for (const [azione,repo] of coppie) {
     repo.mockResolvedValue({ ok: true,id,codice: '1234' })
@@ -37,4 +39,26 @@ it('propaga i redirect di ruolo per tutte le azioni', async () => {
 })
 it('tutte le azioni restituiscono il messaggio italiano per errori DB', async () => {
   for (const [azione,repo] of coppie) { repo.mockRejectedValue(new Error('connessione')); expect(await azione(id)).toEqual({ ok: false, errore: 'Operazione non riuscita, riprova.' }) }
+})
+it('avanza passando lo stato visto sulla card e spiega quando un altro schermo è arrivato prima', async () => {
+  m.avanzaStato.mockResolvedValueOnce({ id })
+  expect(await avanzaOrdine(id,'in_preparazione')).toEqual({ ok: true })
+  expect(m.avanzaStato).toHaveBeenLastCalledWith(expect.anything(),id,'in_preparazione')
+  m.avanzaStato.mockResolvedValueOnce(null)
+  expect(await avanzaOrdine(id,'inviato')).toEqual({ ok: false,errore: 'La comanda è già stata aggiornata da un altro schermo: controlla il suo stato attuale.' })
+  m.avanzaStato.mockClear()
+  for (const da of ['servito','annullato','boh',undefined]) expect((await avanzaOrdine(id,da as never)).ok).toBe(false)
+  expect(m.avanzaStato).not.toHaveBeenCalled()
+})
+it('gli annullamenti registrano l’utente staff e rifiutano i conti chiusi con un messaggio chiaro', async () => {
+  const voce = { nome: 'Salmone',numero: 1,prezzoUnitCent: 600,poke: null }
+  for (const [chiama,repo,args] of [[() => annullaOrdineStaff(id),m.annullaOrdine,[id,utente]],[() => annullaRigaStaff(id),m.annullaRiga,[id,utente]],[() => annullaVoceStaff(id,voce),m.annullaVoceConto,[id,voce,utente]]] as const) {
+    repo.mockResolvedValueOnce('ok')
+    expect(await chiama()).toEqual({ ok: true })
+    expect(repo).toHaveBeenLastCalledWith(expect.anything(),...args)
+    repo.mockResolvedValueOnce('conto_chiuso')
+    expect(await chiama()).toEqual({ ok: false,errore: 'Il conto di questo tavolo è già chiuso: non si può più modificare.' })
+    repo.mockResolvedValueOnce('non_disponibile')
+    expect(await chiama()).toEqual({ ok: false,errore: 'Operazione non disponibile: aggiorna lo schermo.' })
+  }
 })

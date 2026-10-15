@@ -7,6 +7,7 @@ import { ordiniAttivi, riepiloghiTavoli } from '@/tavoli/ordini-repo'
 import { AggiornamentoAutomatico } from '@/componenti/AggiornamentoAutomatico'
 import { ordiniCasaAttivi, perClient } from '@/casa/ordini-casa-repo'
 import { leggiDisponibilita } from '@/casa/disponibilita'
+import { leggiMenu } from '@/menu/repo'
 import { avviaInvioEmail } from '@/casa/avvia-email'
 import { modalitaProva, TESTO_MOTIVO, type StatoApertura } from '@/domain/apertura-casa'
 import { InizioTurno } from './InizioTurno'
@@ -22,7 +23,9 @@ export default async function AreaStaff({ searchParams }: { searchParams?: Promi
     // dati del browser invece di passare alla pagina d'errore. I redirect di accesso e permessi
     // passano comunque (unstable_rethrow) e senza ruolo verificato non si legge alcun dato.
     await richiediRuolo('staff')
-    dati = await Promise.all([elencoTavoli(db),ordiniAttivi(db),riepiloghiTavoli(db),contiRecenti(db),ordiniCasaAttivi(db),leggiDisponibilita(db,new Date(),modalitaProva(process.env))])
+    dati = await Promise.all([elencoTavoli(db),ordiniAttivi(db),riepiloghiTavoli(db),contiRecenti(db),ordiniCasaAttivi(db),leggiDisponibilita(db,new Date(),modalitaProva(process.env)),
+      // Il menù serve solo alla scheda «Menù»: le altre non lo rileggono a ogni aggiornamento.
+      vista === 'menu' ? leggiMenu(db) : null])
     // Ogni aggiornamento dello schermo ritenta anche le email rimaste in coda.
     avviaInvioEmail()
   } catch (err) {
@@ -37,6 +40,7 @@ export default async function AreaStaff({ searchParams }: { searchParams?: Promi
     riepiloghi: dati[2],
     contiRecenti: dati[3].map(c => ({ ...c,chiusaIl: c.chiusaIl.toISOString() })),
     casa: dati[4].map(perClient),
+    menu: dati[6]?.map(c => ({ id: c.id,nome: c.nome,pezzi: c.pezzi,piatti: c.piatti.map(p => ({ id: p.id,numero: p.numero,nome: p.nome,prezzoCent: p.prezzoCent,allergeniConfermati: p.allergeniConfermati,disponibile: p.disponibile })) })) ?? null,
     ordiniOnline: { accesi: dati[5].apertiIl === dati[5].oggi,asporto: motivo(dati[5].servizi.asporto.apertura),domicilio: motivo(dati[5].servizi.domicilio.apertura) },
   } : null
   const uscita = <form action={esci}><button className="b-btn b-btn--discreto">Esci</button></form>
