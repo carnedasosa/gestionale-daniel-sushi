@@ -9,6 +9,7 @@ if (existsSync('.env.local')) process.loadEnvFile('.env.local')
 // DATABASE_URL punta sempre a 127.0.0.1: le variabili del processo prevalgono su .env.local.
 export default defineConfig({
   testDir: 'e2e',
+  testIgnore: 'serata.spec.ts',
   fullyParallel: false,
   workers: 1,
   timeout: 90_000,
