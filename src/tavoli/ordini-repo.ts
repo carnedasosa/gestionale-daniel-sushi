@@ -93,30 +93,55 @@ export async function riepiloghiTavoli(db: Db): Promise<RiepilogoTavolo[]> {
     coalesce(sum(case when o.stato <> 'annullato' then o.totale_cent else 0 end),0)::float8 as "totaleCent"
     from sessioni_tavolo s left join ordini o on o.sessione_id=s.id where s.chiusa_il is null group by s.id`)
 }
-export async function avanzaStato(db: Db, ordineId: string): Promise<Ordine | null> {
-  if (!idValido(ordineId)) return null
+// `da`: lo stato che vedeva lo staff. Se un altro schermo ha già fatto avanzare la comanda il passo si rifiuta:
+// due tocchi su «Inizia a preparare» non la portano a «servito».
+export async function avanzaStato(db: Db, ordineId: string, da: StatoOrdineTavolo): Promise<Ordine | null> {
+  if (!idValido(ordineId) || !prossimoStato(da)) return null
   return db.transazione(async tx => {
     const [o] = await tx.query<{ stato: StatoOrdineTavolo }>("select stato from ordini where id=$1 and tipo='tavolo' for update",[ordineId])
-    const stato = o ? prossimoStato(o.stato) : null
-    if (!stato) return null
-    await tx.query('update ordini set stato=$2,aggiornato_il=now() where id=$1',[ordineId,stato])
+    if (o?.stato !== da) return null
+    await tx.query('update ordini set stato=$2,aggiornato_il=now() where id=$1',[ordineId,prossimoStato(da)])
     return (await leggiOrdini(tx,'o.id=$1',[ordineId]))[0] ?? null
   })
 }
-export async function annullaOrdine(db: Db, ordineId: string): Promise<boolean> {
-  if (!idValido(ordineId)) return false
-  return (await db.query("update ordini set stato='annullato',aggiornato_il=now() where id=$1 and tipo='tavolo' and stato in ('inviato','in_preparazione') returning id",[ordineId])).length === 1
+/** Esito di un annullamento: `conto_chiuso` se il tavolo è già stato chiuso (il conto incassato non si tocca più). */
+export type EsitoAnnullo = 'ok' | 'conto_chiuso' | 'non_disponibile'
+// Blocca la sessione prima degli ordini (stesso ordine di chiudiSessione e annullaVoceConto): una chiusura in corso aspetta o viene vista.
+async function contoChiuso(tx: Db,sessioneId: string | null): Promise<boolean> {
+  if (!sessioneId) return false
+  const [s] = await tx.query<{ chiusa: boolean }>('select chiusa_il is not null as chiusa from sessioni_tavolo where id=$1 for share',[sessioneId])
+  return !s || s.chiusa
 }
-export async function annullaRiga(db: Db, rigaId: string): Promise<boolean> {
-  if (!idValido(rigaId)) return false
+type Annullo = { tipo: 'ordine' | 'riga' | 'voce_conto'; ordineId: string; rigaId: string | null; importoCent: number }
+async function registraAnnulli(tx: Db,utenteId: string,annulli: Annullo[]) {
+  for (const a of annulli) await tx.query('insert into registro_annullamenti(utente_id,tipo,ordine_id,riga_id,importo_cent) values ($1,$2,$3,$4,$5)',[utenteId,a.tipo,a.ordineId,a.rigaId,a.importoCent])
+}
+export async function annullaOrdine(db: Db, ordineId: string, utenteId: string): Promise<EsitoAnnullo> {
+  if (!idValido(ordineId) || !idValido(utenteId)) return 'non_disponibile'
   return db.transazione(async tx => {
+    const [s] = await tx.query<{ sessioneId: string }>("select sessione_id as \"sessioneId\" from ordini where id=$1 and tipo='tavolo'",[ordineId])
+    if (!s) return 'non_disponibile'
+    if (await contoChiuso(tx,s.sessioneId)) return 'conto_chiuso'
+    const [o] = await tx.query<{ totaleCent: number }>("update ordini set stato='annullato',aggiornato_il=now() where id=$1 and stato in ('inviato','in_preparazione') returning totale_cent as \"totaleCent\"",[ordineId])
+    if (!o) return 'non_disponibile'
+    await registraAnnulli(tx,utenteId,[{ tipo: 'ordine',ordineId,rigaId: null,importoCent: o.totaleCent }])
+    return 'ok'
+  })
+}
+export async function annullaRiga(db: Db, rigaId: string, utenteId: string): Promise<EsitoAnnullo> {
+  if (!idValido(rigaId) || !idValido(utenteId)) return 'non_disponibile'
+  return db.transazione(async tx => {
+    const [s] = await tx.query<{ sessioneId: string | null }>('select o.sessione_id as "sessioneId" from ordini o join righe_ordine r on r.ordine_id=o.id where r.id=$1',[rigaId])
+    if (!s) return 'non_disponibile'
+    if (await contoChiuso(tx,s.sessioneId)) return 'conto_chiuso'
     // Il lock sull'ordine serializza annullamenti di righe diverse e il ricalcolo.
     const [o] = await tx.query<{ id: string }>(`select o.id from ordini o join righe_ordine r on r.ordine_id=o.id where r.id=$1 and o.stato not in ('annullato','rifiutato') for update of o`,[rigaId])
-    if (!o) return false
-    const righe = await tx.query('update righe_ordine set annullata=true where id=$1 and not annullata returning id',[rigaId])
-    if (!righe.length) return false
+    if (!o) return 'non_disponibile'
+    const [r] = await tx.query<{ importoCent: number }>('update righe_ordine set annullata=true where id=$1 and not annullata returning prezzo_unit_cent*quantita as "importoCent"',[rigaId])
+    if (!r) return 'non_disponibile'
     await ricalcolaOrdine(tx,o.id)
-    return true
+    await registraAnnulli(tx,utenteId,[{ tipo: 'riga',ordineId: o.id,rigaId,importoCent: r.importoCent }])
+    return 'ok'
   })
 }
 // Totale = righe attive + consegna (solo domicilio). Senza righe attive l'ordine è annullato; da casa il cliente riceve l'email.
@@ -125,15 +150,17 @@ async function ricalcolaOrdine(db: Db,id: string) {
   await db.query(`insert into email_ordini (ordine_id,tipo) select id,'annullato' from ordini where id=$1 and tipo<>'tavolo' and stato='annullato' on conflict (ordine_id,tipo) do nothing`,[id])
 }
 export interface IdentitaVoce { nome: string; numero: number | null; prezzoUnitCent: number; poke: SceltePoke | null }
-export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce): Promise<boolean> {
-  if (!idValido(sessioneId) || !v || typeof v.nome !== 'string' || !v.nome.length || v.nome.length>300 || !Number.isSafeInteger(v.prezzoUnitCent) || v.prezzoUnitCent<0 || v.prezzoUnitCent>2147483647 || (v.numero!==null && (!Number.isSafeInteger(v.numero) || v.numero<0 || v.numero>2147483647)) || (v.poke!==null && (typeof v.poke!=='object' || Array.isArray(v.poke) || !Object.values(v.poke).every(x => Array.isArray(x) && x.every(s => typeof s==='string'))))) return false
+export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce,utenteId: string): Promise<EsitoAnnullo> {
+  if (!idValido(sessioneId) || !idValido(utenteId) || !v || typeof v.nome !== 'string' || !v.nome.length || v.nome.length>300 || !Number.isSafeInteger(v.prezzoUnitCent) || v.prezzoUnitCent<0 || v.prezzoUnitCent>2147483647 || (v.numero!==null && (!Number.isSafeInteger(v.numero) || v.numero<0 || v.numero>2147483647)) || (v.poke!==null && (typeof v.poke!=='object' || Array.isArray(v.poke) || !Object.values(v.poke).every(x => Array.isArray(x) && x.every(s => typeof s==='string'))))) return 'non_disponibile'
   return db.transazione(async tx => {
-    const [s] = await tx.query('select id from sessioni_tavolo where id=$1 for update',[sessioneId])
-    if (!s) return false
+    const [s] = await tx.query<{ chiusa: boolean }>('select chiusa_il is not null as chiusa from sessioni_tavolo where id=$1 for update',[sessioneId])
+    if (!s) return 'non_disponibile'
+    if (s.chiusa) return 'conto_chiuso'
     const ordini = await tx.query<{ id: string }>("select id from ordini where sessione_id=$1 and stato<>'annullato' order by id for update",[sessioneId])
-    const righe = await tx.query<{ ordineId: string }>(`update righe_ordine set annullata=true where ordine_id=any($1::uuid[]) and not annullata and nome=$2 and numero is not distinct from $3::int and prezzo_unit_cent=$4 and poke is not distinct from $5::text::jsonb returning ordine_id as "ordineId"`,[ordini.map(o => o.id),v.nome,v.numero,v.prezzoUnitCent,v.poke===null ? null : JSON.stringify(v.poke)])
+    const righe = await tx.query<{ id: string; ordineId: string; importoCent: number }>(`update righe_ordine set annullata=true where ordine_id=any($1::uuid[]) and not annullata and nome=$2 and numero is not distinct from $3::int and prezzo_unit_cent=$4 and poke is not distinct from $5::text::jsonb returning id,ordine_id as "ordineId",prezzo_unit_cent*quantita as "importoCent"`,[ordini.map(o => o.id),v.nome,v.numero,v.prezzoUnitCent,v.poke===null ? null : JSON.stringify(v.poke)])
     for (const id of new Set(righe.map(r => r.ordineId))) await ricalcolaOrdine(tx,id)
-    return righe.length>0
+    await registraAnnulli(tx,utenteId,righe.map(r => ({ tipo: 'voce_conto',ordineId: r.ordineId,rigaId: r.id,importoCent: r.importoCent })))
+    return righe.length>0 ? 'ok' : 'non_disponibile'
   })
 }
 // ordiniIds: ordini non annullati del conto, per riconoscere quelli arrivati dopo l'apertura della pagina.

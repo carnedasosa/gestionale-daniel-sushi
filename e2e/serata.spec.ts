@@ -285,8 +285,11 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
 
   const [sala,cucinaPage] = [await tabletStaff(browser,'sala'),await tabletStaff(browser,'cucina')]
   const inSala = fila()
-  const admin = await sala.context().newPage()
-  await admin.goto('/admin/menu')
+  // Gli esauriti si segnano dalla scheda «Menù» dello staff, senza passare dall'admin.
+  const menuSala = await sala.context().newPage()
+  await menuSala.goto('/staff?vista=menu')
+  await menuSala.getByRole('button',{ name: 'Inizia turno' }).click()
+  await expect(menuSala.getByRole('switch').first()).toBeVisible()
 
   // La sala apre gli ordini online di stasera.
   await sala.getByRole('button',{ name: 'Ordini online chiusi' }).click()
@@ -336,9 +339,11 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
     return totale
   })
   const esaurito = (nome: string, attivo: boolean) => inSala(async () => {
-    await admin.goto('/admin/menu')
-    const interruttore = admin.getByRole('switch',{ name: new RegExp(`^${nome}: `) }).first()
+    // La scheda resta aperta e si aggiorna da sola: ricaricarla riproporrebbe «Inizia turno».
+    const interruttore = menuSala.getByRole('switch',{ name: new RegExp(`^${nome}: `) }).first()
     if ((await interruttore.getAttribute('aria-checked')) === String(attivo)) await interruttore.click()
+    // L'interruttore cambia subito: si aspetta la fine del salvataggio, che in caso di errore lo riporterebbe indietro.
+    await expect(interruttore).not.toHaveAttribute('aria-busy','true')
     await expect(interruttore).toHaveAttribute('aria-checked',String(!attivo))
     log('sala',`${nome}: ${attivo ? 'ESAURITO' : 'di nuovo disponibile'}`)
   })

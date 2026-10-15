@@ -8,6 +8,7 @@ import { annullaOrdine, annullaRiga, annullaVoceConto, avanzaStato, contoSession
 import { contiRecenti } from './repo'
 import { leggiPokeConfig, salvaPokeConfig } from './poke-repo'
 import { validaCarrello } from '@/domain/carrello'
+const UTENTE = '22222222-2222-4222-8222-222222222222'
 let ambiente: Awaited<ReturnType<typeof creaDbDiTest>>, sessione: string, piatto: string
 beforeEach(async () => {
   ambiente = await creaDbDiTest({ seed: true })
@@ -32,7 +33,7 @@ it('un ordine arrivato dopo il conto richiede conferma anche se è già servito'
   const { db } = ambiente
   const conto = (await contoSessione(db,sessione))!
   const e = await creaOrdineTavolo(db,sessione,righe()); if (!e.ok) throw new Error(e.errore)
-  await avanzaStato(db,e.ordine.id); await avanzaStato(db,e.ordine.id)
+  await avanzaStato(db,e.ordine.id,'inviato'); await avanzaStato(db,e.ordine.id,'in_preparazione')
   // La pagina si aggiorna da sola: il nuovo ordine compare negli ordini del conto...
   const aggiornato = (await contoSessione(db,sessione))!
   expect(aggiornato.ordiniIds.filter(id => !conto.ordiniIds.includes(id))).toEqual([e.ordine.id])
@@ -44,15 +45,15 @@ it('conto: annulla una voce raggruppata anche servita e annulla ordini rimasti v
   const { db } = ambiente
   for (let i=0; i<2; i++) {
     const e = await creaOrdineTavolo(db,sessione,righe()); if (!e.ok) throw new Error(e.errore)
-    await avanzaStato(db,e.ordine.id); await avanzaStato(db,e.ordine.id)
+    await avanzaStato(db,e.ordine.id,'inviato'); await avanzaStato(db,e.ordine.id,'in_preparazione')
   }
   const c = (await contoSessione(db,sessione))!
   expect(c.voci[0]).toMatchObject({ quantita: 4,prezzoUnitCent: 600,poke: null })
-  expect(await annullaVoceConto(db,sessione,c.voci[0])).toBe(true)
+  expect(await annullaVoceConto(db,sessione,c.voci[0],UTENTE)).toBe('ok')
   expect(await contoSessione(db,sessione)).toMatchObject({ totaleCent: 0,voci: [] })
   expect((await ordiniDellaSessione(db,sessione)).map(o => o.stato)).toEqual(['annullato','annullato'])
-  expect(await annullaVoceConto(db,sessione,c.voci[0])).toBe(false)
-  expect(await annullaVoceConto(db,'x',c.voci[0])).toBe(false)
+  expect(await annullaVoceConto(db,sessione,c.voci[0],UTENTE)).toBe('non_disponibile')
+  expect(await annullaVoceConto(db,'x',c.voci[0],UTENTE)).toBe('non_disponibile')
 })
 it('poke differenti restano separate nel conto con le scelte e il prezzo unitario', async () => {
   const { db } = ambiente
@@ -62,7 +63,7 @@ it('poke differenti restano separate nel conto con le scelte e il prezzo unitari
   await creaOrdineTavolo(db,sessione,[{ piattoId: null,quantita: 1,nota: '',poke },{ piattoId: null,quantita: 1,nota: '',poke: altro }])
   const voci = (await contoSessione(db,sessione))!.voci
   expect(voci).toHaveLength(2); expect(voci.map(v => v.poke)).toEqual(expect.arrayContaining([poke,altro]))
-  await annullaVoceConto(db,sessione,voci[0])
+  await annullaVoceConto(db,sessione,voci[0],UTENTE)
   expect(await contoSessione(db,sessione)).toMatchObject({ totaleCent: 900,voci: [{ quantita: 1 }] })
 })
 it('ripete lo stesso invio senza duplicati, anche dopo chiusura, e non accetta chiavi di altre sessioni', async () => {
@@ -109,10 +110,10 @@ it('avanza fino a servito ed esclude ordini finali dalla cucina', async () => {
   const { db } = ambiente
   const e = await creaOrdineTavolo(db,sessione,righe()); if (!e.ok) throw new Error(e.errore)
   expect(await ordiniAttivi(db)).toHaveLength(1)
-  expect((await avanzaStato(db,e.ordine.id))?.stato).toBe('in_preparazione')
-  expect((await avanzaStato(db,e.ordine.id))?.stato).toBe('servito')
-  expect(await avanzaStato(db,e.ordine.id)).toBeNull()
-  expect(await annullaOrdine(db,e.ordine.id)).toBe(false)
+  expect((await avanzaStato(db,e.ordine.id,'inviato'))?.stato).toBe('in_preparazione')
+  expect((await avanzaStato(db,e.ordine.id,'in_preparazione'))?.stato).toBe('servito')
+  expect(await avanzaStato(db,e.ordine.id,'servito' as never)).toBeNull()
+  expect(await annullaOrdine(db,e.ordine.id,UTENTE)).toBe('non_disponibile')
   expect(await ordiniAttivi(db)).toEqual([])
 })
 it('annulla righe, ricalcola totale e raggruppa il conto escludendo annullati', async () => {
@@ -120,13 +121,13 @@ it('annulla righe, ricalcola totale e raggruppa il conto escludendo annullati', 
   const a = await creaOrdineTavolo(db,sessione,righe()), b = await creaOrdineTavolo(db,sessione,righe()), c = await creaOrdineTavolo(db,sessione,righe())
   if (!a.ok || !b.ok || !c.ok) throw new Error('creazione')
   expect((await contoSessione(db,sessione))?.voci).toEqual([{ nome: 'Salmone', numero: 1, prezzoUnitCent: 600,poke: null,quantita: 6, importoCent: 3600 }])
-  expect(await annullaRiga(db,a.ordine.righe[0].id)).toBe(true)
-  expect(await annullaRiga(db,a.ordine.righe[0].id)).toBe(false)
+  expect(await annullaRiga(db,a.ordine.righe[0].id,UTENTE)).toBe('ok')
+  expect(await annullaRiga(db,a.ordine.righe[0].id,UTENTE)).toBe('non_disponibile')
   expect((await ordiniDellaSessione(db,sessione))[0].totaleCent).toBe(0)
-  await annullaOrdine(db,b.ordine.id)
+  await annullaOrdine(db,b.ordine.id,UTENTE)
   expect(await contoSessione(db,sessione)).toMatchObject({ totaleCent: 1200, voci: [{ quantita: 2, importoCent: 1200 }] })
   expect(await contoSessione(db,'x')).toBeNull()
-  expect(await annullaRiga(db,'x')).toBe(false)
+  expect(await annullaRiga(db,'x',UTENTE)).toBe('non_disponibile')
 })
 it('effettua rollback se la scrittura di una riga fallisce', async () => {
   const { db } = ambiente
@@ -139,7 +140,7 @@ it('riepiloghi staff: numero ordini e totale senza annullati', async () => {
   const { db } = ambiente
   const a = await creaOrdineTavolo(db,sessione,righe()), b = await creaOrdineTavolo(db,sessione,righe())
   if (!a.ok || !b.ok) throw new Error('creazione')
-  await annullaOrdine(db,a.ordine.id)
+  await annullaOrdine(db,a.ordine.id,UTENTE)
   expect(await riepiloghiTavoli(db)).toEqual([{ sessioneId: sessione, numeroOrdini: 1, totaleCent: 1200 }])
 })
 it('un ordine misto con un esaurito non salva neppure le righe disponibili', async () => {
@@ -164,8 +165,56 @@ it('annullamenti di righe in sequenza mantengono il totale e annullano l’ordin
   const e = await creaOrdineTavolo(db,sessione,[...righe(),...righe()]); if (!e.ok) throw new Error(e.errore)
   // PGlite serializza le transazioni; la concorrenza reale dipende dai lock SQL.
   const risultati = []
-  for (const r of e.ordine.righe) risultati.push(await annullaRiga(db,r.id))
-  expect(risultati).toEqual([true,true])
+  for (const r of e.ordine.righe) risultati.push(await annullaRiga(db,r.id,UTENTE))
+  expect(risultati).toEqual(['ok','ok'])
   expect((await ordiniDellaSessione(db,sessione))[0].totaleCent).toBe(0)
   expect((await ordiniDellaSessione(db,sessione))[0].stato).toBe('annullato')
+})
+it('avanza solo dallo stato visto dallo staff: un secondo tocco su «Inizia a preparare» non porta a servito', async () => {
+  const { db } = ambiente
+  const e = await creaOrdineTavolo(db,sessione,righe()); if (!e.ok) throw new Error(e.errore)
+  // Due schermi mostrano la comanda «inviata» e la toccano entrambi.
+  expect((await avanzaStato(db,e.ordine.id,'inviato'))?.stato).toBe('in_preparazione')
+  expect(await avanzaStato(db,e.ordine.id,'inviato')).toBeNull()
+  expect((await ordiniDellaSessione(db,sessione))[0].stato).toBe('in_preparazione')
+  expect(await avanzaStato(db,e.ordine.id,'annullato' as never)).toBeNull()
+  expect(await avanzaStato(db,e.ordine.id,'boh' as never)).toBeNull()
+  expect((await avanzaStato(db,e.ordine.id,'in_preparazione'))?.stato).toBe('servito')
+})
+it('a conto chiuso voci, righe e ordini non si annullano più e il totale incassato resta quello', async () => {
+  const { db } = ambiente
+  const a = await creaOrdineTavolo(db,sessione,righe()), b = await creaOrdineTavolo(db,sessione,righe())
+  if (!a.ok || !b.ok) throw new Error('creazione')
+  await avanzaStato(db,a.ordine.id,'inviato'); await avanzaStato(db,a.ordine.id,'in_preparazione')
+  // La cucina ha ancora b: il tavolo si chiude con conferma.
+  expect(await chiudiSessione(db,sessione,null,true)).toEqual({ ok: true })
+  const conto = (await contoSessione(db,sessione))!
+  expect(await annullaVoceConto(db,sessione,conto.voci[0],UTENTE)).toBe('conto_chiuso')
+  expect(await annullaRiga(db,a.ordine.righe[0].id,UTENTE)).toBe('conto_chiuso')
+  expect(await annullaRiga(db,b.ordine.righe[0].id,UTENTE)).toBe('conto_chiuso')
+  expect(await annullaOrdine(db,b.ordine.id,UTENTE)).toBe('conto_chiuso')
+  expect(await contoSessione(db,sessione)).toMatchObject({ totaleCent: 2400,voci: [{ quantita: 4 }] })
+  expect((await ordiniDellaSessione(db,sessione)).map(o => o.stato)).toEqual(['servito','inviato'])
+  expect(await db.query('select * from registro_annullamenti')).toEqual([])
+})
+it('registra chi ha annullato cosa, quando e per quale importo', async () => {
+  const { db } = ambiente
+  const a = await creaOrdineTavolo(db,sessione,righe()), b = await creaOrdineTavolo(db,sessione,righe()), c = await creaOrdineTavolo(db,sessione,[{ piattoId: piatto,quantita: 1,nota: '' }])
+  if (!a.ok || !b.ok || !c.ok) throw new Error('creazione')
+  const altro = '33333333-3333-4333-8333-333333333333'
+  const prima = new Date()
+  expect(await annullaRiga(db,a.ordine.righe[0].id,UTENTE)).toBe('ok')
+  expect(await annullaOrdine(db,b.ordine.id,altro)).toBe('ok')
+  const voce = (await contoSessione(db,sessione))!.voci[0]
+  expect(await annullaVoceConto(db,sessione,voce,UTENTE)).toBe('ok')
+  expect(await db.query('select utente_id,tipo,ordine_id,riga_id,importo_cent from registro_annullamenti order by creato_il')).toEqual([
+    { utente_id: UTENTE,tipo: 'riga',ordine_id: a.ordine.id,riga_id: a.ordine.righe[0].id,importo_cent: 1200 },
+    { utente_id: altro,tipo: 'ordine',ordine_id: b.ordine.id,riga_id: null,importo_cent: 1200 },
+    { utente_id: UTENTE,tipo: 'voce_conto',ordine_id: c.ordine.id,riga_id: c.ordine.righe[0].id,importo_cent: 600 },
+  ])
+  expect(await db.query("select bool_and(creato_il >= $1::timestamptz - interval '1 second') as recenti from registro_annullamenti",[prima])).toEqual([{ recenti: true }])
+  // Senza un utente valido non si annulla nulla.
+  expect(await annullaOrdine(db,c.ordine.id,'nessuno')).toBe('non_disponibile')
+  // Il registro non si perde: gli ordini annullati non si possono eliminare.
+  await expect(db.query('delete from ordini where id=$1',[b.ordine.id])).rejects.toThrow(/foreign key|violates/i)
 })

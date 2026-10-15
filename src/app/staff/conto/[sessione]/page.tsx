@@ -31,7 +31,7 @@ export default async function ContoPage({ params }: { params: Promise<{ sessione
         {conto.chiusaIl ? <p role="status" className="b-avviso b-avviso--pronto">Tavolo chiuso alle {conto.chiusaIl.toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</p> : <AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={conto.vistoAlle.toISOString()} />}
         <div className="b-tabella-scorre"><table className="b-tabella b-conto__tabella"><caption className="b-nascosto">Voci del conto</caption>
           <thead><tr><th>N.</th><th>Piatto</th><th className="b-destra">Q.tà</th><th className="b-destra">Importo</th></tr></thead>
-          <tbody>{conto.voci.map(v => <VoceConto key={JSON.stringify([v.numero,v.nome,v.prezzoUnitCent,v.poke])} sessioneId={sessione} voce={v} />)}</tbody></table></div>
+          <tbody>{conto.voci.map(v => <VoceConto key={JSON.stringify([v.numero,v.nome,v.prezzoUnitCent,v.poke])} sessioneId={sessione} voce={v} modificabile={!conto.chiusaIl} />)}</tbody></table></div>
         <div className="b-conto__piede">
           <div><p className="b-secondario">Da battere in cassa · non è uno scontrino fiscale</p><p className="b-num b-conto__totale" aria-label={`Totale: ${formatEuro(conto.totaleCent)}`}>{formatEuro(conto.totaleCent)}</p></div>
           {!conto.chiusaIl && <ChiusuraConto sessioneId={sessione} attuale={{ vistoAlle: conto.vistoAlle.toISOString(),ordiniIds: conto.ordiniIds,totaleCent: conto.totaleCent }} />}

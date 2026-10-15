@@ -106,3 +106,12 @@
   .b-conto { padding: 0; }
   .b-conto tr { break-inside: avoid; }
 }
+
+/* Menù: esauriti durante il servizio */
+.b-menu-staff { display: flex; flex-direction: column; gap: 18px; max-width: 760px; }
+.b-menu-staff__testa { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 20px; }
+.b-menu-staff__testa .b-campo { flex: 1 1 280px; }
+.b-menu-staff__categoria { display: flex; flex-direction: column; gap: 8px; }
+.b-menu-staff__piatto { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; padding: 8px 14px; }
+.b-menu-staff__piatto--esaurito { background: var(--b-campo); }
+.b-menu-staff__nome { flex: 1 1 200px; min-width: 0; font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }

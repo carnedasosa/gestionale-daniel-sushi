@@ -12,6 +12,8 @@ import { SuonoTurno } from './InizioTurno'
 import { BarraStaff } from './BarraStaff'
 import { ElencoConti } from './ElencoConti'
 import { VistaTavoli } from './VistaTavoli'
+import { MenuStaff } from './MenuStaff'
+import type { CategoriaElenco } from '@/menu/elenco'
 import { CardOrdineCasa, OrdiniOnlineBarra, type OrdiniOnline } from './OrdiniCasa'
 import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 import { colonnaCucina } from '@/domain/stati-casa'
@@ -33,16 +35,19 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
     {o.tavoloChiuso && <p className="b-nota">Tavolo chiuso</p>}
     <DettaglioRighe righe={o.righe} area="staff" />
     <div className="b-comanda__azioni">
-      <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => { leggi(); esegui(() => avanzaOrdine(o.id)) }}>{o.stato === 'inviato' ? 'Inizia a preparare' : 'Segna servito'}</button>
+      <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => { leggi(); esegui(() => avanzaOrdine(o.id,o.stato)) }}>{o.stato === 'inviato' ? 'Inizia a preparare' : 'Segna servito'}</button>
       <AltreAzioni titolo={`Altre azioni · ${o.tavoloNome} n. ${o.numero}`}>{chiudi => <>
         {nuovo && <button type="button" className="b-btn b-btn--secondario" onClick={() => { leggi(); chiudi() }}>Segna come letto</button>}
-        {o.righe.filter(r => !r.annullata).map(r => <ConfermaAzione key={r.id} inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => { chiudi(); esegui(() => annullaRigaStaff(r.id)) }}>Annulla {r.nome}</ConfermaAzione>)}
-        <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numero}?`} conferma={() => { chiudi(); esegui(() => annullaOrdineStaff(o.id)) }}>Annulla tutto l’ordine</ConfermaAzione>
+        {/* Il conto di un tavolo chiuso è già stato incassato: niente annullamenti, il server li rifiuterebbe. */}
+        {o.tavoloChiuso ? <p className="b-secondario">Tavolo chiuso: il conto non si può più modificare.</p> : <>
+          {o.righe.filter(r => !r.annullata).map(r => <ConfermaAzione key={r.id} inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => { chiudi(); esegui(() => annullaRigaStaff(r.id)) }}>Annulla {r.nome}</ConfermaAzione>)}
+          <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numero}?`} conferma={() => { chiudi(); esegui(() => annullaOrdineStaff(o.id)) }}>Annulla tutto l’ordine</ConfermaAzione>
+        </>}
       </>}</AltreAzioni>
     </div>
   </article>
 }
-export interface DatiStaff { tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[]; casa: OrdineCasaClient[]; ordiniOnline: OrdiniOnline }
+export interface DatiStaff { tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[]; casa: OrdineCasaClient[]; ordiniOnline: OrdiniOnline; menu?: CategoriaElenco[] | null }
 const CHIAVE_ARRIVI = 'ds_arrivi_cucina'
 function arriviSalvati(): StatoArrivi | null {
   try { return leggiStatoArrivi(sessionStorage.getItem(CHIAVE_ARRIVI)) } catch { return null }
@@ -132,6 +137,9 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita }: { dati: DatiS
     <section aria-label="Conti" hidden={vista !== 'conti'} className="b-staff__vista">
       <div className="b-conti"><ElencoConti aperti={aperti} recenti={contiRecenti.map(c => ({ id: c.id,nome: c.tavoloNome,chiusaIl: c.chiusaIl }))} corrente={null} />
         <p className="b-conti__vuoto b-secondario">Scegli un tavolo per vedere il conto.</p></div>
+    </section>
+    <section aria-label="Menù" hidden={vista !== 'menu'} className="b-staff__vista">
+      {vista === 'menu' && <MenuStaff categorie={mostrati.menu ?? null} />}
     </section>
   </>
 }

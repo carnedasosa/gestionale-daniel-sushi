@@ -46,14 +46,26 @@ describe('salvaPiatto', () => {
 })
 
 describe('cambiaDisponibilita', () => {
-  it('se il database fallisce non lancia e non rivalida', async () => {
+  it('solo admin: il ruolo si controlla prima di scrivere', async () => {
+    impostaDisponibile.mockResolvedValue(true)
+    expect(await cambiaDisponibilita('id', false)).toEqual({ ok: true })
+    expect(richiediRuolo).toHaveBeenCalledWith('admin')
+    expect(impostaDisponibile).toHaveBeenCalledWith({}, 'id', false)
+    expect(revalidatePath).toHaveBeenCalledWith('/admin/menu')
+    expect(revalidatePath).toHaveBeenCalledWith('/staff')
+  })
+  it('se il database fallisce restituisce l’errore da mostrare e non rivalida', async () => {
     impostaDisponibile.mockRejectedValue(new Error('connessione scaduta'))
-    await expect(cambiaDisponibilita('id', false)).resolves.toBeUndefined()
+    expect(await cambiaDisponibilita('id', false)).toEqual({ ok: false, errore: 'Salvataggio non riuscito: controlla la connessione e riprova.' })
     expect(revalidatePath).not.toHaveBeenCalled()
   })
-  it('se il piatto non esiste più rivalida comunque', async () => {
+  it('se il piatto non esiste più lo dice e rivalida comunque', async () => {
     impostaDisponibile.mockResolvedValue(false)
-    await cambiaDisponibilita('id', false)
+    expect(await cambiaDisponibilita('id', false)).toEqual({ ok: false, errore: 'Piatto non trovato: forse è stato eliminato.' })
     expect(revalidatePath).toHaveBeenCalledWith('/admin/menu')
+  })
+  it('rifiuta valori non booleani senza toccare il database', async () => {
+    expect((await cambiaDisponibilita('id', 'no' as unknown as boolean)).ok).toBe(false)
+    expect(impostaDisponibile).not.toHaveBeenCalled()
   })
 })

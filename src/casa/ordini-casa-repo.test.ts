@@ -7,6 +7,7 @@ import { aggiungiOrario, creaZona, impostaApertura, salvaImpostazioni, type Zona
 import { accettaOrdine, anonimizzaOrdiniCasa, annullaOrdineCasa, avanzaOrdineCasa, creaOrdineCasa, ordineCasaPerToken, ordiniCasaAttivi, rifiutaOrdine, type InputOrdineCasa } from './ordini-casa-repo'
 import { annullaRiga, ordiniAttivi } from '@/tavoli/ordini-repo'
 import { leggiPokeConfig, salvaAllergeniPoke, salvaPokeConfig, leggiAllergeniPoke } from '@/tavoli/poke-repo'
+const UTENTE = '22222222-2222-4222-8222-222222222222'
 let ambiente: Awaited<ReturnType<typeof creaDbDiTest>>, piatto: string, zona: Zona
 // Lunedì 12/10/2026 alle 18:00 di Roma; prima fascia prenotabile: 18:30 (16:30 UTC).
 const ADESSO = new Date('2026-10-12T16:00:00Z')
@@ -125,9 +126,9 @@ it('annullare righe ricalcola con la consegna; senza righe l’ordine è annulla
   const { db } = ambiente
   const d = await crea({ dati: domicilio(),righe: [{ piattoId: piatto,quantita: 3,nota: '' },{ piattoId: (await db.query<{ id: string }>('select id from piatti where numero=2'))[0].id,quantita: 1,nota: '' }],totaleVistoCent: 2000 + (await db.query<{ p: number }>('select prezzo_cent as p from piatti where numero=2'))[0].p })
   await accettaOrdine(db,d.id,0)
-  expect(await annullaRiga(db,d.righe[1].id)).toBe(true)
+  expect(await annullaRiga(db,d.righe[1].id,UTENTE)).toBe('ok')
   expect((await ordiniCasaAttivi(db))[0]).toMatchObject({ totaleCent: 2000,stato: 'accettato' })
-  expect(await annullaRiga(db,d.righe[0].id)).toBe(true)
+  expect(await annullaRiga(db,d.righe[0].id,UTENTE)).toBe('ok')
   expect(await ordiniCasaAttivi(db)).toEqual([])
   expect(await db.query(`select stato,totale_cent from ordini where id=$1`,[d.id])).toEqual([{ stato: 'annullato',totale_cent: 0 }])
   expect(await db.query(`select tipo from email_ordini where ordine_id=$1 and tipo='annullato'`,[d.id])).toHaveLength(1)
