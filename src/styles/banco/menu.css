@@ -5,8 +5,9 @@
 .b-testata-cliente__nome { font-size: 1.0625rem; font-weight: 700; }
 .b-pagina-cliente { display: flex; flex-direction: column; gap: 16px; padding-block: 10px 40px; }
 
-.b-menu-nav { position: relative; margin-inline: -16px; padding: 4px 16px 12px; border-bottom: 1.5px solid var(--b-filetto); }
-.b-menu-sezione { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; scroll-margin-top: 16px; }
+/* La fila delle categorie resta in alto; sul telefono si nasconde scorrendo in giù e ricompare risalendo (BarraCategorie). */
+.b-menu-nav { position: sticky; top: 0; z-index: 2; margin-inline: -16px; padding: 8px 16px; background: var(--b-carta); border-bottom: 1.5px solid var(--b-filetto); }
+.b-menu-sezione { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; scroll-margin-top: calc(var(--b-categorie-altezza, 72px) + 12px); }
 .b-menu-sezione__testa { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 
 .b-piatto { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto; gap: 12px; padding: 16px; align-items: start; }

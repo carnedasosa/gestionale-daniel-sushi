@@ -42,16 +42,11 @@
 .b-elenco-testa { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; margin-inline: calc(-1 * var(--b-margine)); padding: 12px var(--b-margine); background: var(--b-carta); border-bottom: 1.5px solid var(--b-filetto); }
 .b-admin-cerca { flex: 0 1 320px; }
 .b-elenco-categorie { flex: 1 1 320px; min-width: 0; }
-.b-elenco-categorie .b-pillole { padding-bottom: 0; }
-.b-elenco-categorie[data-coda="destra"] .b-pillole { mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
-.b-elenco-categorie[data-coda="sinistra"] .b-pillole { mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); }
-.b-elenco-categorie[data-coda="entrambe"] .b-pillole { mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
 .b-admin-sezione--categoria { scroll-margin-top: calc(var(--b-categorie-altezza, 72px) + 12px); }
 @media (max-width: 50em) {
   .b-elenco-testa { display: contents; }
   .b-admin-cerca { flex: none; }
-  .b-elenco-categorie { flex: none; position: sticky; top: 0; z-index: 2; margin-inline: calc(-1 * var(--b-margine)); padding: 8px var(--b-margine); background: var(--b-carta); border-bottom: 1.5px solid var(--b-filetto); transition: transform var(--b-base) ease-out; }
-  .b-elenco-categorie[data-nascosta] { transform: translateY(calc(-100% - 2px)); }
+  .b-elenco-categorie { flex: none; position: sticky; top: 0; z-index: 2; margin-inline: calc(-1 * var(--b-margine)); padding: 8px var(--b-margine); background: var(--b-carta); border-bottom: 1.5px solid var(--b-filetto); }
 }
 .b-tabella-piatti { min-width: 640px; }
 .b-tabella-piatti td:first-child, .b-tabella-piatti th:first-child { width: 3.5em; color: var(--b-grafite); }
