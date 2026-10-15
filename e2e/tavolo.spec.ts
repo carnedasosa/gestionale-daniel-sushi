@@ -20,7 +20,7 @@ test('tavolo: QR, codice, ordini da due telefoni, cucina e chiusura del conto', 
   }
 
   // Anna: una tartare di salmone (6,00 €).
-  await anna.locator('#tartare').getByRole('button',{ name: 'Aggiungi Salmone',exact: true }).click()
+  await anna.locator('#sez-tartare').getByRole('button',{ name: 'Aggiungi Salmone',exact: true }).click()
   await anna.getByRole('button',{ name: /^Rivedi e manda in cucina · 1 piatti/ }).click()
   await anna.getByRole('button',{ name: 'Invia ordine' }).click()
   const inviatoAnna = anna.getByRole('status').filter({ hasText: /^Ordine n\. \d+ inviato in cucina$/ })
