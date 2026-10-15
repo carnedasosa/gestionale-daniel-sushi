@@ -1,8 +1,8 @@
 /* Banco — area admin: barra laterale su computer, barra in basso su telefono. */
 .b-admin { min-height: 100dvh; display: flex; flex-wrap: wrap; align-items: stretch; }
-.b-admin__contenuto { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 32px clamp(16px, 4vw, 48px) 48px; }
+.b-admin__contenuto { --b-margine: clamp(16px, 4vw, 48px); flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 32px var(--b-margine) 48px; }
 
-.b-nav-admin { flex: 1 1 240px; max-width: 280px; display: flex; flex-direction: column; gap: 4px; padding: 24px 16px; background: var(--b-foglio); border-right: 1.5px solid var(--b-filetto); }
+.b-nav-admin { flex: 1 1 240px; max-width: 280px; position: sticky; top: 0; align-self: flex-start; height: 100dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 24px 16px; background: var(--b-foglio); border-right: 1.5px solid var(--b-filetto); }
 .b-nav-admin__marchio { display: flex; flex-direction: column; gap: 2px; padding: 0 12px 20px; font-size: 1.25rem; font-weight: 800; }
 .b-nav-admin__voce { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 0 12px; border-radius: 12px; color: var(--b-inchiostro); font-weight: 600; text-decoration: none; }
 .b-nav-admin__voce[aria-current="page"] { background: var(--b-inchiostro); color: var(--b-su-inchiostro); font-weight: 700; }
@@ -37,7 +37,22 @@
 @media (max-width: 50em) { .b-barra-salva { bottom: var(--b-nav-altezza, calc(76px + env(safe-area-inset-bottom))); } }
 
 /* Menù */
+/* Ricerca e categorie: su computer restano entrambe in alto; su telefono resta solo la fila delle categorie,
+   che si nasconde scorrendo verso il basso e ricompare appena si risale (ElencoPiatti). */
+.b-elenco-testa { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; margin-inline: calc(-1 * var(--b-margine)); padding: 12px var(--b-margine); background: var(--b-carta); border-bottom: 1.5px solid var(--b-filetto); }
 .b-admin-cerca { flex: 0 1 320px; }
+.b-elenco-categorie { flex: 1 1 320px; min-width: 0; }
+.b-elenco-categorie .b-pillole { padding-bottom: 0; }
+.b-elenco-categorie[data-coda="destra"] .b-pillole { mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+.b-elenco-categorie[data-coda="sinistra"] .b-pillole { mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); }
+.b-elenco-categorie[data-coda="entrambe"] .b-pillole { mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
+.b-admin-sezione--categoria { scroll-margin-top: calc(var(--b-categorie-altezza, 72px) + 12px); }
+@media (max-width: 50em) {
+  .b-elenco-testa { display: contents; }
+  .b-admin-cerca { flex: none; }
+  .b-elenco-categorie { flex: none; position: sticky; top: 0; z-index: 2; margin-inline: calc(-1 * var(--b-margine)); padding: 8px var(--b-margine); background: var(--b-carta); border-bottom: 1.5px solid var(--b-filetto); transition: transform var(--b-base) ease-out; }
+  .b-elenco-categorie[data-nascosta] { transform: translateY(calc(-100% - 2px)); }
+}
 .b-tabella-piatti { min-width: 640px; }
 .b-tabella-piatti td:first-child, .b-tabella-piatti th:first-child { width: 3.5em; color: var(--b-grafite); }
 .b-tabella-piatti tr.b-esaurito td { background: var(--b-campo); }
