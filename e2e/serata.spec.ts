@@ -416,7 +416,11 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
           else if (!/Edamame/.test(prima.errore ?? '')) problema(chi,`messaggio inatteso per il piatto esaurito: ${prima.errore}`)
           await invia(tel,nome,chi)
           segnalaProvaEsaurito()
-        } else await giro(tel,nome,chi,imprevisto)
+        } else {
+          // Tavoli dispari: l'ultimo giro chiude col dolce, così più ordini toccano banco e cucina insieme.
+          const dolce: [string,string][] = indice % 2 === 1 && g === giri - 1 ? [['dessert','Tiramisù']] : []
+          await giro(tel,nome,chi,imprevisto,dolce)
+        }
         await attendi(tra(5000,15_000))
       }
     }))

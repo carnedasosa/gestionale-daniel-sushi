@@ -35,7 +35,7 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
     {(nuovo || etichettaOrigine(o.origine)) && <div className="b-comanda__etichette">{nuovo && <span className="b-etichetta b-etichetta--accettare">Nuovo ordine</span>}{etichettaOrigine(o.origine) && <span className="b-etichetta">{etichettaOrigine(o.origine)}</span>}</div>}
     <p className="b-comanda__meta b-num">{formatEuro(o.totaleCent)}</p>
     {o.tavoloChiuso && <p className="b-nota">Tavolo chiuso</p>}
-    <DettaglioRighe righe={o.righe} area="staff" />
+    <DettaglioRighe righe={o.righe} area="staff" perReparto />
     <div className="b-comanda__azioni">
       <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => { leggi(); esegui(() => avanzaOrdine(o.id,o.stato)) }}>{o.stato === 'inviato' ? 'Inizia a preparare' : 'Segna servito'}</button>
       <AltreAzioni titolo={`Altre azioni · ${o.tavoloNome} n. ${o.numero}`}>{chiudi => <>

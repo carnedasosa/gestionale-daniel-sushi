@@ -1,4 +1,5 @@
 import { euroInCentesimi } from '@/domain/soldi'
+import { repartoSeed, type Reparto } from '@/domain/reparti'
 
 export interface MenuJson {
   categorie: Array<{
@@ -10,7 +11,7 @@ export interface MenuJson {
   }>
 }
 
-export interface RigaCategoria { id: string; nome: string; pezzi: string | null; posizione: number }
+export interface RigaCategoria { id: string; nome: string; pezzi: string | null; posizione: number; reparto: Reparto }
 
 export interface RigaPiatto {
   categoria_id: string
@@ -51,7 +52,7 @@ export function convertiMenu(json: MenuJson): MenuConvertito {
   let poke: PokeConfig | null = null
 
   json.categorie.forEach((c, i) => {
-    categorie.push({ id: c.id, nome: c.nome, pezzi: c.pezzi ?? null, posizione: i + 1 })
+    categorie.push({ id: c.id, nome: c.nome, pezzi: c.pezzi ?? null, posizione: i + 1, reparto: repartoSeed(c.id) })
     c.voci.forEach((v, j) => {
       piatti.push({
         categoria_id: c.id,

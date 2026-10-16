@@ -14,8 +14,8 @@ export function generaSeedSql(menu: MenuConvertito): string {
   const righe: string[] = ['-- Generato da scripts/genera-seed.ts: non modificare a mano.', 'begin;']
 
   righe.push(
-    'insert into public.categorie (id, nome, pezzi, posizione) values',
-    menu.categorie.map((c) => `  (${lit(c.id)}, ${lit(c.nome)}, ${lit(c.pezzi)}, ${lit(c.posizione)})`).join(',\n') + ';',
+    'insert into public.categorie (id, nome, pezzi, posizione, reparto) values',
+    menu.categorie.map((c) => `  (${lit(c.id)}, ${lit(c.nome)}, ${lit(c.pezzi)}, ${lit(c.posizione)}, ${lit(c.reparto)})`).join(',\n') + ';',
   )
 
   righe.push(

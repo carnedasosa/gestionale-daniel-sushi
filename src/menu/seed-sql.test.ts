@@ -14,6 +14,8 @@ describe('generaSeedSql', () => {
     expect(n).toBe(139)
     const [{ c }] = await db.query<{ c: number }>('select count(*)::int as c from categorie')
     expect(c).toBe(14)
+    const reparti = await db.query<{ id: string; reparto: string }>("select id, reparto from categorie where reparto <> 'banco' order by id")
+    expect(reparti).toEqual([{ id: 'beverage', reparto: 'sala' }, { id: 'dessert', reparto: 'cucina' }, { id: 'primi', reparto: 'cucina' }, { id: 'starter', reparto: 'cucina' }])
   })
   it('gestisce gli apostrofi (Daniel\'s poke)', async () => {
     const { pg, db } = await creaDbDiTest()

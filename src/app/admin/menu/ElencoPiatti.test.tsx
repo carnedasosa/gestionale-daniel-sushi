@@ -21,3 +21,11 @@ it('fila delle categorie: una pillola per categoria che porta alla sua sezione',
   for (const id of ['tartare','sashimi','dessert']) { expect(html).toContain(`href="#sez-${id}"`); expect(html).toContain(`id="sez-${id}"`) }
   expect(html.match(/aria-current="true"/g)).toHaveLength(1)
 })
+it('reparto di ogni categoria: selettore con la nota solo se si può cambiare', () => {
+  const conReparto = categorie.map(c => ({ ...c,reparto: c.id === 'dessert' ? 'cucina' as const : 'banco' as const }))
+  const html = renderToStaticMarkup(<ElencoPiatti categorie={conReparto} cambia={async () => ({ ok: true })} cambiaReparto={async () => ({ ok: true })} />)
+  expect(html.match(/<select/g)).toHaveLength(3)
+  expect(html).toMatch(/<option value="cucina" selected="">Cucina<\/option>/)
+  expect(html).toContain('Banco sushi'); expect(html).toContain('Chi prepara questa categoria. Vale per gli ordini da adesso.')
+  expect(renderToStaticMarkup(<ElencoPiatti categorie={conReparto} cambia={async () => ({ ok: true })} />)).not.toContain('<select')
+})

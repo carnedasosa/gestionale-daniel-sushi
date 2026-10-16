@@ -1,5 +1,6 @@
 import type { Db } from '@/server/db-tipi'
 import type { CodiceAllergene } from '@/domain/allergeni'
+import type { Reparto } from '@/domain/reparti'
 
 export interface Piatto {
   id: string
@@ -17,7 +18,7 @@ export interface Piatto {
   posizione: number
 }
 
-export interface CategoriaConPiatti { id: string; nome: string; pezzi: string | null; posizione: number; piatti: Piatto[] }
+export interface CategoriaConPiatti { id: string; nome: string; pezzi: string | null; posizione: number; reparto: Reparto; piatti: Piatto[] }
 
 export interface DatiPiatto {
   nome: string
@@ -50,8 +51,8 @@ function daRiga(r: RigaPiatto): Piatto {
 }
 
 export async function leggiMenu(db: Db): Promise<CategoriaConPiatti[]> {
-  const categorie = await db.query<{ id: string; nome: string; pezzi: string | null; posizione: number }>(
-    'select id, nome, pezzi, posizione from categorie order by posizione',
+  const categorie = await db.query<Omit<CategoriaConPiatti, 'piatti'>>(
+    'select id, nome, pezzi, posizione, reparto from categorie order by posizione',
   )
   const piatti = await db.query<RigaPiatto>(`select ${COLONNE} from piatti order by posizione, numero nulls last`)
   return categorie.map((c) => ({ ...c, piatti: piatti.filter((p) => p.categoria_id === c.id).map(daRiga) }))
@@ -77,6 +78,12 @@ export async function aggiornaPiatto(db: Db, id: string, d: DatiPiatto): Promise
 export async function impostaDisponibile(db: Db, id: string, disponibile: boolean): Promise<boolean> {
   if (!UUID.test(id)) return false
   const righe = await db.query('update piatti set disponibile = $2, aggiornato_il = now() where id = $1 returning id', [id, disponibile])
+  return righe.length === 1
+}
+
+/** Reparto che prepara la categoria. Vale per gli ordini da adesso: le righe già inviate tengono il loro. */
+export async function aggiornaRepartoCategoria(db: Db, id: string, reparto: Reparto): Promise<boolean> {
+  const righe = await db.query('update categorie set reparto = $2 where id = $1 returning id', [id, reparto])
   return righe.length === 1
 }
 

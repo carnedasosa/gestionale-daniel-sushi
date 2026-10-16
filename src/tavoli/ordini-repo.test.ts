@@ -232,3 +232,25 @@ it('origine: cliente se non indicata, cameriere quando lo staff ordina; stessa c
   expect(await creaOrdine(db,sessione,righe(),randomUUID(),'cameriere')).toEqual({ ok: false,errore: 'Il tavolo è stato chiuso: chiedi al personale' })
   expect(await db.query('select id from ordini')).toHaveLength(2)
 })
+it('reparto: copiato dalla categoria del piatto, la poke prende quello delle poke-bowl', async () => {
+  const { db } = ambiente
+  const id = async (nome: string) => (await db.query<{ id: string }>('select id from piatti where nome=$1 limit 1',[nome]))[0].id
+  const c = (await leggiPokeConfig(db))!
+  c.prezzoBaseCent = 900; c.prezzoExtraCent = 100; await salvaPokeConfig(db,c)
+  const poke = Object.fromEntries(c.gruppi.map(g => [g.nome,g.voci.slice(0,g.min)]))
+  const carrello = [{ piattoId: piatto,quantita: 1,nota: '' },{ piattoId: await id('Edamame'),quantita: 1,nota: '' },{ piattoId: await id('Coca Cola'),quantita: 1,nota: '' },{ piattoId: null,quantita: 1,nota: '',poke }]
+  const e = await creaOrdineTavolo(db,sessione,carrello); if (!e.ok) throw new Error(e.errore)
+  expect(e.ordine.righe.map(r => r.reparto)).toEqual(['banco','cucina','sala','banco'])
+  await db.query("update categorie set reparto='cucina' where id='poke-bowl'")
+  const dopo = await creaOrdineTavolo(db,sessione,carrello.slice(3)); if (!dopo.ok) throw new Error(dopo.errore)
+  expect(dopo.ordine.righe.map(r => r.reparto)).toEqual(['cucina'])
+})
+it('reparto: cambiare la categoria vale per gli ordini da adesso, le righe passate restano', async () => {
+  const { db } = ambiente
+  const prima = await creaOrdineTavolo(db,sessione,righe()); if (!prima.ok) throw new Error(prima.errore)
+  await db.query("update categorie set reparto='cucina' where id='tartare'")
+  const dopo = await creaOrdineTavolo(db,sessione,righe()); if (!dopo.ok) throw new Error(dopo.errore)
+  const [vecchio,nuovo] = await ordiniDellaSessione(db,sessione)
+  expect(vecchio.righe.map(r => r.reparto)).toEqual(['banco'])
+  expect(nuovo.righe.map(r => r.reparto)).toEqual(['cucina'])
+})

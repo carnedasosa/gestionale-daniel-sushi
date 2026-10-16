@@ -67,7 +67,7 @@ export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare }: { o
     {lunga && <p className="b-avviso b-avviso--ritardo"><strong>In attesa da più di 10 minuti</strong></p>}
     <p className="b-comanda__meta">{o.clienteNome} · {o.clienteTelefono && <a href={`tel:${o.clienteTelefono}`}>{o.clienteTelefono}</a>} · <span className="b-num">{formatEuro(o.totaleCent)}</span> · {o.pagamento === 'carta' ? 'Carta' : `Contanti${o.contantiDaCent ? ` (paga con ${formatEuro(o.contantiDaCent)})` : ''}`}</p>
     {o.tipo === 'domicilio' && <p className="b-comanda__meta">{o.indirizzo} · {o.zonaNome}{o.noteConsegna && ` · ${o.noteConsegna}`}{o.consegnaCent > 0 && ` · consegna ${formatEuro(o.consegnaCent)}`}</p>}
-    <DettaglioRighe righe={o.righe} area="staff" />
+    <DettaglioRighe righe={o.righe} area="staff" perReparto />
     {daAccettare ? <div className="b-comanda__azioni">
       <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => esegui(() => accettaOrdineStaff(o.id,0))}>Accetta</button>
       <div className="b-comanda__coppia">

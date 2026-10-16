@@ -1,20 +1,20 @@
 -- Generato da scripts/genera-seed.ts: non modificare a mano.
 begin;
-insert into public.categorie (id, nome, pezzi, posizione) values
-  ('tartare', 'Tartare', null, 1),
-  ('sashimi', 'Sashimi', '5 pz.', 2),
-  ('starter', 'Starter', null, 3),
-  ('sushi-gio', 'Sushi Gio', '2 pz.', 4),
-  ('hosomaki', 'Hosomaki', '6 pz.', 5),
-  ('nigiri', 'Nigiri', '2 pz.', 6),
-  ('triangolini', 'Triangolini', '4 pz.', 7),
-  ('uramaki', 'Uramaki', '8 pz.', 8),
-  ('special-roll', 'Special roll', '8 pz.', 9),
-  ('poke-bowl', 'Poke bowl', null, 10),
-  ('box', 'Box', null, 11),
-  ('primi', 'Primi', null, 12),
-  ('dessert', 'Dessert', null, 13),
-  ('beverage', 'Beverage', null, 14);
+insert into public.categorie (id, nome, pezzi, posizione, reparto) values
+  ('tartare', 'Tartare', null, 1, 'banco'),
+  ('sashimi', 'Sashimi', '5 pz.', 2, 'banco'),
+  ('starter', 'Starter', null, 3, 'cucina'),
+  ('sushi-gio', 'Sushi Gio', '2 pz.', 4, 'banco'),
+  ('hosomaki', 'Hosomaki', '6 pz.', 5, 'banco'),
+  ('nigiri', 'Nigiri', '2 pz.', 6, 'banco'),
+  ('triangolini', 'Triangolini', '4 pz.', 7, 'banco'),
+  ('uramaki', 'Uramaki', '8 pz.', 8, 'banco'),
+  ('special-roll', 'Special roll', '8 pz.', 9, 'banco'),
+  ('poke-bowl', 'Poke bowl', null, 10, 'banco'),
+  ('box', 'Box', null, 11, 'banco'),
+  ('primi', 'Primi', null, 12, 'cucina'),
+  ('dessert', 'Dessert', null, 13, 'cucina'),
+  ('beverage', 'Beverage', null, 14, 'sala');
 insert into public.piatti (categoria_id, numero, nome, descrizione, prezzo_cent, piccante, vegetariano, della_casa, posizione) values
   ('tartare', 1, 'Salmone', 'Tartare condita dallo Chef', 600, false, false, false, 1),
   ('tartare', 2, 'Tonno', 'Tartare condita dallo Chef', 800, false, false, false, 2),

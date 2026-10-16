@@ -5,12 +5,13 @@ import { formatEuro } from '@/domain/soldi'
 import { filtraCategorie, type CategoriaElenco } from '@/menu/elenco'
 import { InterruttoreDisponibile, type CambiaDisponibilita } from '@/componenti/InterruttoreDisponibile'
 import { FilaCategorie, useBarraCategorie } from '@/componenti/BarraCategorie'
+import { SelettoreReparto, type CambiaReparto } from './SelettoreReparto'
 
 export { filtraCategorie, type CategoriaElenco, type PiattoElenco } from '@/menu/elenco'
 
 const Allergeni = ({ ok }: { ok: boolean }) => <span className={`b-etichetta ${ok ? 'b-etichetta--pronto' : 'b-etichetta--accettare'}`}>{ok ? 'Confermati' : 'Da confermare'}</span>
-/** Elenco dei piatti dell'admin, con ricerca istantanea e interruttore della disponibilità. */
-export function ElencoPiatti({ categorie,cambia }: { categorie: CategoriaElenco[]; cambia: CambiaDisponibilita }) {
+/** Elenco dei piatti dell'admin, con ricerca istantanea, interruttore della disponibilità e reparto di ogni categoria. */
+export function ElencoPiatti({ categorie,cambia,cambiaReparto }: { categorie: CategoriaElenco[]; cambia: CambiaDisponibilita; cambiaReparto?: CambiaReparto }) {
   const [testo,setTesto] = useState('')
   const trovate = filtraCategorie(categorie,testo)
   const { testa:rifTesta,fila:rifFila,pillole:rifPillole,...fila } = useBarraCategorie(trovate.map(c => c.id))
@@ -22,6 +23,7 @@ export function ElencoPiatti({ categorie,cambia }: { categorie: CategoriaElenco[
     {!trovate.length && <p className="b-avviso">Nessun piatto trovato.</p>}
     {trovate.map(c => <section key={c.id} id={`sez-${c.id}`} className="b-admin-sezione b-admin-sezione--categoria" aria-labelledby={`cat-${c.id}`}>
       <div className="b-menu-sezione__testa"><h2 id={`cat-${c.id}`} className="b-titolo-2" tabIndex={-1}>{c.nome}</h2>{c.pezzi && <span className="b-num b-secondario">{c.pezzi}</span>}</div>
+      {cambiaReparto && c.reparto && <SelettoreReparto id={c.id} nome={c.nome} reparto={c.reparto} cambia={cambiaReparto} />}
       <div className="b-tabella-scorre" role="region" aria-label={`Piatti: ${c.nome}`} tabIndex={0}>
         <table className="b-tabella b-tabella-piatti">
           <thead><tr><th>N.</th><th>Piatto</th><th className="b-destra">Prezzo</th><th>Allergeni</th><th>Stasera</th><th><span className="b-nascosto">Azioni</span></th></tr></thead>

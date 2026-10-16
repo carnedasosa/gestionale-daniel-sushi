@@ -12,9 +12,9 @@ it('etichetta di stato: tono e testo', () => {
 })
 it('righe: quantità, nota, poke senza gruppi vuoti e riga annullata barrata', () => {
   const html = renderToStaticMarkup(<DettaglioRighe area="staff" righe={[
-    { id: 'a',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 2,nota: 'senza sesamo',poke: null,annullata: false },
-    { id: 'b',numero: null,nome: 'Poke composta',prezzoUnitCent: 900,quantita: 1,nota: null,poke: { Base: ['Riso'],Topping: [] },annullata: false },
-    { id: 'c',numero: 2,nome: 'Tonno',prezzoUnitCent: 700,quantita: 1,nota: null,poke: null,annullata: true }]} />)
+    { id: 'a',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 2,nota: 'senza sesamo',poke: null,annullata: false,reparto: 'banco' },
+    { id: 'b',numero: null,nome: 'Poke composta',prezzoUnitCent: 900,quantita: 1,nota: null,poke: { Base: ['Riso'],Topping: [] },annullata: false,reparto: 'banco' },
+    { id: 'c',numero: 2,nome: 'Tonno',prezzoUnitCent: 700,quantita: 1,nota: null,poke: null,annullata: true,reparto: 'banco' }]} />)
   expect(html).toContain('b-nota'); expect(html).toContain('Nota: senza sesamo'); expect(html).toContain('Base:'); expect(html).not.toContain('Topping')
   expect(html).toContain('<s>'); expect(html).toContain('annullato'); expect(html).toMatch(/<strong class="b-num">2×<\/strong>/)
 })
@@ -27,9 +27,21 @@ it('conferma: il bottone che apre ha lo stile scelto, la conferma è sempre pien
   expect(html).toMatch(/<button[^>]*b-btn--discreto[^>]*>Annulla<\/button>/); expect(html).toMatch(/<button[^>]*b-btn--pieno-pericolo[^>]*>Annulla<\/button>/); expect(html).toContain('Conferma')
 })
 it('righe: il numero del piatto si vede in cucina, non al cliente', () => {
-  const righe = [{ id: 'a',numero: 26,nome: 'Salmone roll',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: false }]
+  const righe = [{ id: 'a',numero: 26,nome: 'Salmone roll',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: false,reparto: 'banco' as const }]
   expect(renderToStaticMarkup(<DettaglioRighe area="staff" righe={righe} />)).toContain('26 ')
   expect(renderToStaticMarkup(<DettaglioRighe area="tavolo" righe={righe} />)).not.toContain('26 ')
+})
+it('righe per reparto: intestazioni solo in area staff, con perReparto e più di un reparto', () => {
+  const riga = (id: string,nome: string,reparto: 'banco' | 'cucina' | 'sala') => ({ id,numero: null,nome,prezzoUnitCent: 500,quantita: 1,nota: null,poke: null,annullata: false,reparto })
+  const misto = [riga('a','Tiramisù','cucina'),riga('b','Salmone roll','banco'),riga('c','Coca Cola','sala')]
+  const html = renderToStaticMarkup(<DettaglioRighe area="staff" perReparto righe={misto} />)
+  expect(html.match(/b-occhiello/g)).toHaveLength(3)
+  expect(html.indexOf('Banco sushi')).toBeLessThan(html.indexOf('Salmone roll'))
+  expect(html.indexOf('Salmone roll')).toBeLessThan(html.indexOf('>Cucina<'))
+  expect(html.indexOf('Tiramisù')).toBeLessThan(html.indexOf('>Sala<'))
+  expect(renderToStaticMarkup(<DettaglioRighe area="staff" perReparto righe={[riga('a','Salmone roll','banco'),riga('b','Tonno','banco')]} />)).not.toContain('b-occhiello')
+  expect(renderToStaticMarkup(<DettaglioRighe area="staff" righe={misto} />)).not.toContain('b-occhiello')
+  expect(renderToStaticMarkup(<DettaglioRighe area="tavolo" perReparto righe={misto} />)).not.toContain('b-occhiello')
 })
 it('barra in basso: l’altezza misurata passa alla radice e segue i cambi; via la barra, via la variabile', () => {
   let altezza = 200.4, richiamo = () => {}, staccato = false

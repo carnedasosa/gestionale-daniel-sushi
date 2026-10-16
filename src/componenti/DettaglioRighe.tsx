@@ -1,6 +1,17 @@
 import type { RigaOrdine } from '@/tavoli/ordini-repo'
+import { ETICHETTA_REPARTO, raggruppaPerReparto } from '@/domain/reparti'
+type AzioneRiga = (riga: RigaOrdine) => React.ReactNode
 // Stesso aspetto in cucina e per il cliente; il numero del piatto serve solo alla cucina (`area` staff).
-export function DettaglioRighe({ righe,area,azioneRiga }: { righe: RigaOrdine[]; area: 'staff' | 'tavolo'; azioneRiga?: (riga: RigaOrdine) => React.ReactNode }) {
+// `perReparto`: in area staff, se l'ordine tocca più reparti, le righe si dividono sotto «Banco sushi», «Cucina», «Sala».
+export function DettaglioRighe({ righe,area,azioneRiga,perReparto = false }: { righe: RigaOrdine[]; area: 'staff' | 'tavolo'; azioneRiga?: AzioneRiga; perReparto?: boolean }) {
+  const gruppi = perReparto && area === 'staff' ? raggruppaPerReparto(righe) : []
+  if (gruppi.length < 2) return <Righe righe={righe} area={area} azioneRiga={azioneRiga} />
+  return <div className="b-righe-reparti">{gruppi.map(g => <section key={g.reparto} aria-label={ETICHETTA_REPARTO[g.reparto]}>
+    <p className="b-occhiello">{ETICHETTA_REPARTO[g.reparto]}</p>
+    <Righe righe={g.righe} area={area} azioneRiga={azioneRiga} />
+  </section>)}</div>
+}
+function Righe({ righe,area,azioneRiga }: { righe: RigaOrdine[]; area: 'staff' | 'tavolo'; azioneRiga?: AzioneRiga }) {
   return <ul className="b-righe">{righe.map(r => {
     const nome = <>{area === 'staff' && r.numero !== null && <span className="b-num b-secondario">{r.numero} </span>}{r.nome}</>
     const poke = r.poke ? Object.entries(r.poke).filter(([,v]) => v.length > 0) : []

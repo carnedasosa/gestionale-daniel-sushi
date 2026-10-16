@@ -11,7 +11,7 @@ const base: Piatto = {
 
 const categorie: CategoriaConPiatti[] = [
   {
-    id: 'uramaki', nome: 'Uramaki', pezzi: '8 pezzi', posizione: 0,
+    id: 'uramaki', nome: 'Uramaki', pezzi: '8 pezzi', posizione: 0, reparto: 'banco',
     piatti: [
       { ...base, id: 'a', nome: 'Esaurito con pesce', allergeni: ['pesce'], disponibile: false },
       { ...base, id: 'b', nome: 'Disponibile in verifica', allergeniConfermati: false },
@@ -59,7 +59,7 @@ describe('MenuCliente', () => {
   })
 
   it('fila delle categorie: una pillola per categoria che porta alla sua sezione, una sola evidenziata', () => {
-    const due = renderToStaticMarkup(<MenuCliente categorie={[...categorie,{ id: 'nigiri',nome: 'Nigiri',pezzi: null,posizione: 1,piatti: [] }]} />)
+    const due = renderToStaticMarkup(<MenuCliente categorie={[...categorie,{ id: 'nigiri',nome: 'Nigiri',pezzi: null,posizione: 1,reparto: 'banco' as const,piatti: [] }]} />)
     expect(due).toContain('aria-label="Vai alla categoria"')
     for (const id of ['uramaki','nigiri']) { expect(due).toContain(`href="#sez-${id}"`); expect(due).toContain(`id="sez-${id}"`) }
     expect(due.match(/aria-current="true"/g)).toHaveLength(1)

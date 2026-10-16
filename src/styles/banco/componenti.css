@@ -64,6 +64,8 @@
 
 /* Righe d'ordine (DettaglioRighe) */
 .b-righe { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.b-righe-reparti { display: flex; flex-direction: column; gap: 10px; }
+.b-righe-reparti .b-occhiello { margin: 0 0 4px; }
 .b-riga { display: flex; flex-direction: column; gap: 4px; font-size: 1rem; }
 .b-riga__testa { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 8px; }
 .b-riga__poke { color: var(--b-grafite); font-size: .875rem; line-height: 1.45; padding-left: 1.6em; }
