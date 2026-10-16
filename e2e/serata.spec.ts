@@ -1,15 +1,19 @@
 // Simulazione di una serata nel locale, sul database finto di e2e/db-locale.ts (mai quello reale).
-// Uso: npm run serata. Tempi compressi: una serata in circa 10 minuti.
-// Attori: un tablet in sala (apre e chiude i tavoli, segna esauriti) con accanto la cassa (accetta
-// gli ordini da casa, li consegna, porta al tavolo bibite e piatti pronti), un tablet al banco sushi
-// e uno in cucina (ognuno porta avanti le comande del suo reparto), 6 tavoli con 2–4 telefoni
-// ciascuno e 5 clienti da casa. In mezzo, gli imprevisti di una serata vera.
-// Alla fine controlla sul database che nessun ordine sia andato perso o doppio e che i conti tornino,
-// e scrive tempi e problemi in test-results/serata/risultati.json.
+// Uso: npm run serata. Tempi compressi: una serata in circa 3–4 minuti, più la compilazione.
+// Quattro dispositivi dello staff, come nel locale:
+// - il tablet della cassa (postazione cassa), con più schede: Tavoli (apre e chiude i tavoli), Ordini
+//   (accetta o rifiuta gli ordini da casa, li segna partiti/consegnati/ritirati, tocca «Portate» per
+//   bibite e piatti pronti), Menù (esauriti) e Nuovo ordine (2 ordini presi al telefono, asporto e domicilio);
+// - il tablet del banco sushi e quello della cucina, ognuno con le sole comande del proprio reparto;
+// - il telefono di un cameriere (postazione sala), che ordina per un tavolo da /staff/tavolo/[sessione]/ordina.
+// Clienti: 6 tavoli con 2–4 telefoni ciascuno e 5 clienti da casa. In mezzo, gli imprevisti di una serata vera.
+// Alla fine controlla sul database che nessun ordine sia andato perso o doppio, che i conti tornino e che
+// le comande per reparto siano coerenti, e scrive tempi (anche per reparto) e problemi in
+// test-results/serata/risultati.json.
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import pg from 'pg'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { apriTelefono, iniziaTurno, oraDiRoma, scheda, type PostazioneStaff } from './aiuti'
+import { apriSchermoStaff, apriTelefono, iniziaTurno, oraDiRoma, scheda, type PostazioneStaff } from './aiuti'
 import { URL_DB } from './dati'
 
 test.setTimeout(30 * 60_000)
@@ -30,17 +34,28 @@ const osserva = (chi: string, cosa: string) => { osservazioni.push({ t: secondi(
 const problema = (chi: string, cosa: string) => { problemi.push({ t: secondi(),chi,cosa }); log(chi,`PROBLEMA: ${cosa}`) }
 const lente: { t: number; chi: string; cosa: string }[] = []
 const lenta = (chi: string, cosa: string) => { lente.push({ t: secondi(),chi,cosa }); log(chi,`LENTA: ${cosa}`) }
-const misure = { invioTavolo: [] as number[],arrivoInCucina: [] as number[],arrivoDopoStandby: [] as number[],invioCasa: [] as number[],aperturaMenu: [] as number[],ingressoTavolo: [] as number[] }
+// Arrivo = dall'invio al primo momento in cui l'ordine compare su quello schermo (si aggiornano ogni 5 s).
+const misure = {
+  invioTavolo: [] as number[],invioCameriere: [] as number[],invioCasa: [] as number[],invioCassa: [] as number[],
+  arrivoAllaCassa: [] as number[],arrivoAlBanco: [] as number[],arrivoInCucina: [] as number[],arrivoDopoStandby: [] as number[],
+  aperturaMenu: [] as number[],ingressoTavolo: [] as number[],
+}
+type Schermo = 'cassa' | 'banco' | 'cucina'
+const MISURA_ARRIVO: Record<Schermo,keyof typeof misure> = { cassa: 'arrivoAllaCassa',banco: 'arrivoAlBanco',cucina: 'arrivoInCucina' }
 
 // Ordini andati a buon fine secondo i clienti: il database alla fine deve dire esattamente questo.
 interface Inviato { tavolo: string; numero: number; totaleCent: number; inviatoAlle: number }
 const inviati: Inviato[] = []
-// Primo momento in cui un ordine compare su uno schermo dello staff (cassa, banco o cucina).
-const visteInCucina = new Map<string,number>()
+// Primo momento in cui un ordine compare su uno schermo dello staff: su uno qualsiasi e su ognuno.
+const visti = new Map<string,number>()
+const vistiDa: Record<Schermo,Set<string>> = { cassa: new Set(),banco: new Set(),cucina: new Set() }
 // Gli ordini mandati mentre il tablet della cassa è in standby si misurano a parte.
 const standby: { da: number; a: number | null }[] = []
 const inStandby = (t: number) => standby.some(s => t >= s.da && (s.a === null || t <= s.a))
-const daCasa: { numero: number; nome: string; tipo: string; totaleCent: number; inviatoAlle: number }[] = []
+// Ordini da casa: dal sito (origine cliente) e presi al telefono dalla cassa (origine cassa).
+const daCasa: { numero: number; nome: string; tipo: string; totaleCent: number; inviatoAlle: number; origine: 'cliente' | 'cassa' }[] = []
+// Comande del cameriere: i numeri degli ordini, per controllarne l'origine alla fine.
+const dalCameriere: number[] = []
 
 const PIATTI: [categoria: string, nome: string][] = [
   ['tartare','Salmone'],['tartare','Tonno'],['sashimi','Salmone'],['nigiri','Salmone'],['nigiri','Tonno scottato'],['sushi-gio','Gio salmone'],
@@ -187,17 +202,19 @@ const TITOLO = /^(Tavolo \d+|Domicilio \d\d:\d\d|Asporto \d\d:\d\d) · n\. \d+$/
 // («Inizia a preparare», «Segna servito», «Segna pronto»): sono l'emergenza, le comande le fanno i reparti.
 const PASSI_REPARTO = /^(Inizia a preparare|Segna pronta)$/
 const PASSI_CASSA = /^(Segna partito|Segna consegnato|Segna ritirato)$/
-async function lavoro(page: Page, chi: string, cassa: boolean, stato: { fine: boolean; standby: boolean }) {
+async function lavoro(page: Page, chi: Schermo, stato: { fine: boolean; standby: boolean }) {
+  const cassa = chi === 'cassa'
   await scheda(page,'Ordini')
   while (!stato.fine) {
     if (stato.standby) { await attendi(500); continue }
     try {
       for (const t of await page.getByRole('heading',{ name: TITOLO }).allTextContents()) {
         const n = t.match(/n\. (\d+)$/)![1]
-        if (!visteInCucina.has(n)) {
-          visteInCucina.set(n,Date.now())
+        if (!vistiDa[chi].has(n)) {
+          vistiDa[chi].add(n)
+          if (!visti.has(n)) visti.set(n,Date.now())
           const inviato = inviati.find(i => String(i.numero) === n) ?? daCasa.find(i => String(i.numero) === n)
-          if (inviato) (inStandby(inviato.inviatoAlle) ? misure.arrivoDopoStandby : misure.arrivoInCucina).push(Date.now() - inviato.inviatoAlle)
+          if (inviato) misure[cassa && inStandby(inviato.inviatoAlle) ? 'arrivoDopoStandby' : MISURA_ARRIVO[chi]].push(Date.now() - inviato.inviatoAlle)
           log(chi,`vede ${t}${inviato ? ` dopo ${((Date.now() - inviato.inviatoAlle) / 1000).toFixed(1)} s` : ''}`)
         }
       }
@@ -279,13 +296,73 @@ async function clienteDaCasa(browser: Browser, nome: string, telefono: string, t
   await tel.waitForURL('**/ordine/**',{ timeout: 30_000 })
   misure.invioCasa.push(Date.now() - invio)
   const numero = Number((await tel.getByRole('heading',{ level: 1 }).textContent())!.match(/n\. (\d+)/)![1])
-  daCasa.push({ numero,nome,tipo,totaleCent,inviatoAlle: Date.now() })
+  daCasa.push({ numero,nome,tipo,totaleCent,inviatoAlle: Date.now(),origine: 'cliente' })
   log(nome,`${tipo} n. ${numero} alle ${ora} (${(totaleCent / 100).toFixed(2)} €; orari già pieni: ${pieni})`)
   return { tel,numero }
 }
 
+// ── Ordine al telefono, preso dalla cassa ─────────────────────────────────────────────────────
+/** La cassa detta l'ordine da /staff/nuovo-ordine: niente email né privacy, nasce già accettato. */
+async function ordineDallaCassa(page: Page, nome: string, telefono: string, tipo: 'asporto' | 'domicilio', piatti: [string,string][]) {
+  await page.goto('/staff/nuovo-ordine')
+  for (const p of piatti) await aggiungi(page,p,2)
+  await page.getByRole('button',{ name: /^Rivedi l’ordine · / }).click()
+  await page.getByRole('dialog',{ name: 'Il tuo carrello' }).getByRole('button',{ name: 'Dati del cliente' }).click()
+  const modulo = page.getByRole('dialog',{ name: 'Dati del cliente' })
+  if (tipo === 'domicilio') {
+    await modulo.getByLabel('Consegna a domicilio').check()
+    await modulo.getByLabel('Zona').selectOption({ label: 'Centro · consegna 2,00 € · minimo 15,00 €' })
+    await modulo.getByLabel('Indirizzo e numero civico').fill('Via Verdi 7')
+  } else await modulo.getByLabel('Ritiro al locale (asporto)').check()
+  const gruppo = modulo.getByRole('radiogroup',{ name: tipo === 'domicilio' ? 'Consegna verso le' : 'Ritiro alle' })
+  const liberi = gruppo.locator('label').filter({ has: page.getByRole('radio',{ disabled: false }) })
+  if (!await liberi.count()) {
+    // Tutti gli orari pieni: la cassa può forzare, il sito vedrà l'orario pieno.
+    await modulo.getByLabel(/^Forza: /).check()
+    osserva('cassa',`nessun orario libero per ${nome}: forza il primo`)
+  }
+  const orario = liberi.first()
+  const ora = (await orario.locator('.b-num').first().textContent())!.trim()
+  await orario.click()
+  await modulo.getByLabel('Nome').fill(nome)
+  await modulo.getByLabel('Telefono').fill(telefono)
+  await modulo.getByLabel(tipo === 'domicilio' ? 'Contanti' : 'Carta (POS)').check()
+  const manda = modulo.getByRole('button',{ name: /^Manda in cucina · / })
+  const totaleCent = euroInCent((await manda.getAttribute('aria-label'))!.match(/([\d.]+,\d{2})/)![1])
+  const invio = Date.now()
+  await manda.click()
+  const fatto = page.getByRole('status').filter({ hasText: /^Ordine n\. \d+ in cucina\./ })
+  await expect(fatto).toBeVisible({ timeout: 30_000 })
+  misure.invioCassa.push(Date.now() - invio)
+  const numero = Number((await fatto.textContent())!.match(/n\. (\d+)/)![1])
+  daCasa.push({ numero,nome,tipo,totaleCent,inviatoAlle: Date.now(),origine: 'cassa' })
+  log('cassa',`al telefono: ${tipo} n. ${numero} per ${nome} alle ${ora} (${(totaleCent / 100).toFixed(2)} €)`)
+}
+
+// ── Telefono del cameriere ────────────────────────────────────────────────────────────────────
+/** Il cameriere ordina per un tavolo che non vuole farlo da solo: dal dettaglio del tavolo, senza codice. */
+async function comandaCameriere(cam: Page, tavolo: string, piatti: [string,string][]) {
+  await scheda(cam,'Tavoli')
+  const dettaglio = cam.getByRole('button',{ name: `Dettaglio di ${tavolo}` })
+  await expect(dettaglio).toBeVisible({ timeout: 30_000 })
+  await dettaglio.click()
+  await cam.getByRole('complementary',{ name: `Dettaglio di ${tavolo}` }).getByRole('link',{ name: 'Ordina per il tavolo' }).click()
+  await cam.waitForURL('**/staff/tavolo/**/ordina')
+  await expect(cam.getByRole('heading',{ name: `Ordine per ${tavolo}` })).toBeVisible()
+  for (const p of piatti) await aggiungi(cam,p,1)
+  const inizio = Date.now()
+  const { numero } = await invia(cam,tavolo,'cameriere')
+  if (numero === null) problema('cameriere',`comanda per ${tavolo} rifiutata`)
+  else {
+    misure.invioCameriere.push(Date.now() - inizio)
+    dalCameriere.push(numero)
+    await expect(cam.getByRole('region',{ name: 'Ordinato finora' }).getByText('Dal cameriere',{ exact: true }).first()).toBeVisible()
+  }
+  await cam.goto('/staff?vista=ordini')
+}
+
 // ── La serata ─────────────────────────────────────────────────────────────────────────────────
-test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', async ({ browser }) => {
+test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli e ordini da casa', async ({ browser }) => {
   test.skip(oraDiRoma() >= 22,'Servono orari liberi per gli ordini da casa: lanciare prima delle 22 di Roma.')
   const db = new pg.Client({ connectionString: URL_DB })
   await db.connect()
@@ -295,9 +372,14 @@ test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', 
 
   const sala = await tabletStaff(browser,'sala','cassa')
   const [bancoPage,cucinaPage] = [await tabletStaff(browser,'banco','banco'),await tabletStaff(browser,'cucina','cucina')]
-  // La cassa è accanto alla sala, sullo stesso dispositivo (stesso login e stessa postazione), in un'altra scheda.
+  // Gli ordini sono un'altra scheda dello stesso tablet della cassa (stesso login e stessa postazione).
   const cassaPage = await sala.context().newPage()
   await iniziaTurno(cassaPage,'cassa')
+  // E un'altra ancora per gli ordini presi al telefono.
+  const telefonoCassa = await sala.context().newPage()
+  // Il telefono del cameriere: postazione sala, a 375 px.
+  const cameriere = await apriSchermoStaff(browser,'sala',{ width: 375,height: 812 },{ hasTouch: true })
+  log('cameriere','turno iniziato (postazione sala)')
   const inSala = fila()
   // Gli esauriti si segnano dalla scheda «Menù» dello staff, senza passare dall'admin.
   const menuSala = await sala.context().newPage()
@@ -314,7 +396,7 @@ test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', 
   await scheda(sala,'Tavoli')
 
   const statoCassa = { fine: false,standby: false }, statoBanco = { fine: false,standby: false }, statoCucina = { fine: false,standby: false }
-  const lavori = [lavoro(cassaPage,'cassa',true,statoCassa),lavoro(bancoPage,'banco',false,statoBanco),lavoro(cucinaPage,'cucina',false,statoCucina)]
+  const lavori = [lavoro(cassaPage,'cassa',statoCassa),lavoro(bancoPage,'banco',statoBanco),lavoro(cucinaPage,'cucina',statoCucina)]
 
   const apri = (nome: string) => inSala(async () => {
     const card = sala.locator('article').filter({ has: sala.getByRole('heading',{ name: nome,exact: true }) })
@@ -366,7 +448,7 @@ test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', 
   /** Attende che banco e cucina abbiano finito e la sala portato tutto al tavolo, come farebbe il cameriere prima del conto. */
   const tuttoServito = async (nome: string) => {
     // Prima ogni ordine del tavolo deve essere comparso su uno schermo (si aggiornano ogni 5 s), poi essere servito e portato.
-    await expect.poll(() => inviati.filter(i => i.tavolo === nome && !visteInCucina.has(String(i.numero))).length,{ timeout: 60_000 }).toBe(0)
+    await expect.poll(() => inviati.filter(i => i.tavolo === nome && !visti.has(String(i.numero))).length,{ timeout: 60_000 }).toBe(0)
     const ordiniDelTavolo = new RegExp(`^${nome} · n\\. \\d+$`)
     for (const p of [cassaPage,bancoPage,cucinaPage]) await expect(p.getByRole('heading',{ name: ordiniDelTavolo })).toHaveCount(0,{ timeout: 240_000 })
     await expect(cassaPage.getByRole('region',{ name: /^Da portare al tavolo/ }).getByRole('listitem').filter({ hasText: `${nome} ·` })).toHaveCount(0,{ timeout: 240_000 })
@@ -381,7 +463,9 @@ test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', 
     // Tavolo 3: B sbaglia il codice 5 volte; A, sulla stessa rete, prova subito dopo con il codice giusto.
     let segnalaBloccato!: () => void, segnalaSbloccato!: () => void
     const bloccato = new Promise<void>(r => { segnalaBloccato = r }), sbloccato = new Promise<void>(r => { segnalaSbloccato = r })
-    await Promise.all(telefoni.map(async (tel,p) => {
+    // Tavolo 5: mentre i clienti ordinano, il cameriere aggiunge dal suo telefono una tartare, un dolce e due birre.
+    const perIlTavolo = indice === 4 ? attendi(20_000).then(() => comandaCameriere(cameriere,nome,[['tartare','Tonno'],['dessert','Tiramisù'],['beverage','Birra Asahi']])) : null
+    await Promise.all([perIlTavolo,...telefoni.map(async (tel,p) => {
       const chi = `${nome} · ${String.fromCharCode(65 + p)}`
       await attendi(tra(0,4000))
       if (indice === 2 && p === 0) {
@@ -438,7 +522,7 @@ test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', 
         }
         await attendi(tra(5000,15_000))
       }
-    }))
+    })])
     if (indice === 0) {
       // Tavolo 1: il conto si chiude mentre un cliente ha ancora il carrello pieno.
       const ritardatario = telefoni[0]
@@ -495,6 +579,9 @@ test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', 
         statoCassa.standby = false
         standby[standby.length - 1].a = Date.now()
       } else aperti.push({ ...(await clienteDaCasa(browser,nome,telefono,tipo,piatti)),nome })
+      // Tra un ordine online e l'altro squilla il telefono del locale (e arriva un WhatsApp).
+      if (i === 1) await ordineDallaCassa(telefonoCassa,'Pietro al telefono','3330000011','asporto',[['primi','Ramen'],['nigiri','Salmone'],['beverage','Coca Cola']])
+      if (i === 4) await ordineDallaCassa(telefonoCassa,'Sara su WhatsApp','3330000012','domicilio',[['special-roll','Daniel\'s roll'],['dessert','Tiramisù'],['beverage','Acqua naturale']])
     }
     // I clienti seguono l'ordine dalla pagina di stato (si aggiorna da sola).
     for (const { tel,numero,nome } of aperti) {
@@ -519,22 +606,31 @@ test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', 
   // ── Controlli sul database ──────────────────────────────────────────────────────────────────
   const verifica = new pg.Client({ connectionString: URL_DB })
   await verifica.connect()
-  const { rows: ordini } = await verifica.query<{ numero: number; tavolo: string | null; tipo: string; stato: string; totale: number; somma: number; chiavi: number }>(`
-    select o.numero,t.nome as tavolo,o.tipo,o.stato,o.totale_cent as totale,
+  const { rows: ordini } = await verifica.query<{ numero: number; tavolo: string | null; tipo: string; stato: string; origine: string; email: number; totale: number; somma: number; chiavi: number }>(`
+    select o.numero,t.nome as tavolo,o.tipo,o.stato,o.origine,o.totale_cent as totale,
+      (select count(*)::int from email_ordini e where e.ordine_id=o.id) as email,
       (select coalesce(sum(prezzo_unit_cent*quantita),0)::int from righe_ordine r where r.ordine_id=o.id and not r.annullata) + coalesce(o.consegna_cent,0) as somma,
       (select count(*)::int from ordini x where x.chiave_invio=o.chiave_invio) as chiavi
     from ordini o left join sessioni_tavolo s on s.id=o.sessione_id left join tavoli t on t.id=s.tavolo_id
     where t.nome like 'Tavolo %' and t.nome <> 'Tavolo prova' or o.tipo <> 'tavolo' order by o.numero`)
   // Comande: una per reparto delle righe (da casa senza bevande), e alla fine nessuna rimasta da fare.
-  const { rows: comandeOrdini } = await verifica.query<{ numero: number; stato: string; comande: number; reparti: number; aperte: number; nonChiuse: number }>(`
+  const { rows: comandeOrdini } = await verifica.query<{ numero: number; stato: string; comande: number; reparti: number; aperte: number; nonChiuse: number; bevandeDaPortare: number }>(`
     select o.numero,o.stato,
+      (select count(*)::int from comande c where c.ordine_id=o.id and c.reparto='sala' and c.stato='da_preparare') as "bevandeDaPortare",
       (select count(*)::int from comande c where c.ordine_id=o.id) as comande,
       (select count(distinct r.reparto)::int from righe_ordine r where r.ordine_id=o.id and (o.tipo='tavolo' or r.reparto<>'sala')) as reparti,
       (select count(*)::int from comande c where c.ordine_id=o.id and c.stato in ('da_preparare','in_preparazione')) as aperte,
       (select count(*)::int from comande c where c.ordine_id=o.id and c.stato not in ('pronta','annullata')) as "nonChiuse"
     from ordini o left join sessioni_tavolo s on s.id=o.sessione_id left join tavoli t on t.id=s.tavolo_id
     where t.nome like 'Tavolo %' and t.nome <> 'Tavolo prova' and t.nome <> 'Tavolo reparti' or o.tipo <> 'tavolo' order by o.numero`)
-  const sessioniAperte = (await verifica.query(`select count(*)::int as n from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where t.nome like 'Tavolo _' and s.chiusa_il is null`)).rows[0].n
+  // Tempi dei reparti, dalla nascita della comanda: quando il reparto la inizia e quando la segna pronta (o la sala «Portate»).
+  const { rows: tempiComande } = await verifica.query<{ reparto: string; inizio: number | null; pronta: number | null }>(`
+    select c.reparto,
+      round(extract(epoch from (c.iniziata_il - c.creata_il)) * 1000)::int as inizio,
+      round(extract(epoch from (c.pronta_il - c.creata_il)) * 1000)::int as pronta
+    from comande c join ordini o on o.id=c.ordine_id left join sessioni_tavolo s on s.id=o.sessione_id left join tavoli t on t.id=s.tavolo_id
+    where c.stato='pronta' and (t.nome like 'Tavolo _' or o.tipo <> 'tavolo')`)
+  const sessioniAperte =(await verifica.query(`select count(*)::int as n from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where t.nome like 'Tavolo _' and s.chiusa_il is null`)).rows[0].n
   await verifica.end()
 
   const tavolo_ = ordini.filter(o => o.tipo === 'tavolo')
@@ -559,7 +655,18 @@ test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', 
     if (c.comande !== c.reparti) problema('controlli',`ordine n. ${c.numero}: ${c.comande} comande per ${c.reparti} reparti`)
     if (c.aperte > 0) problema('controlli',`ordine n. ${c.numero} («${c.stato}»): ${c.aperte} comande ancora da fare`)
     if (['servito','completato'].includes(c.stato) && c.nonChiuse > 0) problema('controlli',`ordine n. ${c.numero} «${c.stato}» con comande non pronte`)
+    if (c.bevandeDaPortare > 0) problema('controlli',`ordine n. ${c.numero}: bevande mai portate al tavolo`)
   }
+  // Origine: la cassa e il cameriere si riconoscono, e agli ordini della cassa non parte nessuna email.
+  for (const o of ordini) {
+    const casa = daCasa.find(d => d.numero === o.numero)
+    const atteso = o.tipo === 'tavolo' ? (dalCameriere.includes(o.numero) ? 'cameriere' : 'cliente') : casa?.origine
+    if (atteso && o.origine !== atteso) problema('controlli',`ordine n. ${o.numero}: origine «${o.origine}», attesa «${atteso}»`)
+    if (o.origine === 'cassa' && o.email > 0) problema('controlli',`ordine n. ${o.numero} dalla cassa con ${o.email} email in coda`)
+    if (o.tipo !== 'tavolo' && !['completato','rifiutato'].includes(o.stato)) problema('controlli',`ordine da casa n. ${o.numero} rimasto «${o.stato}»`)
+  }
+  if (daCasa.filter(d => d.origine === 'cassa').length !== 2) problema('controlli','gli ordini presi dalla cassa non sono 2')
+  if (dalCameriere.length !== 1) problema('controlli','la comanda del cameriere non è arrivata')
 
   const statistiche = (xs: number[]) => {
     const s = [...xs].sort((a,b) => a - b)
@@ -567,11 +674,17 @@ test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', 
   }
   mkdirSync('test-results/serata',{ recursive: true })
   const risultati = {
-    durataSecondi: secondi(),tavoli: TAVOLI.length,ordiniTavolo: inviati.length,ordiniCasa: daCasa.length,conti: Object.fromEntries(conti),
+    durataSecondi: secondi(),tavoli: TAVOLI.length,ordiniTavolo: inviati.length,ordiniCameriere: dalCameriere.length,
+    ordiniCasa: daCasa.filter(d => d.origine === 'cliente').length,ordiniCassa: daCasa.filter(d => d.origine === 'cassa').length,conti: Object.fromEntries(conti),
     tempiMs: Object.fromEntries(Object.entries(misure).map(([k,v]) => [k,statistiche(v)])),
+    // Per reparto: dalla nascita della comanda all'inizio e alla fine del lavoro (sala: fino a «Portate»).
+    tempiRepartoMs: Object.fromEntries(['banco','cucina','sala'].map(r => {
+      const qui = tempiComande.filter(t => t.reparto === r)
+      return [r,{ inizio: statistiche(qui.flatMap(t => t.inizio === null ? [] : [t.inizio])),pronta: statistiche(qui.flatMap(t => t.pronta === null ? [] : [t.pronta])) }]
+    })),
     ordini,problemi,osservazioni,richiesteLente: lente,eventi,
   }
   writeFileSync('test-results/serata/risultati.json',JSON.stringify(risultati,null,2),'utf8')
-  log('controlli',`fine: ${inviati.length} ordini al tavolo, ${daCasa.length} da casa, ${problemi.length} problemi`)
+  log('controlli',`fine: ${inviati.length} ordini al tavolo (${dalCameriere.length} dal cameriere), ${daCasa.length} da casa (${daCasa.filter(d => d.origine === 'cassa').length} dalla cassa), ${problemi.length} problemi`)
   expect(problemi).toEqual([])
 })
