@@ -9,10 +9,10 @@ import { CardOrdineCasa } from './OrdiniCasa'
 import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 import type { OrdineClient } from '@/tavoli/ordini-repo'
 const online = { accesi: true,asporto: null,domicilio: 'Consegne a domicilio non disponibili.' }
-const tavolo: OrdineClient = { id: 'o',numero: 8,stato: 'inviato',totaleCent: 900,creatoIl: '2026-10-11T18:00:00Z',sessioneId: 's',tavoloNome: 'Tavolo 1',tavoloChiuso: false,origine: 'cliente',righe: [{ id: 'r',numero: null,nome: 'Poke composta',prezzoUnitCent: 900,quantita: 1,nota: 'senza sesamo',poke: { Base: ['Riso'],Proteine: ['Tonno'] },annullata: false },{ id: 'r2',numero: 2,nome: 'Salmone',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: true }] }
+const tavolo: OrdineClient = { id: 'o',numero: 8,stato: 'inviato',totaleCent: 900,creatoIl: '2026-10-11T18:00:00Z',sessioneId: 's',tavoloNome: 'Tavolo 1',tavoloChiuso: false,origine: 'cliente',righe: [{ id: 'r',numero: null,nome: 'Poke composta',prezzoUnitCent: 900,quantita: 1,nota: 'senza sesamo',poke: { Base: ['Riso'],Proteine: ['Tonno'] },annullata: false,reparto: 'banco' },{ id: 'r2',numero: 2,nome: 'Salmone',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: true,reparto: 'banco' }] }
 const casa: OrdineCasaClient = { id: 'c',numero: 9,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-11T17:30:00.000Z',creatoIl: '2026-10-11T17:00:00.000Z',aggiornatoIl: '2026-10-11T17:00:00.000Z',
   clienteNome: 'Anna',clienteTelefono: '3331234567',clienteEmail: 'anna@esempio.it',zonaNome: 'Bitetto',indirizzo: 'Via Roma 1',noteConsegna: 'citofono Rossi',pagamento: 'contanti',contantiDaCent: 5000,motivoRifiuto: null,anonimizzato: false,origine: 'cliente',
-  righe: [{ id: 'rc',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 3,nota: null,poke: null,annullata: false }] }
+  righe: [{ id: 'rc',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 3,nota: null,poke: null,annullata: false,reparto: 'banco' }] }
 it('evidenzia note e poke, barra annullati e mostra tempo e stato', () => {
   const html = renderToStaticMarkup(<CardOrdine ordine={tavolo} ora="2026-10-11T18:05:00Z" nuovo={true} inCorso={false} leggi={() => {}} esegui={() => {}} />)
   expect(html).toContain('b-comanda--nuovo'); expect(html).toContain('senza sesamo'); expect(html).toContain('b-nota'); expect(html).toContain('Tonno'); expect(html).toContain('<s>'); expect(html).toContain('aria-label="5 min"'); expect(html).toContain('Inizia a preparare')

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { creaDbDiTest } from '../../tests/db/pglite'
 import type { Db } from '@/server/db-tipi'
-import { aggiornaPiatto, contaAllergeniDaConfermare, impostaDisponibile, leggiMenu, leggiPiatto, type DatiPiatto } from './repo'
+import { aggiornaPiatto, aggiornaRepartoCategoria, contaAllergeniDaConfermare, impostaDisponibile, leggiMenu, leggiPiatto, type DatiPiatto } from './repo'
 
 let db: Db
 beforeEach(async () => {
@@ -33,6 +33,23 @@ describe('leggiMenu', () => {
       categoriaId: 'tartare', numero: 1, nome: 'Salmone', prezzoCent: 600,
       allergeni: [], allergeniConfermati: false, disponibile: true,
     })
+  })
+  it('ogni categoria porta il suo reparto', async () => {
+    const menu = await leggiMenu(db)
+    expect(menu.find((c) => c.id === 'tartare')?.reparto).toBe('banco')
+    expect(menu.find((c) => c.id === 'starter')?.reparto).toBe('cucina')
+    expect(menu.find((c) => c.id === 'beverage')?.reparto).toBe('sala')
+  })
+})
+
+describe('aggiornaRepartoCategoria', () => {
+  it('cambia il reparto; categoria inesistente → false', async () => {
+    expect(await aggiornaRepartoCategoria(db, 'dessert', 'sala')).toBe(true)
+    expect((await leggiMenu(db)).find((c) => c.id === 'dessert')?.reparto).toBe('sala')
+    expect(await aggiornaRepartoCategoria(db, 'nessuna', 'cucina')).toBe(false)
+  })
+  it('il database rifiuta un reparto fuori elenco', async () => {
+    await expect(aggiornaRepartoCategoria(db, 'dessert', 'bar' as 'sala')).rejects.toThrow(/check/)
   })
 })
 

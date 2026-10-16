@@ -3,20 +3,29 @@ import { validaCarrello, type RigaCarrello } from '@/domain/carrello'
 import { validaPoke, type SceltePoke } from '@/domain/poke'
 import { prossimoStato, type StatoOrdineTavolo } from '@/domain/stati-tavolo'
 import type { OrigineOrdine } from '@/domain/origine-ordine'
+import { CATEGORIA_POKE, type Reparto } from '@/domain/reparti'
 import { leggiAllergeniPoke, leggiPokeConfig } from './poke-repo'
 import { idValido } from './validazione'
 
-export interface RigaOrdine { id: string; numero: number | null; nome: string; prezzoUnitCent: number; quantita: number; nota: string | null; poke: SceltePoke | null; annullata: boolean }
+export interface RigaOrdine { id: string; numero: number | null; nome: string; prezzoUnitCent: number; quantita: number; nota: string | null; poke: SceltePoke | null; annullata: boolean; reparto: Reparto }
 export interface Ordine { id: string; numero: number; stato: StatoOrdineTavolo; totaleCent: number; creatoIl: Date; sessioneId: string; tavoloNome: string; tavoloChiuso: boolean; origine: OrigineOrdine; righe: RigaOrdine[] }
 export type OrdineClient = Omit<Ordine,'creatoIl'> & { creatoIl: string }
 export type EsitoCreazione = { ok: true; ordine: Ordine } | { ok: false; errore: string; nonDisponibili?: string[]; nonDisponibiliIds?: string[] }
 const COLONNE_ORDINE = `o.id,o.numero,o.stato,o.totale_cent as "totaleCent",o.creato_il as "creatoIl",o.sessione_id as "sessioneId",t.nome as "tavoloNome",(s.chiusa_il is not null) as "tavoloChiuso",o.origine`
-const COLONNE_RIGA = `id,numero,nome,prezzo_unit_cent as "prezzoUnitCent",quantita,nota,poke,annullata`
+const COLONNE_RIGA = `id,numero,nome,prezzo_unit_cent as "prezzoUnitCent",quantita,nota,poke,annullata,reparto`
+/** Righe degli ordini indicati, raggruppate per ordine e nell'ordine di inserimento: le usano tavoli e ordini da casa. */
+export async function leggiRigheOrdini(db: Db, ordiniIds: string[]): Promise<Map<string,RigaOrdine[]>> {
+  const per = new Map<string,RigaOrdine[]>(ordiniIds.map(id => [id,[]]))
+  if (!ordiniIds.length) return per
+  const righe = await db.query<RigaOrdine & { ordineId: string }>(`select ${COLONNE_RIGA},ordine_id as "ordineId" from righe_ordine where ordine_id=any($1::uuid[]) order by posizione`,[ordiniIds])
+  for (const { ordineId,...r } of righe) per.get(ordineId)?.push(r)
+  return per
+}
 async function leggiOrdini(db: Db, condizione: string, parametri: unknown[] = []): Promise<Ordine[]> {
   const ordini = await db.query<Omit<Ordine,'righe'>>(`select ${COLONNE_ORDINE} from ordini o join sessioni_tavolo s on s.id=o.sessione_id join tavoli t on t.id=s.tavolo_id where ${condizione} order by o.creato_il,o.numero`,parametri)
   if (!ordini.length) return []
-  const righe = await db.query<RigaOrdine & { ordineId: string }>(`select ${COLONNE_RIGA},ordine_id as "ordineId" from righe_ordine where ordine_id=any($1::uuid[]) order by posizione`,[ordini.map(o => o.id)])
-  return ordini.map(o => ({ ...o,righe: righe.filter(r => r.ordineId === o.id).map(r => ({ id: r.id, numero: r.numero, nome: r.nome, prezzoUnitCent: r.prezzoUnitCent, quantita: r.quantita, nota: r.nota, poke: r.poke, annullata: r.annullata })) }))
+  const righe = await leggiRigheOrdini(db,ordini.map(o => o.id))
+  return ordini.map(o => ({ ...o,righe: righe.get(o.id) ?? [] }))
 }
 export type RigaDaSalvare = Omit<RigaOrdine,'id' | 'annullata'> & { piattoId: string | null }
 export type EsitoPrezzi = { ok: true; righe: RigaDaSalvare[]; totaleCent: number } | { ok: false; errore: string; nonDisponibili?: string[]; nonDisponibiliIds?: string[] }
@@ -26,23 +35,25 @@ export type EsitoPrezzi = { ok: true; righe: RigaDaSalvare[]; totaleCent: number
  */
 export async function prezzaRighe(tx: Db, carrello: RigaCarrello[], { pokeDaCasa = false } = {}): Promise<EsitoPrezzi> {
   const ids = [...new Set(carrello.flatMap(r => r.piattoId ? [r.piattoId] : []))].sort()
-  const piatti = await tx.query<{ id: string; numero: number | null; nome: string; prezzo_cent: number; disponibile: boolean }>('select id,numero,nome,prezzo_cent,disponibile from piatti where id=any($1::uuid[]) order by id for share',[ids])
+  // Il reparto viene dalla categoria e si copia nella riga: un cambio di categoria vale per gli ordini da adesso.
+  const piatti = await tx.query<{ id: string; numero: number | null; nome: string; prezzo_cent: number; disponibile: boolean; reparto: Reparto }>('select p.id,p.numero,p.nome,p.prezzo_cent,p.disponibile,c.reparto from piatti p join categorie c on c.id=p.categoria_id where p.id=any($1::uuid[]) order by p.id for share of p',[ids])
   const nonDisponibiliIds = ids.filter(id => !piatti.find(p => p.id === id)?.disponibile)
   const nonDisponibili = nonDisponibiliIds.map(id => piatti.find(p => p.id === id)?.nome ?? 'Piatto non più in menù')
   if (nonDisponibili.length) return { ok: false, errore: 'Alcuni piatti non sono più disponibili', nonDisponibili, nonDisponibiliIds }
   if (carrello.some(r => r.piattoId === null)) await tx.query('select id from poke_config where id=1 for share')
   const config = carrello.some(r => r.piattoId === null) ? await leggiPokeConfig(tx) : null
   if (config && pokeDaCasa && !(await leggiAllergeniPoke(tx,config)).confermati) return { ok: false, errore: 'La poke composta non si può ordinare online in questo momento: rimuovila dal carrello.' }
+  const repartoPoke = config ? (await tx.query<{ reparto: Reparto }>('select reparto from categorie where id=$1',[CATEGORIA_POKE]))[0]?.reparto ?? 'banco' : 'banco'
   const righe: RigaDaSalvare[] = []
   for (const r of carrello) {
     if (r.piattoId) {
       const p = piatti.find(p => p.id === r.piattoId)!
-      righe.push({ piattoId: p.id, numero: p.numero, nome: p.nome, prezzoUnitCent: p.prezzo_cent, quantita: r.quantita, nota: r.nota || null, poke: null })
+      righe.push({ piattoId: p.id, numero: p.numero, nome: p.nome, prezzoUnitCent: p.prezzo_cent, quantita: r.quantita, nota: r.nota || null, poke: null, reparto: p.reparto })
     } else {
       if (!config) return { ok: false, errore: 'La poke composta non è ancora disponibile' }
       const poke = validaPoke(config,r.poke)
       if (!poke.ok) return poke
-      righe.push({ piattoId: null, numero: null, nome: 'Poke composta', prezzoUnitCent: poke.prezzoCent, quantita: r.quantita, nota: r.nota || null, poke: poke.scelte })
+      righe.push({ piattoId: null, numero: null, nome: 'Poke composta', prezzoUnitCent: poke.prezzoCent, quantita: r.quantita, nota: r.nota || null, poke: poke.scelte, reparto: repartoPoke })
     }
   }
   const totaleCent = righe.reduce((s,r) => s + r.prezzoUnitCent * r.quantita,0)
@@ -50,7 +61,7 @@ export async function prezzaRighe(tx: Db, carrello: RigaCarrello[], { pokeDaCasa
   return { ok: true, righe, totaleCent }
 }
 export async function salvaRighe(tx: Db, ordineId: string, righe: RigaDaSalvare[]): Promise<void> {
-  for (const [i,r] of righe.entries()) await tx.query(`insert into righe_ordine(ordine_id,piatto_id,numero,nome,prezzo_unit_cent,quantita,nota,poke,posizione) values ($1,$2,$3,$4,$5,$6,$7,$8::text::jsonb,$9)`,[ordineId,r.piattoId,r.numero,r.nome,r.prezzoUnitCent,r.quantita,r.nota,r.poke ? JSON.stringify(r.poke) : null,i])
+  for (const [i,r] of righe.entries()) await tx.query(`insert into righe_ordine(ordine_id,piatto_id,numero,nome,prezzo_unit_cent,quantita,nota,poke,posizione,reparto) values ($1,$2,$3,$4,$5,$6,$7,$8::text::jsonb,$9,$10)`,[ordineId,r.piattoId,r.numero,r.nome,r.prezzoUnitCent,r.quantita,r.nota,r.poke ? JSON.stringify(r.poke) : null,i,r.reparto])
 }
 async function ordineGiaInviato(db: Db,sessioneId: string,key: string): Promise<EsitoCreazione | null> {
   const [o] = await leggiOrdini(db,'o.chiave_invio=$1',[key])

@@ -8,7 +8,7 @@ import { etichettaOrdineInCorso } from './OrdineInCorso'
 import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 const ordine: OrdineCasaClient = { id: 'o',numero: 12,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-12T17:15:00.000Z',creatoIl: '2026-10-12T16:00:00.000Z',aggiornatoIl: '2026-10-12T16:03:00.000Z',
   clienteNome: 'Anna',clienteTelefono: '3331234567',clienteEmail: 'anna@esempio.it',zonaNome: 'Bitetto',indirizzo: 'Via Roma 1',noteConsegna: null,pagamento: 'contanti',contantiDaCent: 5000,motivoRifiuto: null,anonimizzato: false,origine: 'cliente',
-  righe: [{ id: 'r',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 3,nota: null,poke: null,annullata: false }] }
+  righe: [{ id: 'r',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 3,nota: null,poke: null,annullata: false,reparto: 'banco' }] }
 it('stato: in attesa, poi dopo 10 minuti il telefono del locale', () => {
   const presto = renderToStaticMarkup(<StatoOrdine ordine={ordine} telefono="0801234567" ora="2026-10-12T16:05:00.000Z" />)
   expect(presto).toContain('In attesa di conferma'); expect(presto).toContain('consegna verso le 19:15'); expect(presto).toContain('si aggiorna da sola'); expect(presto).not.toContain('Non abbiamo ancora risposto')

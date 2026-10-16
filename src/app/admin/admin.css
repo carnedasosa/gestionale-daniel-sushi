@@ -43,6 +43,8 @@
 .b-admin-cerca { flex: 0 1 320px; }
 .b-elenco-categorie { flex: 1 1 320px; min-width: 0; }
 .b-admin-sezione--categoria { scroll-margin-top: calc(var(--b-categorie-altezza, 72px) + 12px); }
+.b-reparto-categoria { display: flex; flex-direction: column; gap: 4px; max-width: 22rem; margin-bottom: 12px; }
+.b-reparto-categoria .b-piccolo { margin: 0; }
 @media (max-width: 50em) {
   .b-elenco-testa { display: contents; }
   .b-admin-cerca { flex: none; }

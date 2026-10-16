@@ -3,7 +3,7 @@ import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
 import { contaAllergeniDaConfermare, leggiMenu } from '@/menu/repo'
 import { testoBannerAllergeni } from '@/menu/testo-banner'
-import { cambiaDisponibilita } from './azioni'
+import { cambiaDisponibilita, cambiaRepartoCategoria } from './azioni'
 import { ElencoPiatti } from './ElencoPiatti'
 
 export default async function AdminMenu({ searchParams }: { searchParams: Promise<{ filtro?: string }> }) {
@@ -14,7 +14,7 @@ export default async function AdminMenu({ searchParams }: { searchParams: Promis
   const tutti = menu.flatMap((c) => c.piatti)
   const esauriti = tutti.filter((p) => !p.disponibile).length
   const tiene = (p: { allergeniConfermati: boolean; disponibile: boolean }) => filtro === 'allergeni' ? !p.allergeniConfermati : filtro === 'esauriti' ? !p.disponibile : true
-  const categorie = menu.map((c) => ({ id: c.id, nome: c.nome, pezzi: c.pezzi, piatti: c.piatti.filter(tiene).map((p) => ({ id: p.id, numero: p.numero, nome: p.nome, prezzoCent: p.prezzoCent, allergeniConfermati: p.allergeniConfermati, disponibile: p.disponibile })) })).filter((c) => c.piatti.length)
+  const categorie = menu.map((c) => ({ id: c.id, nome: c.nome, pezzi: c.pezzi, reparto: c.reparto, piatti: c.piatti.filter(tiene).map((p) => ({ id: p.id, numero: p.numero, nome: p.nome, prezzoCent: p.prezzoCent, allergeniConfermati: p.allergeniConfermati, disponibile: p.disponibile })) })).filter((c) => c.piatti.length)
   const scheda = (valore: string | undefined, testo: string, n?: number) => (
     <Link className="b-scheda" href={valore ? `/admin/menu?filtro=${valore}` : '/admin/menu'} aria-current={filtro === valore || (!valore && filtro !== 'allergeni' && filtro !== 'esauriti') ? 'page' : undefined}>
       {testo}{n !== undefined && <span className="b-num">{n}</span>}
@@ -37,7 +37,7 @@ export default async function AdminMenu({ searchParams }: { searchParams: Promis
       <nav aria-label="Filtra i piatti" className="b-schede">
         {scheda(undefined, 'Tutti')}{scheda('allergeni', 'Allergeni da confermare', daConfermare)}{scheda('esauriti', 'Esauriti', esauriti)}
       </nav>
-      <ElencoPiatti categorie={categorie} cambia={cambiaDisponibilita} />
+      <ElencoPiatti categorie={categorie} cambia={cambiaDisponibilita} cambiaReparto={cambiaRepartoCategoria} />
     </>
   )
 }

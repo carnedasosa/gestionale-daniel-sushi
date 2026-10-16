@@ -33,7 +33,7 @@ it('asporto: ordine in attesa con token, righe copiate ed email «ricevuto» in 
   const o = await crea()
   expect(o).toMatchObject({ tipo: 'asporto',stato: 'in_attesa',totaleCent: 1200,consegnaCent: 0,clienteNome: 'Anna',zonaNome: null,pagamento: 'carta',anonimizzato: false })
   expect(o.token).toMatch(/^[A-Za-z0-9_-]{32}$/); expect(o.fascia.toISOString()).toBe(F1830.toISOString())
-  expect(o.righe).toMatchObject([{ nome: expect.any(String),prezzoUnitCent: 600,quantita: 2,nota: 'senza sesamo' }])
+  expect(o.righe).toMatchObject([{ nome: expect.any(String),prezzoUnitCent: 600,quantita: 2,nota: 'senza sesamo',reparto: 'banco' }])
   expect(await ambiente.db.query('select tipo from email_ordini')).toEqual([{ tipo: 'ricevuto' }])
   expect(await ordineCasaPerToken(ambiente.db,o.token)).toMatchObject({ id: o.id })
   expect(await ordineCasaPerToken(ambiente.db,'corto')).toBeNull()

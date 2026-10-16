@@ -7,7 +7,7 @@ import type { OrigineOrdine } from '@/domain/origine-ordine'
 import { TESTO_MOTIVO } from '@/domain/apertura-casa'
 import { formatEuro } from '@/domain/soldi'
 import { prossimoStatoCasa, puoAnnullareCasa, STATI_CASA, type StatoCasa } from '@/domain/stati-casa'
-import { prezzaRighe, salvaRighe, type RigaOrdine } from '@/tavoli/ordini-repo'
+import { leggiRigheOrdini, prezzaRighe, salvaRighe, type RigaOrdine } from '@/tavoli/ordini-repo'
 import { idValido } from '@/tavoli/validazione'
 import { leggiDisponibilita } from './disponibilita'
 
@@ -27,12 +27,11 @@ export function tokenValido(t: unknown): t is string { return typeof t === 'stri
 const COLONNE = `o.id,o.numero,o.tipo,o.stato,o.token,o.totale_cent as "totaleCent",o.consegna_cent as "consegnaCent",o.fascia,o.creato_il as "creatoIl",o.aggiornato_il as "aggiornatoIl",
   o.cliente_nome as "clienteNome",o.cliente_telefono as "clienteTelefono",o.cliente_email as "clienteEmail",o.zona_nome as "zonaNome",o.indirizzo,
   o.note_consegna as "noteConsegna",o.pagamento,o.contanti_da_cent as "contantiDaCent",o.motivo_rifiuto as "motivoRifiuto",(o.anonimizzato_il is not null) as anonimizzato,o.origine`
-const COLONNE_RIGA = `id,numero,nome,prezzo_unit_cent as "prezzoUnitCent",quantita,nota,poke,annullata`
 async function leggiOrdiniCasa(db: Db, condizione: string, parametri: unknown[] = []): Promise<OrdineCasa[]> {
   const ordini = await db.query<Omit<OrdineCasa,'righe'>>(`select ${COLONNE} from ordini o where o.tipo<>'tavolo' and ${condizione} order by o.fascia,o.creato_il,o.numero`,parametri)
   if (!ordini.length) return []
-  const righe = await db.query<RigaOrdine & { ordineId: string }>(`select ${COLONNE_RIGA},ordine_id as "ordineId" from righe_ordine where ordine_id=any($1::uuid[]) order by posizione`,[ordini.map(o => o.id)])
-  return ordini.map(o => ({ ...o,righe: righe.filter(r => r.ordineId === o.id).map(r => ({ id: r.id,numero: r.numero,nome: r.nome,prezzoUnitCent: r.prezzoUnitCent,quantita: r.quantita,nota: r.nota,poke: r.poke,annullata: r.annullata })) }))
+  const righe = await leggiRigheOrdini(db,ordini.map(o => o.id))
+  return ordini.map(o => ({ ...o,righe: righe.get(o.id) ?? [] }))
 }
 export async function ordineCasaPerToken(db: Db, token: string): Promise<OrdineCasa | null> {
   return tokenValido(token) ? (await leggiOrdiniCasa(db,'o.token=$1',[token]))[0] ?? null : null

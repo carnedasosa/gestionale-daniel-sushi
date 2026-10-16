@@ -8,8 +8,14 @@ const menu = convertiMenu(json)
 describe('convertiMenu', () => {
   it('porta tutte le categorie in ordine', () => {
     expect(menu.categorie).toHaveLength(14)
-    expect(menu.categorie[0]).toEqual({ id: 'tartare', nome: 'Tartare', pezzi: null, posizione: 1 })
+    expect(menu.categorie[0]).toEqual({ id: 'tartare', nome: 'Tartare', pezzi: null, posizione: 1, reparto: 'banco' })
     expect(menu.categorie.find((c) => c.id === 'uramaki')?.pezzi).toBe('8 pz.')
+  })
+  it('reparto di ogni categoria: cucina per starter, primi, dessert; sala per le bevande; il resto al banco', () => {
+    const per = (r: string) => menu.categorie.filter((c) => c.reparto === r).map((c) => c.id).sort()
+    expect(per('cucina')).toEqual(['dessert', 'primi', 'starter'])
+    expect(per('sala')).toEqual(['beverage'])
+    expect(per('banco')).toHaveLength(10)
   })
   it('porta tutti i 139 piatti, 27 dei quali senza numero', () => {
     expect(menu.piatti).toHaveLength(139)

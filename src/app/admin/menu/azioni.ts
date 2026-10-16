@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
-import { aggiornaPiatto } from '@/menu/repo'
+import { aggiornaPiatto, aggiornaRepartoCategoria } from '@/menu/repo'
+import { repartoValido } from '@/domain/reparti'
 import { cambiaDisponibilitaPiatto, type EsitoDisponibilita } from '@/menu/cambia-disponibilita'
 import { inputDaForm, validaPiatto, type InputPiatto } from '@/menu/valida-piatto'
 
@@ -41,4 +42,24 @@ export async function salvaPiatto(id: string, stato: StatoModulo, fd: FormData):
 export async function cambiaDisponibilita(id: string, disponibile: boolean): Promise<EsitoDisponibilita> {
   await richiediRuolo('admin')
   return cambiaDisponibilitaPiatto(id, disponibile)
+}
+
+export type EsitoReparto = { ok: true } | { ok: false; errore: string }
+
+/** Reparto che prepara una categoria: vale per gli ordini da adesso, le righe già inviate restano dove sono. */
+export async function cambiaRepartoCategoria(id: string, reparto: string): Promise<EsitoReparto> {
+  await richiediRuolo('admin')
+  if (typeof id !== 'string' || !repartoValido(reparto)) return { ok: false, errore: 'Reparto non valido.' }
+  let trovata: boolean
+  try {
+    trovata = await aggiornaRepartoCategoria(db, id, reparto)
+  } catch (err) {
+    // Solo il messaggio, mai variabili d'ambiente: la stringa di connessione contiene la password.
+    console.error('cambiaRepartoCategoria non riuscito:', err instanceof Error ? err.message : 'errore sconosciuto')
+    return { ok: false, errore: 'Salvataggio non riuscito: controlla la connessione e riprova.' }
+  }
+  revalidatePath('/admin/menu')
+  revalidatePath('/staff')
+  revalidatePath('/')
+  return trovata ? { ok: true } : { ok: false, errore: 'Categoria non trovata.' }
 }

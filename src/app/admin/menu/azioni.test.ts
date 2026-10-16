@@ -1,17 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { richiediRuolo, aggiornaPiatto, impostaDisponibile, revalidatePath } = vi.hoisted(() => ({
+const { richiediRuolo, aggiornaPiatto, impostaDisponibile, aggiornaRepartoCategoria, revalidatePath } = vi.hoisted(() => ({
   richiediRuolo: vi.fn(),
   aggiornaPiatto: vi.fn(),
   impostaDisponibile: vi.fn(),
+  aggiornaRepartoCategoria: vi.fn(),
   revalidatePath: vi.fn(),
 }))
 vi.mock('@/auth/sessione', () => ({ richiediRuolo }))
 vi.mock('@/server/db', () => ({ db: {} }))
-vi.mock('@/menu/repo', () => ({ aggiornaPiatto, impostaDisponibile }))
+vi.mock('@/menu/repo', () => ({ aggiornaPiatto, impostaDisponibile, aggiornaRepartoCategoria }))
 vi.mock('next/cache', () => ({ revalidatePath }))
 
-import { cambiaDisponibilita, salvaPiatto, type StatoModulo } from './azioni'
+import { cambiaDisponibilita, cambiaRepartoCategoria, salvaPiatto, type StatoModulo } from './azioni'
 
 const INIZIALE: StatoModulo = { salvato: false, errori: {}, erroreGenerale: null, valori: null, invii: 3 }
 
@@ -67,5 +68,33 @@ describe('cambiaDisponibilita', () => {
   it('rifiuta valori non booleani senza toccare il database', async () => {
     expect((await cambiaDisponibilita('id', 'no' as unknown as boolean)).ok).toBe(false)
     expect(impostaDisponibile).not.toHaveBeenCalled()
+  })
+})
+
+describe('cambiaRepartoCategoria', () => {
+  it('solo admin: il ruolo si controlla prima di scrivere, poi si rivalidano admin, staff e menù', async () => {
+    aggiornaRepartoCategoria.mockResolvedValue(true)
+    expect(await cambiaRepartoCategoria('dessert', 'cucina')).toEqual({ ok: true })
+    expect(richiediRuolo).toHaveBeenCalledWith('admin')
+    expect(richiediRuolo.mock.invocationCallOrder[0]).toBeLessThan(aggiornaRepartoCategoria.mock.invocationCallOrder[0])
+    expect(aggiornaRepartoCategoria).toHaveBeenCalledWith({}, 'dessert', 'cucina')
+    expect(revalidatePath.mock.calls.map((c) => c[0])).toEqual(['/admin/menu', '/staff', '/'])
+  })
+  it('reparto fuori elenco o id non valido: nessuna scrittura', async () => {
+    expect(await cambiaRepartoCategoria('dessert', 'bar')).toEqual({ ok: false, errore: 'Reparto non valido.' })
+    expect(await cambiaRepartoCategoria(42 as unknown as string, 'banco')).toEqual({ ok: false, errore: 'Reparto non valido.' })
+    expect(aggiornaRepartoCategoria).not.toHaveBeenCalled()
+  })
+  it('senza ruolo non scrive', async () => {
+    richiediRuolo.mockRejectedValue(new Error('NEXT_REDIRECT'))
+    await expect(cambiaRepartoCategoria('dessert', 'sala')).rejects.toThrow('NEXT_REDIRECT')
+    expect(aggiornaRepartoCategoria).not.toHaveBeenCalled()
+  })
+  it('errore del database in italiano; categoria sparita', async () => {
+    aggiornaRepartoCategoria.mockRejectedValueOnce(new Error('connessione scaduta'))
+    expect(await cambiaRepartoCategoria('dessert', 'sala')).toEqual({ ok: false, errore: 'Salvataggio non riuscito: controlla la connessione e riprova.' })
+    expect(revalidatePath).not.toHaveBeenCalled()
+    aggiornaRepartoCategoria.mockResolvedValueOnce(false)
+    expect(await cambiaRepartoCategoria('nessuna', 'sala')).toEqual({ ok: false, errore: 'Categoria non trovata.' })
   })
 })
