@@ -11,7 +11,7 @@ import type { OrdineClient } from '@/tavoli/ordini-repo'
 const online = { accesi: true,asporto: null,domicilio: 'Consegne a domicilio non disponibili.' }
 const tavolo: OrdineClient = { id: 'o',numero: 8,stato: 'inviato',totaleCent: 900,creatoIl: '2026-10-11T18:00:00Z',sessioneId: 's',tavoloNome: 'Tavolo 1',tavoloChiuso: false,righe: [{ id: 'r',numero: null,nome: 'Poke composta',prezzoUnitCent: 900,quantita: 1,nota: 'senza sesamo',poke: { Base: ['Riso'],Proteine: ['Tonno'] },annullata: false },{ id: 'r2',numero: 2,nome: 'Salmone',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: true }] }
 const casa: OrdineCasaClient = { id: 'c',numero: 9,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-11T17:30:00.000Z',creatoIl: '2026-10-11T17:00:00.000Z',aggiornatoIl: '2026-10-11T17:00:00.000Z',
-  clienteNome: 'Anna',clienteTelefono: '3331234567',clienteEmail: 'anna@esempio.it',zonaNome: 'Bitetto',indirizzo: 'Via Roma 1',noteConsegna: 'citofono Rossi',pagamento: 'contanti',contantiDaCent: 5000,motivoRifiuto: null,anonimizzato: false,
+  clienteNome: 'Anna',clienteTelefono: '3331234567',clienteEmail: 'anna@esempio.it',zonaNome: 'Bitetto',indirizzo: 'Via Roma 1',noteConsegna: 'citofono Rossi',pagamento: 'contanti',contantiDaCent: 5000,motivoRifiuto: null,anonimizzato: false,origine: 'cliente',
   righe: [{ id: 'rc',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 3,nota: null,poke: null,annullata: false }] }
 it('evidenzia note e poke, barra annullati e mostra tempo e stato', () => {
   const html = renderToStaticMarkup(<CardOrdine ordine={tavolo} ora="2026-10-11T18:05:00Z" nuovo={true} inCorso={false} leggi={() => {}} esegui={() => {}} />)
@@ -97,4 +97,9 @@ it('scheda «Menù»: interruttori Disponibile/Esaurito per lo staff, con il num
   expect(html).toMatch(/href="\/staff\?vista=menu"[^>]*aria-current="page"|aria-current="page"[^>]*href="\/staff\?vista=menu"/)
   expect(html.match(/role="switch"/g)).toHaveLength(2); expect(html).toContain('aria-checked="false"'); expect(html).toContain('1 piatto esaurito stasera')
   expect(html).not.toContain('/admin/')
+})
+it('un ordine preso dalla cassa porta il chip «Dalla cassa»; quelli del cliente no', () => {
+  const dallaCassa = renderToStaticMarkup(<CardOrdineCasa ordine={{ ...casa,stato: 'accettato',origine: 'cassa',clienteEmail: null }} ora="2026-10-11T17:05:00.000Z" inCorso={false} esegui={() => {}} daAccettare={false} />)
+  expect(dallaCassa).toContain('Dalla cassa')
+  expect(renderToStaticMarkup(<CardOrdineCasa ordine={casa} ora="2026-10-11T17:05:00.000Z" inCorso={false} esegui={() => {}} daAccettare />)).not.toContain('Dalla cassa')
 })

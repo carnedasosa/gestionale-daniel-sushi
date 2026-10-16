@@ -33,6 +33,10 @@ export function fascePrenotabili(servizio: Servizio, fasce: Date[], occupazione:
   const perFascia = new Map(occupazione.map(o => [new Date(o.fascia).getTime(),o]))
   return fasce.filter(f => fasciaPrenotabile(servizio,f,perFascia.get(f.getTime()) ?? vuota,regole,adesso))
 }
+/** Fasce del giorno non ancora iniziate, piene o no: la cassa può forzarci un ordine preso a voce. */
+export function fasceFuture(fasce: Date[], adesso: Date): Date[] {
+  return fasce.filter(f => f.getTime() >= adesso.getTime())
+}
 /** Fasce dopo l'anticipo minimo che non si possono prenotare perché già piene (da mostrare barrate). */
 export function fascePiene(servizio: Servizio, fasce: Date[], occupazione: Occupazione[], regole: RegoleFasce, adesso: Date): Date[] {
   const vuota = { totale: 0,domicilio: 0 }

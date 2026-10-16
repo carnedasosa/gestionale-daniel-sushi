@@ -4,6 +4,7 @@ import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 import { attesaLunga, azioneAvanzaCasa, MOTIVI_RIFIUTO } from '@/domain/stati-casa'
 import { formatEuro } from '@/domain/soldi'
 import { oraRoma } from '@/domain/ora-roma'
+import { etichettaOrigine } from '@/domain/origine-ordine'
 import { DettaglioRighe } from '@/componenti/DettaglioRighe'
 import { ConfermaAzione } from '@/componenti/ConfermaAzione'
 import { AltreAzioni } from '@/componenti/AltreAzioni'
@@ -62,6 +63,7 @@ export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare }: { o
       <h3 className="b-comanda__titolo"><span className="b-comanda__tipo">{o.tipo === 'domicilio' ? 'Domicilio' : 'Asporto'}</span> <span className="b-comanda__nome b-num">{oraRoma(new Date(o.fascia))}</span> <span className="b-num b-comanda__numero">· n. {o.numero}</span></h3>
       {daAccettare && <span className="b-num b-comanda__timer" aria-label={`${minuti} min`}>{minuti}′</span>}
     </div>
+    {etichettaOrigine(o.origine) && <span className="b-etichetta">{etichettaOrigine(o.origine)}</span>}
     {lunga && <p className="b-avviso b-avviso--ritardo"><strong>In attesa da più di 10 minuti</strong></p>}
     <p className="b-comanda__meta">{o.clienteNome} · {o.clienteTelefono && <a href={`tel:${o.clienteTelefono}`}>{o.clienteTelefono}</a>} · <span className="b-num">{formatEuro(o.totaleCent)}</span> · {o.pagamento === 'carta' ? 'Carta' : `Contanti${o.contantiDaCent ? ` (paga con ${formatEuro(o.contantiDaCent)})` : ''}`}</p>
     {o.tipo === 'domicilio' && <p className="b-comanda__meta">{o.indirizzo} · {o.zonaNome}{o.noteConsegna && ` · ${o.noteConsegna}`}{o.consegnaCent > 0 && ` · consegna ${formatEuro(o.consegnaCent)}`}</p>}

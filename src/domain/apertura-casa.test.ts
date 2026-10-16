@@ -41,3 +41,11 @@ it('stato della casa: aperto se un servizio lo è, pieno se chiusi ma con orari 
   expect(statoCasa([pieno,spento])).toBe('pieno')
   expect(statoCasa([finito,spento])).toBe('chiuso')
 })
+it('dalla cassa: niente allergeni, telefono o interruttore; restano chiusura, zone e fasce', () => {
+  const cassa = { ...aperto,allergeniCompleti: false,telefono: null,apertiIl: null,origine: 'cassa' as const }
+  expect(aperturaServizio('asporto',cassa)).toEqual({ aperto: true })
+  expect(aperturaServizio('domicilio',{ ...cassa,chiusoOggi: true })).toEqual({ aperto: false,motivo: 'chiusura' })
+  expect(aperturaServizio('domicilio',{ ...cassa,zoneAttive: 0 })).toEqual({ aperto: false,motivo: 'zone' })
+  expect(aperturaServizio('asporto',{ ...cassa,fasceLibere: 0 })).toEqual({ aperto: false,motivo: 'fasce' })
+  expect(aperturaServizio('asporto',{ ...cassa,origine: 'cliente' })).toEqual({ aperto: false,motivo: 'allergeni' })
+})

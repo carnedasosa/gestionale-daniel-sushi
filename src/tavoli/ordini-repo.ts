@@ -147,7 +147,7 @@ export async function annullaRiga(db: Db, rigaId: string, utenteId: string): Pro
 // Totale = righe attive + consegna (solo domicilio). Senza righe attive l'ordine è annullato; da casa il cliente riceve l'email.
 async function ricalcolaOrdine(db: Db,id: string) {
   await db.query(`update ordini set totale_cent=case when r.n=0 then 0 else r.totale+coalesce(ordini.consegna_cent,0) end,stato=case when r.n=0 then 'annullato' else ordini.stato end,aggiornato_il=clock_timestamp() from (select coalesce(sum(prezzo_unit_cent*quantita),0)::int as totale,count(*) as n from righe_ordine where ordine_id=$1 and not annullata) r where ordini.id=$1`,[id])
-  await db.query(`insert into email_ordini (ordine_id,tipo) select id,'annullato' from ordini where id=$1 and tipo<>'tavolo' and stato='annullato' on conflict (ordine_id,tipo) do nothing`,[id])
+  await db.query(`insert into email_ordini (ordine_id,tipo) select id,'annullato' from ordini where id=$1 and tipo<>'tavolo' and origine='cliente' and stato='annullato' on conflict (ordine_id,tipo) do nothing`,[id])
 }
 export interface IdentitaVoce { nome: string; numero: number | null; prezzoUnitCent: number; poke: SceltePoke | null }
 export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce,utenteId: string): Promise<EsitoAnnullo> {

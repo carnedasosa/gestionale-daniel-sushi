@@ -9,8 +9,8 @@ import type { Servizio } from '@/domain/fasce'
 import { totaliCasa, type CampoCheckout, type ErroriCheckout } from '@/domain/checkout'
 import { aggiornaCarrello } from '@/domain/carrello-salvato'
 import { formatEuro } from '@/domain/soldi'
-import { oraRoma } from '@/domain/ora-roma'
 import { useCarrelloSalvato } from '@/ordinare/useCarrelloSalvato'
+import { OrariFascia } from '@/ordinare/OrariFascia'
 import { totaleVista, vistaCarrello } from '@/ordinare/vista-carrello'
 import { CHIAVE_CARRELLO_CASA, CHIAVE_ULTIMO_ORDINE } from '@/ordinare/archivio-casa'
 import { inviaOrdineCasa } from './azioni'
@@ -93,10 +93,7 @@ export function Checkout({ piatti,poke,disponibilita: d }: { piatti: Piatto[]; p
     </fieldset>}
     <fieldset className="b-card b-checkout__blocco"><legend className="b-checkout__titolo">{passo(tipo === 'domicilio' ? 3 : 2)}A che ora, circa?</legend>
       {!fasce.length && <p>Nessun orario libero per oggi.</p>}
-      {orari.length > 0 && <div className="b-orari" role="radiogroup" aria-label={quando} aria-invalid={!!errori.fascia}>{orari.map(({ f,piena }) => <label key={f} className={piena ? 'b-orario b-orario--pieno' : 'b-orario'}>
-        <input type="radio" name="fascia" value={f} checked={fascia === f} disabled={piena || attesa} onChange={imposta('fascia')} />
-        {piena ? <><s>{oraRoma(new Date(f))}</s><span className="b-nascosto"> pieno</span></> : <span className="b-num">{oraRoma(new Date(f))}</span>}
-      </label>)}</div>}
+      {orari.length > 0 && <OrariFascia orari={orari} valore={fascia} onChange={f => setCampi(v => ({ ...v,fascia: f }))} disabilitato={attesa} etichetta={quando} invalido={!!errori.fascia} />}
       {orari.some(o => o.piena) && <p className="b-secondario b-piccolo">Gli orari barrati sono già pieni.</p>}
       <Errore campo="fascia" errori={errori} />
     </fieldset>

@@ -16,7 +16,7 @@ it('asporto valido: i campi del domicilio si ignorano', () => {
   expect(validaCheckout({ ...base,zonaId: 'x',indirizzo: '' })).toEqual({ ok: true,dati: {
     tipo: 'asporto',zonaId: null,indirizzo: null,noteConsegna: null,fascia: new Date('2026-10-12T17:15:00.000Z'),
     nome: 'Anna',telefono: '3331234567',email: 'anna@esempio.it',pagamento: 'carta',contantiDaCent: null,
-  } })
+  },forzaFascia: false })
 })
 it('domicilio con contanti: zona, indirizzo, note e banconota', () => {
   const e = validaCheckout({ ...base,tipo: 'domicilio',zonaId: zona,indirizzo: ' Via Roma 1 ',noteConsegna: ' citofono Rossi ',pagamento: 'contanti',contantiDa: '50' })
@@ -35,4 +35,14 @@ it('totali con consegna e importo mancante al minimo della zona', () => {
   expect(totaliCasa(1800,'domicilio',{ costoCent: 200,minimoCent: 2000 })).toEqual({ righeCent: 1800,consegnaCent: 200,totaleCent: 2000,mancanteCent: 200 })
   expect(totaliCasa(2500,'domicilio',{ costoCent: 200,minimoCent: 2000 })).toEqual({ righeCent: 2500,consegnaCent: 200,totaleCent: 2700,mancanteCent: 0 })
   expect(totaliCasa(1800,'asporto',{ costoCent: 200,minimoCent: 2000 })).toEqual({ righeCent: 1800,consegnaCent: 0,totaleCent: 1800,mancanteCent: 0 })
+})
+it('dalla cassa: email facoltativa, niente privacy, orario forzabile', () => {
+  const cassa = { tipo: 'asporto',fascia: '2026-10-12T17:15:00.000Z',nome: 'Anna',telefono: '3331234567',pagamento: 'contanti' }
+  expect(validaCheckout(cassa,{ origine: 'cassa' })).toMatchObject({ ok: true,dati: { email: null },forzaFascia: false })
+  expect(validaCheckout({ ...cassa,email: '  ',forzaFascia: true },{ origine: 'cassa' })).toMatchObject({ ok: true,dati: { email: null },forzaFascia: true })
+  expect(validaCheckout({ ...cassa,email: 'Anna@Esempio.it' },{ origine: 'cassa' })).toMatchObject({ ok: true,dati: { email: 'anna@esempio.it' } })
+  expect(validaCheckout({ ...cassa,email: 'non-valida' },{ origine: 'cassa' })).toMatchObject({ ok: false,errori: { email: expect.any(String) } })
+  // Dal cliente niente cambia: email e privacy restano obbligatorie e la forzatura si ignora.
+  expect(validaCheckout({ ...cassa,forzaFascia: true })).toMatchObject({ ok: false,errori: { email: expect.any(String),privacy: expect.any(String) } })
+  expect(validaCheckout({ ...base,forzaFascia: true })).toMatchObject({ ok: true,forzaFascia: false })
 })

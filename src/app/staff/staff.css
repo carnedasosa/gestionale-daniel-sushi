@@ -115,3 +115,9 @@
 .b-menu-staff__piatto { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; padding: 8px 14px; }
 .b-menu-staff__piatto--esaurito { background: var(--b-campo); }
 .b-menu-staff__nome { flex: 1 1 200px; min-width: 0; font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }
+
+/* Nuovo ordine dalla cassa */
+.b-nuovo-ordine { display: flex; flex-direction: column; gap: 18px; max-width: 760px; }
+.b-nuovo-ordine__testa { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.b-nuovo-ordine__fatto { flex-direction: column; align-items: flex-start; gap: 12px; }
+.b-checkout--cassa { max-width: none; }

@@ -2,10 +2,12 @@ import { servizioValido, type Servizio } from './fasce'
 import { parseEuro } from './soldi'
 import { idValido } from '@/tavoli/validazione'
 export type Pagamento = 'contanti' | 'carta'
+/** `email` manca solo negli ordini presi dalla cassa, dettati a voce. */
 export interface DatiCheckout {
   tipo: Servizio; zonaId: string | null; indirizzo: string | null; noteConsegna: string | null; fascia: Date
-  nome: string; telefono: string; email: string; pagamento: Pagamento; contantiDaCent: number | null
+  nome: string; telefono: string; email: string | null; pagamento: Pagamento; contantiDaCent: number | null
 }
+export type OrigineCheckout = 'cliente' | 'cassa'
 export type CampoCheckout = 'tipo' | 'zonaId' | 'indirizzo' | 'noteConsegna' | 'fascia' | 'nome' | 'telefono' | 'email' | 'pagamento' | 'contantiDa' | 'privacy'
 export type ErroriCheckout = Partial<Record<CampoCheckout,string>>
 export const MASSIMO_CONTANTI_CENT = 50000
@@ -28,9 +30,13 @@ const testo = (v: unknown, min: number, max: number): string | null => {
   const t = v.trim()
   return t.length >= min && t.length <= max ? t : null
 }
-/** Controlla i dati del checkout (non il carrello). I campi del domicilio si ignorano per l'asporto. */
-export function validaCheckout(v: Record<string,unknown>): { ok: true; dati: DatiCheckout } | { ok: false; errori: ErroriCheckout } {
+/**
+ * Controlla i dati del checkout (non il carrello). I campi del domicilio si ignorano per l'asporto.
+ * Dalla cassa l'email è facoltativa, la privacy non si chiede e `forzaFascia` permette un orario già pieno.
+ */
+export function validaCheckout(v: Record<string,unknown>, { origine = 'cliente' }: { origine?: OrigineCheckout } = {}): { ok: true; dati: DatiCheckout; forzaFascia: boolean } | { ok: false; errori: ErroriCheckout } {
   const errori: ErroriCheckout = {}
+  const cassa = origine === 'cassa'
   const tipo = servizioValido(v.tipo) ? v.tipo : null
   if (!tipo) errori.tipo = 'Scegli asporto o domicilio.'
   const domicilio = tipo === 'domicilio'
@@ -46,8 +52,9 @@ export function validaCheckout(v: Record<string,unknown>): { ok: true; dati: Dat
   if (!nome) errori.nome = 'Scrivi il nome (al massimo 60 caratteri).'
   const telefono = normalizzaTelefono(v.telefono)
   if (!telefono) errori.telefono = 'Scrivi un numero di telefono italiano valido.'
-  const email = normalizzaEmail(v.email)
-  if (!email) errori.email = 'Scrivi un indirizzo email valido.'
+  const emailVuota = cassa && (v.email === undefined || v.email === null || (typeof v.email === 'string' && !v.email.trim()))
+  const email = emailVuota ? null : normalizzaEmail(v.email)
+  if (!email && !emailVuota) errori.email = 'Scrivi un indirizzo email valido.'
   const pagamento = v.pagamento === 'contanti' || v.pagamento === 'carta' ? v.pagamento : null
   if (!pagamento) errori.pagamento = 'Scegli come pagherai.'
   let contantiDaCent: number | null = null
@@ -55,9 +62,9 @@ export function validaCheckout(v: Record<string,unknown>): { ok: true; dati: Dat
     contantiDaCent = parseEuro(v.contantiDa)
     if (contantiDaCent === null || contantiDaCent > MASSIMO_CONTANTI_CENT) errori.contantiDa = 'Scrivi un importo valido, al massimo 500,00 €.'
   }
-  if (v.privacy !== true) errori.privacy = 'Per ordinare devi accettare l’informativa privacy.'
+  if (!cassa && v.privacy !== true) errori.privacy = 'Per ordinare devi accettare l’informativa privacy.'
   if (Object.keys(errori).length) return { ok: false,errori }
-  return { ok: true,dati: { tipo: tipo!,zonaId,indirizzo,noteConsegna: note || null,fascia: fascia!,nome: nome!,telefono: telefono!,email: email!,pagamento: pagamento!,contantiDaCent } }
+  return { ok: true,dati: { tipo: tipo!,zonaId,indirizzo,noteConsegna: note || null,fascia: fascia!,nome: nome!,telefono: telefono!,email,pagamento: pagamento!,contantiDaCent },forzaFascia: cassa && v.forzaFascia === true }
 }
 export interface TotaliCasa { righeCent: number; consegnaCent: number; totaleCent: number; mancanteCent: number }
 /** Totale con la consegna; `mancanteCent` > 0 se il domicilio non raggiunge il minimo della zona. */

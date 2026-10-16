@@ -1,8 +1,9 @@
 import type { Servizio } from './fasce'
 export type MotivoChiusura = 'allergeni' | 'telefono' | 'spenti' | 'chiusura' | 'zone' | 'fasce'
+/** `origine: 'cassa'` = ordine dettato a voce alla cassa: niente obbligo di allergeni (vale per la vendita a distanza), telefono del locale o interruttore del sito. */
 export interface DatiApertura {
   allergeniCompleti: boolean; telefono: string | null; apertiIl: string | null; oggi: string
-  chiusoOggi: boolean; zoneAttive: number; fasceLibere: number; prova: boolean
+  chiusoOggi: boolean; zoneAttive: number; fasceLibere: number; prova: boolean; origine?: 'cliente' | 'cassa'
 }
 export type StatoApertura = { aperto: true } | { aperto: false; motivo: MotivoChiusura }
 export const TESTO_MOTIVO: Record<MotivoChiusura,string> = {
@@ -15,9 +16,11 @@ export const TESTO_MOTIVO: Record<MotivoChiusura,string> = {
 }
 /** Primo motivo per cui il servizio è chiuso, nell'ordine della spec (§5.1). */
 export function aperturaServizio(servizio: Servizio, d: DatiApertura): StatoApertura {
-  if (!d.allergeniCompleti && !d.prova) return { aperto: false,motivo: 'allergeni' }
-  if (!d.telefono) return { aperto: false,motivo: 'telefono' }
-  if (d.apertiIl !== d.oggi) return { aperto: false,motivo: 'spenti' }
+  if (d.origine !== 'cassa') {
+    if (!d.allergeniCompleti && !d.prova) return { aperto: false,motivo: 'allergeni' }
+    if (!d.telefono) return { aperto: false,motivo: 'telefono' }
+    if (d.apertiIl !== d.oggi) return { aperto: false,motivo: 'spenti' }
+  }
   if (d.chiusoOggi) return { aperto: false,motivo: 'chiusura' }
   if (servizio === 'domicilio' && d.zoneAttive === 0) return { aperto: false,motivo: 'zone' }
   if (d.fasceLibere === 0) return { aperto: false,motivo: 'fasce' }

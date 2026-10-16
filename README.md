@@ -103,6 +103,7 @@ Le nuove registrazioni sono disattivate in Supabase: solo gli utenti creati a ma
 | `/admin/tavoli/stampa` | QR dei tavoli attivi (admin) |
 | `/staff` | cucina e apertura/chiusura tavoli |
 | `/staff/conto/[sessione]` | riepilogo per la cassa |
+| `/staff/nuovo-ordine` | ordine preso a voce dalla cassa (telefono o WhatsApp) |
 | `/tavolo/[chiave]` | accesso con codice e ordini al tavolo |
 
 ## Tavoli e QR
@@ -140,6 +141,12 @@ In `/admin/domicilio` imposta il telefono del locale, gli ordini per fascia di 1
 Gli ordini si aprono solo dallo schermo staff con **Apri ordini di oggi**: l'interruttore vale per il giorno in cui si accende e il giorno dopo riparte spento. Servono anche il telefono del locale, gli allergeni confermati e almeno una fascia libera. Il cliente sceglie i piatti in `/`, conferma in `/ordina` (asporto o domicilio, fascia, dati, contanti o carta, privacy) e segue l'ordine in `/ordine/<token>`. Il server ricalcola tutto: se il totale cambia, l'ordine non parte e il riepilogo si aggiorna. Due clienti non possono prendere insieme l'ultimo posto di una fascia: gli invii da casa si mettono in fila sul lock delle impostazioni. Al massimo 3 ordini in attesa per telefono e 10 all'ora per rete.
 
 Sullo schermo staff gli ordini da casa compaiono in **Da accettare** con un suono ogni 10 secondi: **Accetta**, **Accetta +15’**, **Accetta +30’** o **Rifiuta** con motivo. Poi passano nella cucina insieme ai tavoli: **Da preparare**, **In preparazione**, **Pronti e in consegna** (Pronto → Ritirato, oppure Partito → Consegnato).
+
+### Ordini dalla cassa
+
+Applica la migrazione `20261016120000_origine_ordini.sql`: aggiunge la colonna `origine` (`cliente`, `cassa`, `cameriere`) agli ordini e allenta i vincoli per quelli della cassa. Va autorizzata prima di applicarla al database reale.
+
+Gli ordini presi al telefono o su WhatsApp si inseriscono da **Nuovo ordine** nella barra dello schermo staff (`/staff/nuovo-ordine`): stesso menù del sito, poi **Dati del cliente** con asporto o domicilio, orario, nome e telefono, pagamento; l'email è facoltativa e non si chiede il consenso privacy (l'ordine è dettato a voce). L'ordine nasce già **accettato**, va in cucina con il chip «Dalla cassa» e **occupa l'orario** come quelli del sito; per questi ordini non partono email e non valgono i limiti per telefono e per rete. La cassa può ordinare anche con gli ordini online chiusi o con allergeni da confermare (l'obbligo vale per la vendita a distanza), ma non in un giorno di chiusura e solo nei turni impostati. Sotto ogni orario c'è l'occupazione (es. `3/4`); gli orari pieni o troppo vicini sono barrati e si sbloccano con **Forza**: il sito vedrà quell'orario pieno.
 
 Le email (ricevuto, accettato, rifiutato, annullato) si accodano nel database e partono subito dopo l'azione; quelle non riuscite si ritentano a ogni aggiornamento dello schermo staff, fino a 5 volte. Servono `RESEND_API_KEY`, `EMAIL_MITTENTE` con un dominio verificato e `APP_URL`; senza, le email restano in coda e l'app funziona lo stesso. Ogni giorno alle 3 il cron di Vercel (`vercel.json`) chiama `/api/cron/anonimizza`, che toglie i dati personali dagli ordini da casa più vecchi di 12 mesi.
 
