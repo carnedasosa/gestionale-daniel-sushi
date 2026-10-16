@@ -1,10 +1,10 @@
 'use client'
 import Link from 'next/link'
-import { useContext, useEffect, useRef, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useContext, useEffect } from 'react'
 import { formatEuro } from '@/domain/soldi'
 import { etichettaOrigine } from '@/domain/origine-ordine'
-import { arriviCucina, leggiStatoArrivi, segnaLetto, type StatoArrivi } from '@/domain/arrivi-cucina'
+import { nuovoOrdineAmmesso, onlineAmmesso, suonaAccettare, type Postazione } from '@/domain/postazioni'
+import type { StatoReparto, VoceDaPortareClient } from '@/comande/comande-repo'
 import type { OrdineClient, RiepilogoTavolo } from '@/tavoli/ordini-repo'
 import type { TavoloConSessione, ContoRecente } from '@/tavoli/repo'
 import { DettaglioRighe } from '@/componenti/DettaglioRighe'
@@ -20,12 +20,14 @@ import { CardOrdineCasa, OrdiniOnlineBarra, type OrdiniOnline } from './OrdiniCa
 import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 import { colonnaCucina } from '@/domain/stati-casa'
 import type { VistaStaff } from './vista'
-import { avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, type EsitoStaff } from './azioni'
+import { avanzaOrdine, annullaOrdineStaff, annullaRigaStaff } from './azioni'
+import { ChipComande, DaPortare } from './DaPortare'
+import { useArrivi } from './useArrivi'
+import { useEsegui, useUltimiDati, type Esegui } from './useEsegui'
 
-type Esegui = (azione: () => Promise<EsitoStaff>) => void
 export type TavoloStaff = Omit<TavoloConSessione,'sessione'> & { sessione: (Omit<NonNullable<TavoloConSessione['sessione']>,'apertaIl'> & { apertaIl: string }) | null }
 // Letta al clic (anche sul bottone, che arriva prima): alla pressione l’etichetta «Nuovo ordine» sparirebbe e sposterebbe il bottone sotto il dito.
-export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordine: OrdineClient; ora: string; nuovo: boolean; inCorso: boolean; leggi: () => void; esegui: Esegui }) {
+export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui,comande }: { ordine: OrdineClient; ora: string; nuovo: boolean; inCorso: boolean; leggi: () => void; esegui: Esegui; comande?: StatoReparto[] }) {
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
   return <article className={`b-comanda${nuovo ? ' b-comanda--nuovo' : ''}${o.stato === 'in_preparazione' ? ' b-comanda--preparazione' : ''}`} onClick={leggi}>
     <div className="b-comanda__testa">
@@ -33,6 +35,7 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
       <span className="b-num b-comanda__timer" aria-label={`${minuti} min`}>{minuti}′</span>
     </div>
     {(nuovo || etichettaOrigine(o.origine)) && <div className="b-comanda__etichette">{nuovo && <span className="b-etichetta b-etichetta--accettare">Nuovo ordine</span>}{etichettaOrigine(o.origine) && <span className="b-etichetta">{etichettaOrigine(o.origine)}</span>}</div>}
+    <ChipComande comande={comande} />
     <p className="b-comanda__meta b-num">{formatEuro(o.totaleCent)}</p>
     {o.tavoloChiuso && <p className="b-nota">Tavolo chiuso</p>}
     <DettaglioRighe righe={o.righe} area="staff" perReparto />
@@ -49,88 +52,62 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
     </div>
   </article>
 }
-export interface DatiStaff { tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[]; casa: OrdineCasaClient[]; ordiniOnline: OrdiniOnline; menu?: CategoriaElenco[] | null }
-const CHIAVE_ARRIVI = 'ds_arrivi_cucina'
-function arriviSalvati(): StatoArrivi | null {
-  try { return leggiStatoArrivi(sessionStorage.getItem(CHIAVE_ARRIVI)) } catch { return null }
-}
-function salvaArrivi(stato: StatoArrivi) {
-  try { sessionStorage.setItem(CHIAVE_ARRIVI,JSON.stringify(stato)) } catch { /* Senza storage la memoria resta solo in questa pagina. */ }
+export interface DatiStaff {
+  tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[]; casa: OrdineCasaClient[]; ordiniOnline: OrdiniOnline; menu?: CategoriaElenco[] | null
+  daPortare?: VoceDaPortareClient[]; comande?: Record<string,StatoReparto[]>
 }
 const COLONNE = [
   { chiave: 'da_preparare',titolo: 'Da preparare',punto: '' },
   { chiave: 'in_preparazione',titolo: 'In preparazione',punto: 'b-punto--preparazione' },
   { chiave: 'pronti',titolo: 'Pronti e in consegna',punto: 'b-punto--pronto' },
 ] as const
-// Le tre schede restano tutte montate (si nasconde quella non scelta): suono e memoria degli ordini letti valgono ovunque.
-export function SchermoStaff({ dati,ora,vista = 'ordini',uscita }: { dati: DatiStaff | null; ora: string; vista?: VistaStaff; uscita?: React.ReactNode }) {
+// Le schede restano tutte montate (si nasconde quella non scelta): suono e memoria degli ordini letti valgono ovunque.
+// `postazione`: cassa (tutto) o sala (telefoni dei camerieri: niente interruttore online, «Nuovo ordine» né suono per gli ordini da accettare).
+export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'cassa' }: { dati: DatiStaff | null; ora: string; vista?: VistaStaff; uscita?: React.ReactNode; postazione?: Extract<Postazione,'cassa' | 'sala'> }) {
   // Se una lettura dal database fallisce lo schermo resta montato con gli ultimi dati ricevuti:
   // smontarlo azzererebbe il suono e la memoria degli ordini già visti.
-  const [ultimi,setUltimi] = useState(dati)
-  if (dati && dati !== ultimi) setUltimi(dati)
-  const mostrati = dati ?? ultimi
+  const mostrati = useUltimiDati(dati)
   const ordini = mostrati?.ordini
-  const [errore,setErrore] = useState<string | null>(null)
-  const [nuovi,setNuovi] = useState<string[]>([])
-  // undefined = non ancora letto da sessionStorage; null = primo avvio del turno in questa scheda.
-  const arrivi = useRef<StatoArrivi | null | undefined>(undefined)
-  const [inCorso,startTransition] = useTransition()
-  const bloccato = useRef(false)
-  const router = useRouter(), suona = useContext(SuonoTurno)
-  useEffect(() => {
-    if (!ordini) return
-    if (arrivi.current === undefined) arrivi.current = arriviSalvati()
-    const { stato,arrivati } = arriviCucina(arrivi.current,ordini.map(o => o.id))
-    arrivi.current = stato; salvaArrivi(stato)
-    setNuovi(stato.nuovi)
-    if (arrivati.length) suona(3)
-  },[ordini,suona])
-  const leggi = (id: string) => {
-    if (!arrivi.current) return
-    arrivi.current = segnaLetto(arrivi.current,id); salvaArrivi(arrivi.current)
-    setNuovi(arrivi.current.nuovi)
-  }
-  const esegui: Esegui = azione => {
-    if (bloccato.current) return
-    bloccato.current = true; setErrore(null)
-    startTransition(async () => {
-      try { const esito = await azione(); if (!esito.ok) setErrore(esito.errore ?? 'Operazione non riuscita, riprova.'); router.refresh() }
-      catch { setErrore('Operazione non riuscita, riprova.') }
-      finally { bloccato.current = false }
-    })
-  }
+  const suona = useContext(SuonoTurno)
+  const { esegui,inCorso,errore } = useEsegui()
+  // Ordini al tavolo nuovi: evidenziati finché non si toccano. Suonano le cose da portare al tavolo.
+  const { nuovi,leggi } = useArrivi(`ds_arrivi_${postazione}`,ordini?.map(o => o.id),() => {})
+  const { nuovi: nuoviDaPortare } = useArrivi(`ds_arrivi_portare_${postazione}`,mostrati?.daPortare?.map(v => v.id),() => suona(3))
   // Suono ripetuto ogni 10 secondi finché c'è un ordine da casa da accettare; subito quando ne arriva uno nuovo.
-  const inAttesa = (mostrati?.casa ?? []).filter(o => o.stato === 'in_attesa').map(o => o.id).join(',')
+  const inAttesa = suonaAccettare(postazione) ? (mostrati?.casa ?? []).filter(o => o.stato === 'in_attesa').map(o => o.id).join(',') : ''
   useEffect(() => {
     if (!inAttesa) return
     suona(3)
     const timer = setInterval(() => suona(3),10000)
     return () => clearInterval(timer)
   },[inAttesa,suona])
-  if (!mostrati || !ordini) return <><BarraStaff vista={vista} daGuardare={0} online={null} ora={ora} /><p role="status" className="b-staff__vuoto">Caricamento dello schermo…</p>{uscita}</>
+  if (!mostrati || !ordini) return <><BarraStaff postazione={postazione} vista={vista} daGuardare={0} online={null} ora={ora} uscita={uscita} /><p role="status" className="b-staff__vuoto">Caricamento dello schermo…</p></>
   const { tavoli,riepiloghi,contiRecenti,casa,ordiniOnline } = mostrati
+  const comande = mostrati.comande ?? {}
   const daAccettare = casa.filter(o => o.stato === 'in_attesa')
   // Tavoli e casa nella stessa cucina: la casa per orario della fascia, i tavoli per arrivo.
   const cucina = [...ordini.map(o => ({ casa: false as const,o,quando: o.creatoIl })),...casa.filter(o => colonnaCucina(o.stato)).map(o => ({ casa: true as const,o,quando: o.fascia }))]
     .sort((a,b) => a.quando.localeCompare(b.quando))
   const aperti = tavoli.filter(t => t.sessione).map(t => ({ id: t.sessione!.id,nome: t.nome,totaleCent: riepiloghi.find(r => r.sessioneId === t.sessione!.id)?.totaleCent ?? 0 }))
   return <>
-    <BarraStaff vista={vista} daGuardare={daAccettare.length + nuovi.length} ora={ora} azioni={<Link href="/staff/nuovo-ordine" className="b-staff-barra__bottone">Nuovo ordine</Link>}
-      online={<OrdiniOnlineBarra stato={ordiniOnline} inCorso={inCorso} esegui={esegui} uscita={uscita} />} />
+    <BarraStaff postazione={postazione} vista={vista} daGuardare={daAccettare.length + nuovi.length + nuoviDaPortare.length} ora={ora} uscita={uscita}
+      azioni={nuovoOrdineAmmesso(postazione) ? <Link href="/staff/nuovo-ordine" className="b-staff-barra__bottone">Nuovo ordine</Link> : null}
+      online={onlineAmmesso(postazione) ? <OrdiniOnlineBarra stato={ordiniOnline} inCorso={inCorso} esegui={esegui} uscita={uscita} /> : null} />
     {errore && <p role="alert" className="b-avviso b-avviso--ritardo b-staff__avviso">{errore}</p>}
     <section aria-label="Ordini" hidden={vista !== 'ordini'} className="b-staff__vista">
+      <DaPortare voci={mostrati.daPortare ?? []} nuove={nuoviDaPortare} inCorso={inCorso} esegui={esegui} />
       <div className="b-colonne">
         <section className="b-colonna" aria-labelledby="col-accettare">
           <h2 id="col-accettare" className="b-colonna__titolo"><span className="b-punto b-punto--accettare" aria-hidden="true" />Da accettare <span className="b-num b-secondario">{daAccettare.length}</span></h2>
           {!daAccettare.length && <p className="b-secondario">Nessun ordine da accettare.</p>}
-          {daAccettare.map(o => <CardOrdineCasa key={o.id} ordine={o} ora={ora} inCorso={inCorso} esegui={esegui} daAccettare />)}
+          {daAccettare.map(o => <CardOrdineCasa key={o.id} ordine={o} ora={ora} inCorso={inCorso} esegui={esegui} daAccettare comande={comande[o.id]} />)}
         </section>
         {COLONNE.map(col => { const qui = cucina.filter(x => colonnaCucina(x.o.stato) === col.chiave)
           return <section key={col.chiave} className="b-colonna" aria-labelledby={`col-${col.chiave}`}>
             <h2 id={`col-${col.chiave}`} className="b-colonna__titolo"><span className={`b-punto ${col.punto}`} aria-hidden="true" />{col.titolo} <span className="b-num b-secondario">{qui.length}</span></h2>
             {!qui.length && <p className="b-secondario">Nessun ordine.</p>}
-            {qui.map(x => x.casa ? <CardOrdineCasa key={x.o.id} ordine={x.o} ora={ora} inCorso={inCorso} esegui={esegui} daAccettare={false} />
-              : <CardOrdine key={x.o.id} ordine={x.o} ora={ora} nuovo={nuovi.includes(x.o.id)} inCorso={inCorso} leggi={() => leggi(x.o.id)} esegui={esegui} />)}
+            {qui.map(x => x.casa ? <CardOrdineCasa key={x.o.id} ordine={x.o} ora={ora} inCorso={inCorso} esegui={esegui} daAccettare={false} comande={comande[x.o.id]} />
+              : <CardOrdine key={x.o.id} ordine={x.o} ora={ora} nuovo={nuovi.includes(x.o.id)} inCorso={inCorso} leggi={() => leggi(x.o.id)} esegui={esegui} comande={comande[x.o.id]} />)}
           </section> })}
       </div>
     </section>

@@ -1,8 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it, vi } from 'vitest'
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(),replace: vi.fn() }) }))
 vi.mock('./azioni', () => ({ apriTavolo: vi.fn(), chiudiTavolo: vi.fn(), avanzaOrdine: vi.fn(), annullaOrdineStaff: vi.fn(), annullaRigaStaff: vi.fn() }))
 vi.mock('./azioni-menu', () => ({ cambiaDisponibilitaStaff: vi.fn() }))
+vi.mock('./azioni-comande', () => ({ avanzaComandaStaff: vi.fn(),portaComandaStaff: vi.fn() }))
+vi.mock('./azioni-postazione', () => ({ impostaPostazione: vi.fn() }))
 vi.mock('./azioni-casa', () => ({ apriOrdiniOnline: vi.fn(), chiudiOrdiniOnline: vi.fn(), accettaOrdineStaff: vi.fn(), rifiutaOrdineStaff: vi.fn(), avanzaOrdineCasaStaff: vi.fn(), annullaOrdineCasaStaff: vi.fn() }))
 import { CardOrdine } from './SchermoStaff'
 import { CardOrdineCasa } from './OrdiniCasa'
@@ -108,4 +110,34 @@ it('un ordine preso dalla cassa porta il chip «Dalla cassa»; quelli del client
   const dallaCassa = renderToStaticMarkup(<CardOrdineCasa ordine={{ ...casa,stato: 'accettato',origine: 'cassa',clienteEmail: null }} ora="2026-10-11T17:05:00.000Z" inCorso={false} esegui={() => {}} daAccettare={false} />)
   expect(dallaCassa).toContain('Dalla cassa')
   expect(renderToStaticMarkup(<CardOrdineCasa ordine={casa} ora="2026-10-11T17:05:00.000Z" inCorso={false} esegui={() => {}} daAccettare />)).not.toContain('Dalla cassa')
+})
+it('sala: niente interruttore degli ordini online né «Nuovo ordine»; la postazione si cambia dalla barra', async () => {
+  const { SchermoStaff } = await import('./SchermoStaff')
+  const dati = { tavoli: [],ordini: [tavolo],riepiloghi: [],contiRecenti: [],casa: [casa],ordiniOnline: online }
+  const sala = renderToStaticMarkup(<SchermoStaff postazione="sala" ora="2026-10-11T18:05:00Z" dati={dati} uscita={<button>Esci</button>} />)
+  expect(sala).not.toContain('Ordini online'); expect(sala).not.toContain('Nuovo ordine'); expect(sala).toContain('Postazione…'); expect(sala).toContain('Staff · Sala')
+  expect(sala).not.toContain('href="/staff?vista=menu"'); expect(sala).toContain('href="/staff?vista=conti"')
+  const cassa = renderToStaticMarkup(<SchermoStaff ora="2026-10-11T18:05:00Z" dati={dati} uscita={<button>Esci</button>} />)
+  expect(cassa).toContain('Ordini online aperti'); expect(cassa).toContain('>Nuovo ordine<'); expect(cassa).toContain('href="/staff?vista=menu"')
+})
+it('cassa: striscia «Da portare al tavolo» senza card, chip per reparto quando l’ordine ne tocca più di uno', async () => {
+  const { SchermoStaff } = await import('./SchermoStaff')
+  const daPortare = [{ id: 'v1',reparto: 'sala' as const,stato: 'da_preparare' as const,ordineId: 'o',numero: 8,tavoloNome: 'Tavolo 1',quando: '2026-10-11T18:00:00Z',righe: [{ ...tavolo.righe[0],id: 'b',nome: 'Coca Cola',quantita: 2,reparto: 'sala' as const }] },
+    { id: 'v2',reparto: 'banco' as const,stato: 'pronta' as const,ordineId: 'o',numero: 8,tavoloNome: 'Tavolo 1',quando: '2026-10-11T18:03:00Z',righe: [tavolo.righe[0]] }]
+  const comande = { o: [{ reparto: 'banco' as const,stato: 'pronta' as const,portata: false },{ reparto: 'cucina' as const,stato: 'in_preparazione' as const,portata: false },{ reparto: 'sala' as const,stato: 'da_preparare' as const,portata: false }] }
+  const html = renderToStaticMarkup(<SchermoStaff ora="2026-10-11T18:05:00Z" dati={{ tavoli: [],ordini: [tavolo],riepiloghi: [],contiRecenti: [],casa: [],ordiniOnline: online,daPortare,comande }} />)
+  const striscia = html.slice(html.indexOf('Da portare al tavolo'),html.indexOf('b-colonne'))
+  expect(striscia).toContain('2× Coca Cola'); expect(striscia).toContain('Bevande'); expect(striscia).toContain('Banco sushi, pronto')
+  expect(striscia).toContain('aria-label="Portate · Tavolo 1 n. 8 · Bevande"'); expect(striscia).not.toContain('<article'); expect(striscia).not.toContain('<h3')
+  expect(html).toContain('Banco sushi: pronta'); expect(html).toContain('Cucina: in preparazione'); expect(html).toContain('Sala: da portare')
+  // Un solo reparto: nessun chip.
+  expect(renderToStaticMarkup(<CardOrdine ordine={tavolo} comande={[comande.o[0]]} ora="2026-10-11T18:05:00Z" nuovo={false} inCorso={false} leggi={() => {}} esegui={() => {}} />)).not.toContain('Banco sushi: pronta')
+  expect(renderToStaticMarkup(<SchermoStaff ora="2026-10-11T18:05:00Z" dati={{ tavoli: [],ordini: [],riepiloghi: [],contiRecenti: [],casa: [],ordiniOnline: online }} />)).not.toContain('Da portare al tavolo')
+})
+it('inizio turno: scelta della postazione preselezionata e suoni della postazione', async () => {
+  const { InizioTurno } = await import('./InizioTurno')
+  const html = renderToStaticMarkup(<InizioTurno postazione="cucina"><p>schermo</p></InizioTurno>)
+  expect(html).toContain('Questo dispositivo è'); expect(html).toMatch(/value="cucina"[^>]*checked=""|checked=""[^>]*value="cucina"/)
+  expect(html).toContain('comanda nuova della cucina'); expect(html).not.toContain('Gli ordini online di stasera')
+  expect(renderToStaticMarkup(<InizioTurno><p>schermo</p></InizioTurno>)).toContain('Gli ordini online di stasera')
 })

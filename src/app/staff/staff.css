@@ -48,6 +48,26 @@
 .b-comanda .b-righe { padding-top: 8px; border-top: 1.5px dashed var(--b-filetto-tenue); }
 .b-comanda__azioni { display: flex; flex-direction: column; gap: 8px; }
 .b-comanda__coppia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.b-comanda__reparti { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.b-comanda__altri { font-size: .875rem; }
+
+/* Banco e cucina: tre colonne, solo le comande del reparto */
+.b-colonne--reparto { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 56.25em) { .b-colonne--reparto { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 37.5em) { .b-colonne--reparto { grid-template-columns: minmax(0, 1fr); } }
+
+/* Da portare al tavolo (cassa e sala) */
+.b-portare { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; padding: 14px; border-radius: var(--b-r-card); background: var(--b-foglio); box-shadow: inset 4px 0 0 var(--b-st-pronto-punto); }
+.b-portare__voci { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20em), 1fr)); gap: 10px; }
+.b-portare__voce { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--b-carta); border: 2px solid transparent; overflow-wrap: anywhere; }
+.b-portare__voce--nuova { border-color: var(--b-st-accettare-punto); }
+.b-portare__testo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.b-portare__dove { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.b-portare__righe { font-size: .9375rem; }
+.b-portare__voce .b-btn { flex: none; }
+
+/* Scelta della postazione all'inizio del turno */
+.b-inizio__postazioni { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Tavoli */
 .b-vista-tavoli { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
