@@ -9,7 +9,7 @@ import { CardOrdineCasa } from './OrdiniCasa'
 import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 import type { OrdineClient } from '@/tavoli/ordini-repo'
 const online = { accesi: true,asporto: null,domicilio: 'Consegne a domicilio non disponibili.' }
-const tavolo: OrdineClient = { id: 'o',numero: 8,stato: 'inviato',totaleCent: 900,creatoIl: '2026-10-11T18:00:00Z',sessioneId: 's',tavoloNome: 'Tavolo 1',tavoloChiuso: false,righe: [{ id: 'r',numero: null,nome: 'Poke composta',prezzoUnitCent: 900,quantita: 1,nota: 'senza sesamo',poke: { Base: ['Riso'],Proteine: ['Tonno'] },annullata: false },{ id: 'r2',numero: 2,nome: 'Salmone',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: true }] }
+const tavolo: OrdineClient = { id: 'o',numero: 8,stato: 'inviato',totaleCent: 900,creatoIl: '2026-10-11T18:00:00Z',sessioneId: 's',tavoloNome: 'Tavolo 1',tavoloChiuso: false,origine: 'cliente',righe: [{ id: 'r',numero: null,nome: 'Poke composta',prezzoUnitCent: 900,quantita: 1,nota: 'senza sesamo',poke: { Base: ['Riso'],Proteine: ['Tonno'] },annullata: false },{ id: 'r2',numero: 2,nome: 'Salmone',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: true }] }
 const casa: OrdineCasaClient = { id: 'c',numero: 9,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-11T17:30:00.000Z',creatoIl: '2026-10-11T17:00:00.000Z',aggiornatoIl: '2026-10-11T17:00:00.000Z',
   clienteNome: 'Anna',clienteTelefono: '3331234567',clienteEmail: 'anna@esempio.it',zonaNome: 'Bitetto',indirizzo: 'Via Roma 1',noteConsegna: 'citofono Rossi',pagamento: 'contanti',contantiDaCent: 5000,motivoRifiuto: null,anonimizzato: false,origine: 'cliente',
   righe: [{ id: 'rc',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 3,nota: null,poke: null,annullata: false }] }
@@ -52,6 +52,12 @@ it('tavoli: aperto con codice e riassunto, libero con «Apri tavolo», dettaglio
   const tavoli = [{ id: 't1',nome: 'Tavolo 1',slug: 'tavolo-1',chiave: 'k1',posizione: 1,attivo: true,sessione },{ id: 't2',nome: 'Tavolo 2',slug: 'tavolo-2',chiave: 'k2',posizione: 2,attivo: true,sessione: null }]
   const html = renderToStaticMarkup(<SchermoStaff ora="2026-10-11T18:10:00Z" vista="tavoli" dati={{ tavoli,ordini: [{ ...tavolo,sessioneId: 's' }],riepiloghi: [{ sessioneId: 's',numeroOrdini: 1,totaleCent: 900 }],contiRecenti: [],casa: [],ordiniOnline: online }} />)
   expect(html).toContain('aria-label="Codice 4827"'); expect(html).toContain('1 in cucina'); expect(html).toContain('1 ordini · '); expect(html).toContain('Apri tavolo'); expect(html).toContain('href="/staff/conto/s"'); expect(html).toContain('Chiudi tavolo')
+  expect(html).toMatch(/<a[^>]*href="\/staff\/tavolo\/s\/ordina"[^>]*>Ordina per il tavolo<\/a>/)
+})
+it('comanda dal cameriere: chip «Dal cameriere»; dal cliente nessun chip', () => {
+  const html = renderToStaticMarkup(<CardOrdine ordine={{ ...tavolo,origine: 'cameriere' }} ora="2026-10-11T18:05:00Z" nuovo={false} inCorso={false} leggi={() => {}} esegui={() => {}} />)
+  expect(html).toContain('>Dal cameriere<'); expect(html).not.toContain('Nuovo ordine')
+  expect(renderToStaticMarkup(<CardOrdine ordine={tavolo} ora="2026-10-11T18:05:00Z" nuovo={false} inCorso={false} leggi={() => {}} esegui={() => {}} />)).not.toContain('Dal cameriere')
 })
 it('conti: tavoli aperti con totale e chiusi di recente, ognuno porta al suo conto', async () => {
   const { ElencoConti } = await import('./ElencoConti')

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { apriSchermoStaff, apriTelefono, cardOrdine, scheda } from './aiuti'
 import { TAVOLO_E2E } from './dati'
 
-test('tavolo: QR, codice, ordini da due telefoni, cucina e chiusura del conto', async ({ browser }) => {
+test('tavolo: QR, codice, ordini da due telefoni, comanda del cameriere, cucina e chiusura del conto', async ({ browser }) => {
   const staff = await apriSchermoStaff(browser)
   await scheda(staff,'Tavoli')
   const tavolo = staff.locator('article').filter({ has: staff.getByRole('heading',{ name: TAVOLO_E2E.nome,exact: true }) })
@@ -59,14 +59,46 @@ test('tavolo: QR, codice, ordini da due telefoni, cucina e chiusura del conto', 
   await scheda(staff,'Tavoli')
   await expect(tavolo).toContainText('2 ordini · 15,00 €')
 
-  // Chiusura del tavolo dal dettaglio: si passa al conto.
+  // Comanda del cameriere: dal dettaglio del tavolo, senza codice, una tartare (6,00 €) per il tavolo.
   await tavolo.getByRole('button',{ name: `Dettaglio di ${TAVOLO_E2E.nome}` }).click()
   const dettaglio = staff.getByRole('complementary',{ name: `Dettaglio di ${TAVOLO_E2E.nome}` })
+  await dettaglio.getByRole('link',{ name: 'Ordina per il tavolo' }).click()
+  await staff.waitForURL('**/staff/tavolo/**/ordina')
+  // Il cameriere ordina dal proprio telefono: la pagina si prova a 375 px.
+  await staff.setViewportSize({ width: 375,height: 812 })
+  await expect(staff.getByRole('heading',{ name: `Ordine per ${TAVOLO_E2E.nome}` })).toBeVisible()
+  await expect(staff.getByLabel(`Codice ${codice}`)).toBeVisible()
+  await staff.locator('#sez-tartare').getByRole('button',{ name: 'Aggiungi Salmone',exact: true }).click()
+  await staff.getByRole('button',{ name: /^Rivedi e manda in cucina · 1 piatti/ }).click()
+  await staff.getByRole('button',{ name: 'Invia ordine' }).click()
+  const inviatoCameriere = staff.getByRole('status').filter({ hasText: /^Ordine n\. \d+ inviato in cucina$/ })
+  await expect(inviatoCameriere).toBeVisible()
+  const numeroCameriere = (await inviatoCameriere.textContent())!.match(/n\. (\d+)/)![1]
+  await expect(staff.getByRole('region',{ name: 'Ordinato finora' }).getByText('Dal cameriere',{ exact: true })).toBeVisible()
+  if (process.env.E2E_SCHERMATE) await staff.screenshot({ path: `${process.env.E2E_SCHERMATE}/comanda-cameriere-375.png`,fullPage: true })
+  await staff.setViewportSize({ width: 1280,height: 900 })
+  // Il telefono di Anna (aggiornamento ogni 10 s) vede la comanda del cameriere con il suo chip.
+  const ordineCameriere = anna.locator('article').filter({ has: anna.getByRole('heading',{ name: `Ordine n. ${numeroCameriere}` }) })
+  await expect(ordineCameriere).toBeVisible({ timeout: 30_000 })
+  await expect(ordineCameriere.getByText('Dal cameriere')).toBeVisible()
+  await expect(anna.getByText('21,00 €')).toBeVisible()
+  // In cucina la comanda è segnata «Dal cameriere» e si serve come le altre.
+  await staff.goto('/staff?vista=ordini')
+  const cardCameriere = cardOrdine(staff,`${TAVOLO_E2E.nome} · n. ${numeroCameriere}`)
+  await expect(cardCameriere.getByText('Dal cameriere')).toBeVisible()
+  await cardCameriere.getByRole('button',{ name: 'Inizia a preparare' }).click()
+  await cardCameriere.getByRole('button',{ name: 'Segna servito' }).click()
+  await expect(cardCameriere).toHaveCount(0)
+
+  // Chiusura del tavolo dal dettaglio: si passa al conto, con il totale che comprende la comanda del cameriere.
+  await scheda(staff,'Tavoli')
+  await expect(tavolo).toContainText('3 ordini · 21,00 €')
+  await tavolo.getByRole('button',{ name: `Dettaglio di ${TAVOLO_E2E.nome}` }).click()
   await expect(dettaglio.getByRole('link',{ name: 'Apri il conto' })).toBeVisible()
   await dettaglio.getByRole('button',{ name: 'Chiudi tavolo' }).click()
   await staff.getByRole('dialog',{ name: 'Conferma' }).getByRole('button',{ name: 'Chiudi tavolo' }).click()
   await staff.waitForURL('**/staff/conto/**')
-  await expect(staff.getByText('15,00 €').first()).toBeVisible()
+  await expect(staff.getByText('21,00 €').first()).toBeVisible()
 
   // Un nuovo telefono con il vecchio codice resta fuori.
   const carlo = await apriTelefono(browser)

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it, vi } from 'vitest'
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 vi.mock('./azioni', () => ({ inviaOrdine: vi.fn(), entraAlTavolo: vi.fn(), inizializzaDispositivo: vi.fn(), pulisciCookieTavolo: vi.fn() }))
-import { OrdinatoFinora } from './OrdinatoFinora'
+import { OrdinatoFinora } from '@/ordinare/OrdinatoFinora'
 import { CardPiatto } from '@/ordinare/CardPiatto'
 import { ModuloCodice } from './ModuloCodice'
 import { Carrello } from '@/ordinare/Carrello'
@@ -20,9 +20,16 @@ it('il carrello da casa porta al riepilogo invece di inviare', () => {
 import type { OrdineClient } from '@/tavoli/ordini-repo'
 import type { Piatto } from '@/menu/repo'
 it('ordini: stato, note, riga barrata e totale senza ordini annullati', () => {
-  const o: OrdineClient = { id: 'o', numero: 1, stato: 'in_preparazione', totaleCent: 600, creatoIl: '2026-10-11T18:00:00Z', sessioneId: 's', tavoloNome: 'Uno',tavoloChiuso: false, righe: [{ id: 'r', numero: 1, nome: 'Salmone', prezzoUnitCent: 600, quantita: 1, nota: 'senza sesamo', poke: null, annullata: false }, { id: 'r2', numero: 2, nome: 'Tonno', prezzoUnitCent: 700, quantita: 1, nota: null, poke: null, annullata: true }] }
+  const o: OrdineClient = { id: 'o', numero: 1, stato: 'in_preparazione', totaleCent: 600, creatoIl: '2026-10-11T18:00:00Z', sessioneId: 's', tavoloNome: 'Uno',tavoloChiuso: false, origine: 'cliente', righe: [{ id: 'r', numero: 1, nome: 'Salmone', prezzoUnitCent: 600, quantita: 1, nota: 'senza sesamo', poke: null, annullata: false }, { id: 'r2', numero: 2, nome: 'Tonno', prezzoUnitCent: 700, quantita: 1, nota: null, poke: null, annullata: true }] }
   const html = renderToStaticMarkup(<OrdinatoFinora ordini={[o,{ ...o,id: 'o2',numero: 2,stato: 'annullato',totaleCent: 600 }]} />)
   expect(html).toContain('In preparazione'); expect(html).toContain('senza sesamo'); expect(html).toContain('<s>'); expect(html).toContain('annullato'); expect(html).toContain('Totale del tavolo finora'); expect(html).toContain('Mandato alle'); expect(html).toContain('b-stato--preparazione'); expect(html).toContain('6,00\u00a0€'); expect(html).not.toContain('12,00')
+})
+it('ordini: l’ordine del cameriere porta il chip «Dal cameriere», quello del cliente no; la vista dello staff rimanda ai conti', () => {
+  const o: OrdineClient = { id: 'o', numero: 1, stato: 'inviato', totaleCent: 600, creatoIl: '2026-10-11T18:00:00Z', sessioneId: 's', tavoloNome: 'Uno',tavoloChiuso: false, origine: 'cameriere', righe: [] }
+  const cliente = renderToStaticMarkup(<OrdinatoFinora ordini={[o,{ ...o,id: 'o2',numero: 2,origine: 'cliente' }]} />)
+  expect(cliente.match(/>Dal cameriere</g)).toHaveLength(1); expect(cliente).toContain('Il conto lo fai alla cassa')
+  const staff = renderToStaticMarkup(<OrdinatoFinora ordini={[o]} vista="staff" />)
+  expect(staff).toContain('dal cameriere'); expect(staff).toContain('scheda Conti'); expect(staff).not.toContain('Il conto lo fai alla cassa')
 })
 it('piatto esaurito mostra allergeni e nessun bottone Aggiungi', () => {
   const p: Piatto = { id: 'p', categoriaId: 'x', numero: 1, nome: 'Salmone', descrizione: null, prezzoCent: 600, piccante: false, vegetariano: false, dellaCasa: false, allergeni: ['pesce'], allergeniConfermati: true, disponibile: false, posizione: 0 }

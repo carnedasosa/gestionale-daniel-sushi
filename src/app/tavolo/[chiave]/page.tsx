@@ -10,8 +10,8 @@ import { leggiMenu } from '@/menu/repo'
 import { leggiPokeConfig } from '@/tavoli/poke-repo'
 import { ordiniDellaSessione } from '@/tavoli/ordini-repo'
 import { AggiornamentoAutomatico } from '@/componenti/AggiornamentoAutomatico'
-import { MenuOrdinabile } from './MenuOrdinabile'
-import { OrdinatoFinora } from './OrdinatoFinora'
+import { MenuTavolo } from './MenuTavolo'
+import { OrdinatoFinora } from '@/ordinare/OrdinatoFinora'
 import '@/styles/banco/menu.css'
 import './tavolo.css'
 
@@ -39,7 +39,7 @@ export default async function TavoloPage({ params }: { params: Promise<{ chiave:
       <nav aria-label="Sezioni del tavolo" className="b-schede b-tavolo__schede"><a className="b-scheda" href="#menu">Menù</a><a className="b-scheda" href="#ordinato">Ordinato <span className="b-badge">{ordini.length}</span></a></nav>
     </header>
     <AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={new Date().toISOString()} />
-    <div id="menu" className="b-tavolo__menu"><MenuOrdinabile key={sessione.id} categorie={dati[0]} config={dati[1]} sessioneId={sessione.id} chiave={chiave} /></div>
+    <div id="menu" className="b-tavolo__menu"><MenuTavolo key={sessione.id} categorie={dati[0]} config={dati[1]} sessioneId={sessione.id} chiave={chiave} /></div>
     <OrdinatoFinora ordini={ordini} />
   </main>
 }

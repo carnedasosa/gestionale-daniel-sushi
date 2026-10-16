@@ -104,6 +104,7 @@ Le nuove registrazioni sono disattivate in Supabase: solo gli utenti creati a ma
 | `/staff` | cucina e apertura/chiusura tavoli |
 | `/staff/conto/[sessione]` | riepilogo per la cassa |
 | `/staff/nuovo-ordine` | ordine preso a voce dalla cassa (telefono o WhatsApp) |
+| `/staff/tavolo/[sessione]/ordina` | comanda del cameriere per un tavolo aperto |
 | `/tavolo/[chiave]` | accesso con codice e ordini al tavolo |
 
 ## Tavoli e QR
@@ -119,6 +120,8 @@ Applica prima la nuova migrazione `20261012120000_tavoli_e_ordini.sql` dopo quel
 Apri `/staff` e tocca **Inizia turno**: il browser sblocca il suono e richiede di mantenere acceso lo schermo, quando il dispositivo lo supporta. Il turno si conserva nella scheda; dopo un ricaricamento può essere necessario toccare **Riattiva suono**. Se il browser nega audio o schermo sempre acceso compare un avviso; le comande restano visibili.
 
 Apri un tavolo e comunica il codice di quattro cifre al cliente. Non ci sono codici uguali fra tavoli aperti; alla riapertura il codice cambia. In cucina gli ordini passano da **Inviato** a **In preparazione**, poi **Servito**. Puoi annullare un ordine prima che sia servito, oppure una singola riga. Il conto esclude gli annullati e raggruppa le voci con lo stesso prezzo e le stesse scelte poke.
+
+Dal dettaglio di un tavolo aperto (scheda **Tavoli**) il cameriere, loggato sul proprio telefono, può toccare **Ordina per il tavolo**: stesso menù e stesso carrello dei clienti, ma senza codice né cookie del tavolo, perché conta il login dello staff. La comanda nasce con origine `cameriere`, va in cucina con il chip «Dal cameriere», compare con lo stesso chip in «Ordinato finora» sui telefoni del tavolo e finisce nello stesso conto. Se il tavolo viene chiuso nel frattempo l'invio è rifiutato e la pagina rimanda alla piantina.
 
 Il conto è stampabile dal browser ed è solo un riepilogo da battere in cassa, **non uno scontrino fiscale**. Chiudendo il tavolo i clienti non possono più inviare ordini. Se restano comande in cucina o sono arrivate dopo il conto viene chiesta una conferma esplicita. La chiusura apre il conto; la cucina conserva le comande con «Tavolo chiuso» e «Conti recenti» conserva i link per sei ore. Dal conto puoi annullare una voce anche servita.
 

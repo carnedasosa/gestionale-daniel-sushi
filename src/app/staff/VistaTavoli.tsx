@@ -61,7 +61,8 @@ export function VistaTavoli({ tavoli,riepiloghi,ordini,inCorso,esegui }: { tavol
       </div>
       {s.tentativi > 0 && <div className="b-avviso b-avviso--ritardo"><p>{s.tentativi} tentativi sbagliati{s.tentativi >= LIMITE_SESSIONE && ': nessun nuovo telefono può entrare finché non sblocchi'}</p><button type="button" className="b-btn b-btn--secondario" disabled={inCorso} onClick={() => esegui(() => sbloccaTavolo(s.id))}>Sblocca</button></div>}
       <div className="b-dettaglio-tavolo__azioni">
-        <Link className="b-btn b-btn--principale b-btn--staff b-btn--largo" href={`/staff/conto/${s.id}`}>Apri il conto</Link>
+        <Link className="b-btn b-btn--principale b-btn--staff b-btn--largo" href={`/staff/tavolo/${s.id}/ordina`}>Ordina per il tavolo</Link>
+        <Link className="b-btn b-btn--secondario b-btn--staff b-btn--largo" href={`/staff/conto/${s.id}`}>Apri il conto</Link>
         <ChiudiTavolo key={s.id} sessioneId={s.id} nome={selezionato.nome} />
       </div>
     </aside>}

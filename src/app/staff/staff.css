@@ -41,6 +41,10 @@
 .b-comanda--ritardo .b-comanda__timer { background: var(--b-st-ritardo-sfondo); color: var(--b-st-ritardo-testo); }
 .b-comanda--preparazione .b-comanda__timer { background: var(--b-st-preparazione-sfondo); color: var(--b-st-preparazione-testo); }
 .b-comanda__meta { font-size: .875rem; line-height: 1.45; color: var(--b-grafite); }
+.b-comanda__etichette { display: flex; flex-wrap: wrap; gap: 6px; }
+.b-ordina-tavolo { display: flex; flex-direction: column; gap: 18px; max-width: 760px; }
+.b-ordina-tavolo__testa { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.b-ordina-tavolo__codice { display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--b-spento); }
 .b-comanda .b-righe { padding-top: 8px; border-top: 1.5px dashed var(--b-filetto-tenue); }
 .b-comanda__azioni { display: flex; flex-direction: column; gap: 8px; }
 .b-comanda__coppia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }

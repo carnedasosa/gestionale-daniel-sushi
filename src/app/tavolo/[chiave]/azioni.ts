@@ -12,6 +12,7 @@ import { creaOrdineTavolo } from '@/tavoli/ordini-repo'
 import { validaCarrello } from '@/domain/carrello'
 import { COOKIE_DISPOSITIVO, OPZIONI_COOKIE, nomeCookieTavolo, opzioniCookieTavolo } from '@/tavoli/cookie'
 import { idValido, chiaveValida } from '@/tavoli/validazione'
+import type { EsitoInvio } from '@/ordinare/esito-invio'
 
 export interface StatoCodice { errore: string | null }
 // I Server Components possono leggere cookie, ma solo una Server Action può crearli.
@@ -73,7 +74,6 @@ export async function pulisciCookieTavolo(chiave: string): Promise<void> {
   const s = await sessionePerId(db,id)
   if (!s || s.chiusaIl || s.tavoloChiave !== chiave) jar.set(nomeCookieTavolo(chiave),'',{ ...opzioniCookieTavolo(chiave),maxAge: 0 })
 }
-export interface EsitoInvio { ok: boolean; errore?: string; nonDisponibili?: string[]; nonDisponibiliIds?: string[]; numero?: number }
 export async function inviaOrdine(chiave: string, carrelloJson: string, chiaveInvio: string): Promise<EsitoInvio> {
   if (!idValido(chiaveInvio)) return { ok: false,errore: 'Chiave di invio non valida: ricarica il carrello e riprova.' }
   try {

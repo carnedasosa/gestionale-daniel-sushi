@@ -218,3 +218,17 @@ it('registra chi ha annullato cosa, quando e per quale importo', async () => {
   // Il registro non si perde: gli ordini annullati non si possono eliminare.
   await expect(db.query('delete from ordini where id=$1',[b.ordine.id])).rejects.toThrow(/foreign key|violates/i)
 })
+it('origine: cliente se non indicata, cameriere quando lo staff ordina; stessa chiave, stesso ordine; tavolo chiuso rifiutato', async () => {
+  const { db } = ambiente
+  const cliente = await creaOrdineTavolo(db,sessione,righe())
+  expect(cliente).toMatchObject({ ok: true,ordine: { origine: 'cliente' } })
+  const key = randomUUID()
+  const a = await creaOrdine(db,sessione,righe(),key,'cameriere')
+  expect(a).toMatchObject({ ok: true,ordine: { origine: 'cameriere',totaleCent: 1200 } })
+  expect(await creaOrdine(db,sessione,righe(),key,'cameriere')).toEqual(a)
+  expect(await db.query<{ origine: string }>('select origine from ordini order by numero')).toEqual([{ origine: 'cliente' },{ origine: 'cameriere' }])
+  expect((await ordiniDellaSessione(db,sessione)).map(o => o.origine)).toEqual(['cliente','cameriere'])
+  await chiudiSessione(db,sessione,null,true)
+  expect(await creaOrdine(db,sessione,righe(),randomUUID(),'cameriere')).toEqual({ ok: false,errore: 'Il tavolo è stato chiuso: chiedi al personale' })
+  expect(await db.query('select id from ordini')).toHaveLength(2)
+})

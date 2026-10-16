@@ -76,10 +76,10 @@ export interface ContoRecente { id: string; tavoloNome: string; chiusaIl: Date }
 export async function contiRecenti(db: Db): Promise<ContoRecente[]> {
   return db.query<ContoRecente>(`select s.id,t.nome as "tavoloNome",s.chiusa_il as "chiusaIl" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.chiusa_il>=now()-interval '6 hours' order by s.chiusa_il desc`)
 }
-export interface SessioneConTavolo extends SessioneAperta { tavoloChiave: string; chiusaIl: Date | null }
+export interface SessioneConTavolo extends SessioneAperta { tavoloChiave: string; tavoloNome: string; chiusaIl: Date | null }
 export async function sessionePerId(db: Db, sessioneId: string): Promise<SessioneConTavolo | null> {
   if (!idValido(sessioneId)) return null
-  return (await db.query<SessioneConTavolo>(`select s.id,s.tavolo_id as "tavoloId",s.codice,s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl",t.chiave as "tavoloChiave" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1`,[sessioneId]))[0] ?? null
+  return (await db.query<SessioneConTavolo>(`select s.id,s.tavolo_id as "tavoloId",s.codice,s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl",t.chiave as "tavoloChiave",t.nome as "tavoloNome" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1`,[sessioneId]))[0] ?? null
 }
 export async function sessioneApertaPerId(db: Db, id: string): Promise<SessioneConTavolo | null> {
   const s = await sessionePerId(db,id)

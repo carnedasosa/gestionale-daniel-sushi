@@ -15,5 +15,6 @@
 .b-codice .b-campo .b-codice__input:not([type=checkbox]) { min-height: 76px; text-align: center; font: 700 2.25rem/1 var(--b-font-numeri), monospace; letter-spacing: .5em; padding-left: .5em; border-width: 2px; border-color: var(--b-inchiostro); background: var(--b-foglio); }
 .b-ordinato { display: flex; flex-direction: column; gap: 12px; padding-top: 24px; scroll-margin-top: 12px; }
 .b-ordinato__testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.b-ordinato__stato { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .b-ordinato__totale { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 18px; border-radius: var(--b-r-card); background: var(--b-inchiostro); color: var(--b-su-inchiostro); }
 .b-ordinato__totale .b-num { font-size: 1.625rem; }
