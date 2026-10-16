@@ -1,14 +1,15 @@
 // Simulazione di una serata nel locale, sul database finto di e2e/db-locale.ts (mai quello reale).
 // Uso: npm run serata. Tempi compressi: una serata in circa 10 minuti.
-// Attori: un tablet in sala (apre e chiude i tavoli, segna esauriti), un tablet in cucina
-// (accetta gli ordini da casa e porta avanti le comande), 6 tavoli con 2–4 telefoni ciascuno
-// e 5 clienti da casa. In mezzo, gli imprevisti di una serata vera.
+// Attori: un tablet in sala (apre e chiude i tavoli, segna esauriti) con accanto la cassa (accetta
+// gli ordini da casa, li consegna, porta al tavolo bibite e piatti pronti), un tablet al banco sushi
+// e uno in cucina (ognuno porta avanti le comande del suo reparto), 6 tavoli con 2–4 telefoni
+// ciascuno e 5 clienti da casa. In mezzo, gli imprevisti di una serata vera.
 // Alla fine controlla sul database che nessun ordine sia andato perso o doppio e che i conti tornino,
 // e scrive tempi e problemi in test-results/serata/risultati.json.
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import pg from 'pg'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { apriTelefono, oraDiRoma, scheda } from './aiuti'
+import { apriTelefono, iniziaTurno, oraDiRoma, scheda, type PostazioneStaff } from './aiuti'
 import { URL_DB } from './dati'
 
 test.setTimeout(30 * 60_000)
@@ -34,8 +35,9 @@ const misure = { invioTavolo: [] as number[],arrivoInCucina: [] as number[],arri
 // Ordini andati a buon fine secondo i clienti: il database alla fine deve dire esattamente questo.
 interface Inviato { tavolo: string; numero: number; totaleCent: number; inviatoAlle: number }
 const inviati: Inviato[] = []
+// Primo momento in cui un ordine compare su uno schermo dello staff (cassa, banco o cucina).
 const visteInCucina = new Map<string,number>()
-// Gli ordini mandati mentre il tablet della cucina è in standby si misurano a parte.
+// Gli ordini mandati mentre il tablet della cassa è in standby si misurano a parte.
 const standby: { da: number; a: number | null }[] = []
 const inStandby = (t: number) => standby.some(s => t >= s.da && (s.a === null || t <= s.a))
 const daCasa: { numero: number; nome: string; tipo: string; totaleCent: number; inviatoAlle: number }[] = []
@@ -58,7 +60,7 @@ function fila() {
   return <T>(fn: () => Promise<T>): Promise<T> => { const p = coda.then(fn); coda = p.then(() => undefined,() => undefined); return p }
 }
 
-async function tabletStaff(browser: Browser, nome: string): Promise<Page> {
+async function tabletStaff(browser: Browser, nome: string, postazione: PostazioneStaff): Promise<Page> {
   const { E2E_EMAIL: email,E2E_PASSWORD: password } = process.env
   if (!email || !password) throw new Error('Servono E2E_EMAIL ed E2E_PASSWORD in .env.local')
   const page = await (await browser.newContext({ viewport: { width: 1180,height: 820 },hasTouch: true })).newPage()
@@ -67,9 +69,7 @@ async function tabletStaff(browser: Browser, nome: string): Promise<Page> {
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button',{ name: 'Entra' }).click()
   await page.waitForURL('**/admin')
-  await page.goto('/staff')
-  await page.getByRole('button',{ name: 'Inizia turno' }).click()
-  await expect(page.getByRole('heading',{ name: /^Da preparare/ })).toBeVisible()
+  await iniziaTurno(page,postazione)
   // Le richieste lente del tablet (azioni e aggiornamenti dello schermo) finiscono nel registro.
   page.on('requestfinished',r => {
     const durata = r.timing().responseEnd
@@ -77,7 +77,7 @@ async function tabletStaff(browser: Browser, nome: string): Promise<Page> {
   })
   // ERR_ABORTED è normale (precaricamenti e aggiornamenti sostituiti da uno più recente): contano gli altri errori.
   page.on('requestfailed',r => { if (r.failure()?.errorText !== 'net::ERR_ABORTED') lenta(nome,`FALLITA ${r.method()} ${new URL(r.url()).pathname}: ${r.failure()?.errorText}`) })
-  log(nome,'turno iniziato')
+  log(nome,`turno iniziato (postazione ${postazione})`)
   return page
 }
 
@@ -180,26 +180,31 @@ async function giro(tel: Page, tavolo: string, chi: string, imprevisto: Imprevis
   return invia(tel,tavolo,chi,imprevisto)
 }
 
-// ── Cucina ────────────────────────────────────────────────────────────────────────────────────
+// ── Cassa, banco e cucina ─────────────────────────────────────────────────────────────────────
 const RIFIUTA = 'Rifiuto Prova'
-async function cucina(page: Page, stato: { fine: boolean; standby: boolean }) {
+const TITOLO = /^(Tavolo \d+|Domicilio \d\d:\d\d|Asporto \d\d:\d\d) · n\. \d+$/
+// Banco e cucina: solo i passi delle proprie comande. La cassa non usa mai i bottoni a cascata
+// («Inizia a preparare», «Segna servito», «Segna pronto»): sono l'emergenza, le comande le fanno i reparti.
+const PASSI_REPARTO = /^(Inizia a preparare|Segna pronta)$/
+const PASSI_CASSA = /^(Segna partito|Segna consegnato|Segna ritirato)$/
+async function lavoro(page: Page, chi: string, cassa: boolean, stato: { fine: boolean; standby: boolean }) {
   await scheda(page,'Ordini')
-  const titolo = /^(Tavolo \d+|Domicilio \d\d:\d\d|Asporto \d\d:\d\d) · n\. \d+$/
   while (!stato.fine) {
     if (stato.standby) { await attendi(500); continue }
     try {
-      for (const t of await page.getByRole('heading',{ name: titolo }).allTextContents()) {
+      for (const t of await page.getByRole('heading',{ name: TITOLO }).allTextContents()) {
         const n = t.match(/n\. (\d+)$/)![1]
         if (!visteInCucina.has(n)) {
           visteInCucina.set(n,Date.now())
           const inviato = inviati.find(i => String(i.numero) === n) ?? daCasa.find(i => String(i.numero) === n)
           if (inviato) (inStandby(inviato.inviatoAlle) ? misure.arrivoDopoStandby : misure.arrivoInCucina).push(Date.now() - inviato.inviatoAlle)
-          log('cucina',`vede ${t}${inviato ? ` dopo ${((Date.now() - inviato.inviatoAlle) / 1000).toFixed(1)} s` : ''}`)
+          log(chi,`vede ${t}${inviato ? ` dopo ${((Date.now() - inviato.inviatoAlle) / 1000).toFixed(1)} s` : ''}`)
         }
       }
-      // Prima gli ordini da casa da accettare, poi la comanda più vecchia.
       const daAccettare = page.locator('article').filter({ has: page.getByRole('button',{ name: /^Accetta/ }) }).first()
-      if (await daAccettare.count()) {
+      const portate = page.getByRole('region',{ name: /^Da portare al tavolo/ }).getByRole('button',{ name: /^Portate/ }).first()
+      if (cassa && await daAccettare.count()) {
+        // Prima gli ordini da casa da accettare.
         const testo = (await daAccettare.textContent({ timeout: 5000 })) ?? ''
         const titoloCard = (await daAccettare.getByRole('heading').first().textContent({ timeout: 5000 }))!
         if (testo.includes(RIFIUTA)) {
@@ -207,30 +212,35 @@ async function cucina(page: Page, stato: { fine: boolean; standby: boolean }) {
           const pannello = page.getByRole('dialog',{ name: /^Rifiuta l’ordine n\. / })
           await pannello.getByRole('radio').first().check()
           await pannello.getByRole('button',{ name: 'Rifiuta ordine' }).click()
-          log('cucina',`rifiuta ${titoloCard}`)
+          log(chi,`rifiuta ${titoloCard}`)
         } else {
           const scelta = ['Accetta','Accetta +15’','Accetta +30’'][tra(0,2)]
           const inizioAzione = Date.now()
           await daAccettare.getByRole('button',{ name: scelta,exact: true }).click({ timeout: 5000 })
-          log('cucina',`${scelta} su ${titoloCard}${Date.now() - inizioAzione > 2000 ? ` (pulsante pronto dopo ${((Date.now() - inizioAzione) / 1000).toFixed(1)} s)` : ''}`)
+          log(chi,`${scelta} su ${titoloCard}${Date.now() - inizioAzione > 2000 ? ` (pulsante pronto dopo ${((Date.now() - inizioAzione) / 1000).toFixed(1)} s)` : ''}`)
         }
+      } else if (cassa && caso() < 0.6 && await portate.count()) {
+        // La sala porta al tavolo bibite e piatti pronti.
+        const nome = (await portate.getAttribute('aria-label',{ timeout: 5000 }))!
+        await portate.click({ timeout: 5000 })
+        log(chi,nome)
       } else {
-        // Come in una cucina vera, si alterna tra iniziare comande nuove e servire quelle pronte.
-        const avanti = /^(Segna servito|Segna pronto|Segna partito|Segna consegnato|Segna ritirato)$/
-        const passo = page.getByRole('button',{ name: caso() < 0.5 && await page.getByRole('button',{ name: avanti }).count() ? avanti : /^(Inizia a preparare|Segna servito|Segna pronto|Segna partito|Segna consegnato|Segna ritirato)$/ })
+        // Come in una cucina vera, si alterna tra iniziare comande nuove e finire quelle avviate.
+        const passi = cassa ? PASSI_CASSA : PASSI_REPARTO
+        const passo = page.getByRole('button',{ name: !cassa && caso() < 0.5 && await page.getByRole('button',{ name: 'Segna pronta' }).count() ? /^Segna pronta$/ : passi })
         const card = page.locator('article').filter({ has: passo }).first()
         if (await card.count()) {
           const titoloCard = await card.getByRole('heading').first().textContent({ timeout: 5000 })
-          const azione = card.getByRole('button',{ name: /^(Inizia a preparare|Segna servito|Segna pronto|Segna partito|Segna consegnato|Segna ritirato)$/ }).first()
+          const azione = card.getByRole('button',{ name: passi }).first()
           const inizioAzione = Date.now()
           const nome = await azione.textContent({ timeout: 5000 })
           await azione.click({ timeout: 5000 })
-          log('cucina',`${nome} · ${titoloCard}${Date.now() - inizioAzione > 2000 ? ` (pulsante pronto dopo ${((Date.now() - inizioAzione) / 1000).toFixed(1)} s)` : ''}`)
+          log(chi,`${nome} · ${titoloCard}${Date.now() - inizioAzione > 2000 ? ` (pulsante pronto dopo ${((Date.now() - inizioAzione) / 1000).toFixed(1)} s)` : ''}`)
         }
       }
     } catch (err) {
       // Una card che sparisce mentre la si legge (aggiornamento dello schermo) non è un problema.
-      if (!stato.fine && !/detached|Target closed|strict mode/.test(String(err))) log('cucina',`riprovo: ${String(err).split('\n')[0]}`)
+      if (!stato.fine && !/detached|Target closed|strict mode/.test(String(err))) log(chi,`riprovo: ${String(err).split('\n')[0]}`)
     }
     await attendi(tra(300,900))
   }
@@ -275,7 +285,7 @@ async function clienteDaCasa(browser: Browser, nome: string, telefono: string, t
 }
 
 // ── La serata ─────────────────────────────────────────────────────────────────────────────────
-test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browser }) => {
+test('serata simulata: sala e cassa, banco, cucina, 6 tavoli e ordini da casa', async ({ browser }) => {
   test.skip(oraDiRoma() >= 22,'Servono orari liberi per gli ordini da casa: lanciare prima delle 22 di Roma.')
   const db = new pg.Client({ connectionString: URL_DB })
   await db.connect()
@@ -283,7 +293,11 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
   for (const t of TAVOLI) await db.query('insert into tavoli (nome,slug,chiave) values ($1,$2,$3)',[t.nome,t.chiave,t.chiave])
   await db.end()
 
-  const [sala,cucinaPage] = [await tabletStaff(browser,'sala'),await tabletStaff(browser,'cucina')]
+  const sala = await tabletStaff(browser,'sala','cassa')
+  const [bancoPage,cucinaPage] = [await tabletStaff(browser,'banco','banco'),await tabletStaff(browser,'cucina','cucina')]
+  // La cassa è accanto alla sala, sullo stesso dispositivo (stesso login e stessa postazione), in un'altra scheda.
+  const cassaPage = await sala.context().newPage()
+  await iniziaTurno(cassaPage,'cassa')
   const inSala = fila()
   // Gli esauriti si segnano dalla scheda «Menù» dello staff, senza passare dall'admin.
   const menuSala = await sala.context().newPage()
@@ -299,8 +313,8 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
   log('sala','ordini online aperti')
   await scheda(sala,'Tavoli')
 
-  const statoCucina = { fine: false,standby: false }
-  const lavoroCucina = cucina(cucinaPage,statoCucina)
+  const statoCassa = { fine: false,standby: false }, statoBanco = { fine: false,standby: false }, statoCucina = { fine: false,standby: false }
+  const lavori = [lavoro(cassaPage,'cassa',true,statoCassa),lavoro(bancoPage,'banco',false,statoBanco),lavoro(cucinaPage,'cucina',false,statoCucina)]
 
   const apri = (nome: string) => inSala(async () => {
     const card = sala.locator('article').filter({ has: sala.getByRole('heading',{ name: nome,exact: true }) })
@@ -349,12 +363,13 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
   })
 
   const conti = new Map<string,number>()
-  /** Attende che la cucina abbia servito tutte le comande di un tavolo, come farebbe il cameriere prima del conto. */
+  /** Attende che banco e cucina abbiano finito e la sala portato tutto al tavolo, come farebbe il cameriere prima del conto. */
   const tuttoServito = async (nome: string) => {
-    // Prima la cucina deve aver visto ogni comanda del tavolo (lo schermo si aggiorna ogni 5 s), poi averle servite tutte.
+    // Prima ogni ordine del tavolo deve essere comparso su uno schermo (si aggiornano ogni 5 s), poi essere servito e portato.
     await expect.poll(() => inviati.filter(i => i.tavolo === nome && !visteInCucina.has(String(i.numero))).length,{ timeout: 60_000 }).toBe(0)
-    const comande = cucinaPage.getByRole('heading',{ name: new RegExp(`^${nome} · n\\. \\d+$`) })
-    await expect(comande).toHaveCount(0,{ timeout: 240_000 })
+    const ordiniDelTavolo = new RegExp(`^${nome} · n\\. \\d+$`)
+    for (const p of [cassaPage,bancoPage,cucinaPage]) await expect(p.getByRole('heading',{ name: ordiniDelTavolo })).toHaveCount(0,{ timeout: 240_000 })
+    await expect(cassaPage.getByRole('region',{ name: /^Da portare al tavolo/ }).getByRole('listitem').filter({ hasText: `${nome} ·` })).toHaveCount(0,{ timeout: 240_000 })
   }
 
   const tavolo = async (indice: number) => {
@@ -463,21 +478,21 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
     for (const [i,[nome,telefono,tipo,piatti]] of lista.entries()) {
       await attendi(i === 0 ? 20_000 : 25_000)
       if (i === 3) {
-        // Il tablet della cucina va in standby per 40 secondi proprio mentre arriva un ordine da casa.
-        statoCucina.standby = true
+        // Il tablet della cassa va in standby per 40 secondi proprio mentre arriva un ordine da casa.
+        statoCassa.standby = true
         standby.push({ da: Date.now(),a: null })
-        await cucinaPage.evaluate(() => { Object.defineProperty(document,'visibilityState',{ value: 'hidden',configurable: true }); document.dispatchEvent(new Event('visibilitychange')) })
-        log('cucina','tablet in standby (schermo nascosto)')
+        await cassaPage.evaluate(() => { Object.defineProperty(document,'visibilityState',{ value: 'hidden',configurable: true }); document.dispatchEvent(new Event('visibilitychange')) })
+        log('cassa','tablet in standby (schermo nascosto)')
         const o = await clienteDaCasa(browser,nome,telefono,tipo,piatti)
         aperti.push({ ...o,nome })
         await attendi(40_000)
-        const visto = await cucinaPage.getByRole('heading',{ name: new RegExp(`· n\\. ${o.numero}$`) }).count()
-        log('cucina',`dopo 40 s di standby l’ordine n. ${o.numero} ${visto ? 'è già sullo schermo' : 'non è sullo schermo (atteso: lo schermo nascosto non si aggiorna)'}`)
+        const visto = await cassaPage.getByRole('heading',{ name: new RegExp(`· n\\. ${o.numero}$`) }).count()
+        log('cassa',`dopo 40 s di standby l’ordine n. ${o.numero} ${visto ? 'è già sullo schermo' : 'non è sullo schermo (atteso: lo schermo nascosto non si aggiorna)'}`)
         const risveglio = Date.now()
-        await cucinaPage.evaluate(() => { Object.defineProperty(document,'visibilityState',{ value: 'visible',configurable: true }); document.dispatchEvent(new Event('visibilitychange')) })
-        await expect(cucinaPage.getByRole('heading',{ name: new RegExp(`· n\\. ${o.numero}$`) })).toBeVisible({ timeout: 20_000 })
-        log('cucina',`al risveglio l’ordine n. ${o.numero} compare in ${((Date.now() - risveglio) / 1000).toFixed(1)} s`)
-        statoCucina.standby = false
+        await cassaPage.evaluate(() => { Object.defineProperty(document,'visibilityState',{ value: 'visible',configurable: true }); document.dispatchEvent(new Event('visibilitychange')) })
+        await expect(cassaPage.getByRole('heading',{ name: new RegExp(`· n\\. ${o.numero}$`) })).toBeVisible({ timeout: 20_000 })
+        log('cassa',`al risveglio l’ordine n. ${o.numero} compare in ${((Date.now() - risveglio) / 1000).toFixed(1)} s`)
+        statoCassa.standby = false
         standby[standby.length - 1].a = Date.now()
       } else aperti.push({ ...(await clienteDaCasa(browser,nome,telefono,tipo,piatti)),nome })
     }
@@ -494,10 +509,11 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
 
   await Promise.all([...TAVOLI.map((_,i) => tavolo(i)),imprevistiSala])
   const aperti = await clienti
-  // La cucina finisce le comande da casa, poi si chiude il turno.
-  await expect(cucinaPage.getByRole('heading',{ name: /· n\. \d+$/ })).toHaveCount(0,{ timeout: 240_000 })
-  statoCucina.fine = true
-  await lavoroCucina
+  // Banco e cucina finiscono le comande da casa, la cassa le consegna, poi si chiude il turno su tutti i tablet.
+  for (const p of [bancoPage,cucinaPage,cassaPage]) await expect(p.getByRole('heading',{ name: /· n\. \d+$/ })).toHaveCount(0,{ timeout: 240_000 })
+  await expect(cassaPage.getByRole('region',{ name: /^Da portare al tavolo/ })).toHaveCount(0,{ timeout: 60_000 })
+  for (const st of [statoCassa,statoBanco,statoCucina]) st.fine = true
+  await Promise.all(lavori)
   for (const { tel } of aperti) await tel.context().close()
 
   // ── Controlli sul database ──────────────────────────────────────────────────────────────────
@@ -509,6 +525,15 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
       (select count(*)::int from ordini x where x.chiave_invio=o.chiave_invio) as chiavi
     from ordini o left join sessioni_tavolo s on s.id=o.sessione_id left join tavoli t on t.id=s.tavolo_id
     where t.nome like 'Tavolo %' and t.nome <> 'Tavolo prova' or o.tipo <> 'tavolo' order by o.numero`)
+  // Comande: una per reparto delle righe (da casa senza bevande), e alla fine nessuna rimasta da fare.
+  const { rows: comandeOrdini } = await verifica.query<{ numero: number; stato: string; comande: number; reparti: number; aperte: number; nonChiuse: number }>(`
+    select o.numero,o.stato,
+      (select count(*)::int from comande c where c.ordine_id=o.id) as comande,
+      (select count(distinct r.reparto)::int from righe_ordine r where r.ordine_id=o.id and (o.tipo='tavolo' or r.reparto<>'sala')) as reparti,
+      (select count(*)::int from comande c where c.ordine_id=o.id and c.stato in ('da_preparare','in_preparazione')) as aperte,
+      (select count(*)::int from comande c where c.ordine_id=o.id and c.stato not in ('pronta','annullata')) as "nonChiuse"
+    from ordini o left join sessioni_tavolo s on s.id=o.sessione_id left join tavoli t on t.id=s.tavolo_id
+    where t.nome like 'Tavolo %' and t.nome <> 'Tavolo prova' and t.nome <> 'Tavolo reparti' or o.tipo <> 'tavolo' order by o.numero`)
   const sessioniAperte = (await verifica.query(`select count(*)::int as n from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where t.nome like 'Tavolo _' and s.chiusa_il is null`)).rows[0].n
   await verifica.end()
 
@@ -530,6 +555,11 @@ test('serata simulata: sala, cucina, 6 tavoli e ordini da casa', async ({ browse
   }
   if (sessioniAperte !== 0) problema('controlli',`${sessioniAperte} tavoli ancora aperti`)
   if (daCasa.length !== ordini.filter(o => o.tipo !== 'tavolo').length) problema('controlli','numero di ordini da casa diverso tra clienti e database')
+  for (const c of comandeOrdini) {
+    if (c.comande !== c.reparti) problema('controlli',`ordine n. ${c.numero}: ${c.comande} comande per ${c.reparti} reparti`)
+    if (c.aperte > 0) problema('controlli',`ordine n. ${c.numero} («${c.stato}»): ${c.aperte} comande ancora da fare`)
+    if (['servito','completato'].includes(c.stato) && c.nonChiuse > 0) problema('controlli',`ordine n. ${c.numero} «${c.stato}» con comande non pronte`)
+  }
 
   const statistiche = (xs: number[]) => {
     const s = [...xs].sort((a,b) => a - b)

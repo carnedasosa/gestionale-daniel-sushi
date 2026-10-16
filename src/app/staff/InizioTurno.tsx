@@ -1,11 +1,23 @@
 'use client'
 import { createContext, useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ETICHETTA_POSTAZIONE, POSTAZIONI, type Postazione } from '@/domain/postazioni'
+import { impostaPostazione } from './azioni-postazione'
 export const SuonoTurno = createContext<(ripetizioni?: number) => void>(() => {})
 // Il contesto audio vive quanto la pagina del browser, non quanto il componente: se lo schermo
 // viene rimontato (navigazione nell'area staff, errore temporaneo) il suono resta attivo.
 let audioCondiviso: AudioContext | null = null
-export function InizioTurno({ children,uscita }: { children: React.ReactNode; uscita?: React.ReactNode }) {
+const SUONI: Record<Postazione,string> = {
+  cassa: 'Tre bip per bevande e piatti da portare al tavolo, e ogni 10 secondi finché c’è un ordine da casa da accettare',
+  banco: 'Tre bip a ogni comanda nuova del banco sushi',
+  cucina: 'Tre bip a ogni comanda nuova della cucina',
+  sala: 'Tre bip per bevande e piatti da portare al tavolo',
+}
+/** `postazione`: quella con cui è stata disegnata la pagina; all'avvio del turno la scelta resta salvata sul dispositivo. */
+export function InizioTurno({ children,uscita,postazione = 'cassa' }: { children: React.ReactNode; uscita?: React.ReactNode; postazione?: Postazione }) {
   const [iniziato,setIniziato] = useState(false)
+  const [scelta,setScelta] = useState(postazione)
+  const router = useRouter()
   // Sul server e alla prima idratazione audioCondiviso è null: nessuna differenza tra HTML e client.
   const [audioAttivo,setAudioAttivo] = useState(() => audioCondiviso?.state === 'running')
   const [avviso,setAvviso] = useState<string | null>(null)
@@ -46,9 +58,14 @@ export function InizioTurno({ children,uscita }: { children: React.ReactNode; us
     void acquisisci(); document.addEventListener('visibilitychange',visibilita)
     return () => { attivo = false; document.removeEventListener('visibilitychange',visibilita); void lock.current?.release().catch(() => {}); lock.current = null }
   },[iniziato])
-  const inizia = async () => {
-    setIniziato(true)
-    try { sessionStorage.setItem('ds_turno','iniziato') } catch { /* Stato in memoria. */ }
+  // Il cookie si scrive anche se la postazione è quella mostrata (es. arrivata da `?postazione=`): le schede successive la ritrovano.
+  const salvaPostazione = async () => {
+    try {
+      const esito = await impostaPostazione(scelta)
+      if (esito.ok && scelta !== postazione) router.replace('/staff')
+    } catch { /* Il turno parte comunque con la postazione mostrata. */ }
+  }
+  const attivaAudio = async () => {
     try {
       if (!audioCondiviso || audioCondiviso.state==='closed') audioCondiviso = new AudioContext()
       const ctx = audioCondiviso
@@ -57,17 +74,26 @@ export function InizioTurno({ children,uscita }: { children: React.ReactNode; us
     }
     catch { setAvviso('Audio non disponibile: controlla lo schermo per i nuovi ordini.') }
   }
+  const inizia = async () => {
+    setIniziato(true)
+    try { sessionStorage.setItem('ds_turno','iniziato') } catch { /* Stato in memoria. */ }
+    void salvaPostazione()
+    await attivaAudio()
+  }
   if (!iniziato) return <div className="b-inizio"><div className="b-inizio__riquadro">
     <div className="b-inizio__testa"><span className="b-num b-secondario" suppressHydrationWarning>{new Date().toLocaleString('it-IT',{ weekday: 'long',day: 'numeric',month: 'long',hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</span>
       <h2 className="b-inizio__titolo">Buon turno</h2><p className="b-secondario">Prima di cominciare il tablet deve poter suonare e restare acceso.</p></div>
     <ul className="b-inizio__voci">
-      <li><strong>Suono per i nuovi ordini</strong><span className="b-secondario">Tre bip a ogni ordine, e ogni 10 secondi finché c’è un ordine da casa da accettare</span></li>
+      <li><strong>Suono per i nuovi ordini</strong><span className="b-secondario">{SUONI[scelta]}</span></li>
       <li><strong>Schermo sempre acceso</strong><span className="b-secondario">Il tablet non va in standby durante il turno</span></li>
     </ul>
+    <fieldset className="b-scelte b-inizio__postazioni"><legend className="b-occhiello">Questo dispositivo è</legend>
+      {POSTAZIONI.map(p => <label key={p} className="b-scelta"><input type="radio" name="postazione" value={p} checked={scelta === p} onChange={() => setScelta(p)} />{ETICHETTA_POSTAZIONE[p]}</label>)}
+    </fieldset>
     <p className="b-nascosto">Attiva suono e schermo sempre acceso</p>
     <button type="button" className="b-btn b-btn--principale b-btn--grande" onClick={inizia}>Inizia turno</button>
-    <p className="b-secondario b-piccolo b-inizio__nota">Gli ordini online di stasera si aprono dopo, dalla barra in alto.</p>
+    {scelta === 'cassa' && <p className="b-secondario b-piccolo b-inizio__nota">Gli ordini online di stasera si aprono dopo, dalla barra in alto.</p>}
     {uscita}
   </div></div>
-  return <SuonoTurno.Provider value={suona}>{!audioAttivo && <div className="b-avviso b-avviso--accettare b-staff__avviso"><p>Il suono è sospeso: senza, i nuovi ordini non suonano.</p><button type="button" className="b-btn b-btn--secondario" onClick={inizia}>Riattiva suono</button></div>}{avviso && <p role="status" className="b-avviso b-staff__avviso">{avviso}</p>}{children}</SuonoTurno.Provider>
+  return <SuonoTurno.Provider value={suona}>{!audioAttivo && <div className="b-avviso b-avviso--accettare b-staff__avviso"><p>Il suono è sospeso: senza, i nuovi ordini non suonano.</p><button type="button" className="b-btn b-btn--secondario" onClick={attivaAudio}>Riattiva suono</button></div>}{avviso && <p role="status" className="b-avviso b-staff__avviso">{avviso}</p>}{children}</SuonoTurno.Provider>
 }

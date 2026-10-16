@@ -9,6 +9,7 @@ import { formatEuro } from '@/domain/soldi'
 import { prossimoStatoCasa, puoAnnullareCasa, STATI_CASA, type StatoCasa } from '@/domain/stati-casa'
 import { leggiRigheOrdini, prezzaRighe, salvaRighe, type RigaOrdine } from '@/tavoli/ordini-repo'
 import { idValido } from '@/tavoli/validazione'
+import { cascataComande, creaComande } from '@/comande/comande-repo'
 import { leggiDisponibilita } from './disponibilita'
 
 export interface OrdineCasa {
@@ -98,6 +99,7 @@ export async function creaOrdineCasa(db: Db, input: InputOrdineCasa): Promise<Es
     [dati.tipo,totali.totaleCent,chiaveInvio,token,dati.fascia,dati.nome,dati.telefono,dati.email,zona?.id ?? null,zona?.nome ?? null,totali.consegnaCent,dati.indirizzo,dati.noteConsegna,dati.pagamento,dati.contantiDaCent,
       cassa ? null : input.rete,cassa ? 'accettato' : 'in_attesa',cassa ? 'cassa' : 'cliente'])
     await salvaRighe(tx,ordine.id,prezzi.righe)
+    await creaComande(tx,ordine.id)
     if (!cassa) await tx.query(`insert into email_ordini (ordine_id,tipo) values ($1,'ricevuto')`,[ordine.id])
     return { ok: true,ordine: (await ordineCasaPerId(tx,ordine.id))! }
   }) } catch (err) {
@@ -118,6 +120,8 @@ async function cambiaStato(db: Db, id: string, da: StatoCasa[], verso: (o: { tip
     const nuovo = verso(o)
     if (!nuovo) return null
     await tx.query(`update ordini set stato=$2,aggiornato_il=clock_timestamp()${extra.set ? `,${extra.set}` : ''} where id=$1`,[id,nuovo,...(extra.parametri ?? [])])
+    // Bottoni a cascata della cassa, rifiuti e annullamenti trascinano le comande.
+    await cascataComande(tx,id,nuovo)
     // Le email partono solo per gli ordini del cliente: quelli della cassa non hanno indirizzo né consenso.
     if (extra.email) await tx.query(`insert into email_ordini (ordine_id,tipo) select id,$2 from ordini where id=$1 and origine='cliente' on conflict (ordine_id,tipo) do nothing`,[id,extra.email])
     return ordineCasaPerId(tx,id)

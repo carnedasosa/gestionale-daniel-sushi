@@ -125,6 +125,28 @@ Dal dettaglio di un tavolo aperto (scheda **Tavoli**) il cameriere, loggato sul 
 
 Il conto è stampabile dal browser ed è solo un riepilogo da battere in cassa, **non uno scontrino fiscale**. Chiudendo il tavolo i clienti non possono più inviare ordini. Se restano comande in cucina o sono arrivate dopo il conto viene chiesta una conferma esplicita. La chiusura apre il conto; la cucina conserva le comande con «Tavolo chiuso» e «Conti recenti» conserva i link per sei ore. Dal conto puoi annullare una voce anche servita.
 
+### Postazioni e comande per reparto
+
+Ogni dispositivo dello staff ha una **postazione**, scelta all'inizio del turno («Questo dispositivo è») o in seguito da **Postazione…** nella barra, e ricordata in un cookie (`ds_postazione`, solo sotto `/staff`, un anno). L'indirizzo `/staff?postazione=banco` la impone per quella pagina senza salvarla: «Inizia turno» la salva.
+
+| Postazione | Schede | Colonne | Suono |
+|---|---|---|---|
+| Cassa | Ordini, Tavoli, Conti, Menù, **Nuovo ordine**, ordini online | tutti gli ordini come prima, con un chip per reparto e la striscia «Da portare al tavolo» | ogni 10 s finché c'è un ordine da casa da accettare; tre bip per ogni voce nuova da portare |
+| Banco sushi / Cucina | Ordini, Menù | Da preparare · In preparazione · Pronte, solo le comande del proprio reparto | tre bip per ogni comanda nuova |
+| Sala (telefoni dei camerieri) | Ordini, Tavoli, Conti | come la cassa, senza interruttore online e senza «Nuovo ordine» | tre bip per ogni voce nuova da portare |
+
+Ogni ordine ha una **comanda per reparto** presente nelle righe (tabella `comande`): banco, cucina, sala (= bevande). Il reparto avanza solo la propria («Inizia a preparare», «Segna pronta») e lo stato dell'ordine si ricava dalle comande nella stessa transazione:
+
+| Comande attive | Tavolo | Casa (dopo l'accettazione) |
+|---|---|---|
+| tutte da preparare | Inviato | Accettato |
+| qualcuna avanzata, non tutte pronte | In preparazione | In preparazione |
+| tutte pronte | Servito | Pronto |
+
+Accettazione, rifiuto, partenza, consegna/ritiro e annullamenti restano alla cassa. Le bevande non passano da un reparto: per i tavoli compaiono nella striscia **Da portare al tavolo** di cassa e sala e diventano pronte col bottone **Portate**; negli ordini da casa non hanno comanda (le mette nel sacchetto la cassa, e un ordine di sole bibite si porta avanti coi bottoni della cassa). Nella stessa striscia compaiono le comande di banco e cucina già pronte, finché la sala non tocca **Portate** (o il tavolo si chiude). Annullando righe o voci del conto, la comanda rimasta senza righe si annulla e lo stato dell'ordine si ricalcola. I bottoni della cassa sulle card intere («Inizia a preparare», «Segna servito», «Segna pronto») restano come **emergenza**: portano avanti tutte le comande dell'ordine insieme. Il lock è sempre sull'ordine prima delle comande (sessione → ordine → comande).
+
+La migrazione `20261018120000_comande_reparto.sql` crea le comande anche per gli ordini esistenti: va applicata al database reale prima del deploy che la usa.
+
 ## Ordini al tavolo
 
 Il cliente scansiona il QR, inserisce il codice, sceglie i piatti e invia il carrello alla cucina. Ogni riga può avere una nota di massimo 200 caratteri e una quantità da 1 a 20; massimo 40 righe per ordine. I prezzi sono indicativi sul telefono e vengono sempre ricalcolati sul server dal menù e dalle regole poke. Un piatto diventato esaurito fa rifiutare l'intero ordine senza salvare comande parziali.

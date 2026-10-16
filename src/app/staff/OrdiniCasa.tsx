@@ -10,6 +10,8 @@ import { ConfermaAzione } from '@/componenti/ConfermaAzione'
 import { AltreAzioni } from '@/componenti/AltreAzioni'
 import { Pannello } from '@/componenti/Pannello'
 import type { EsitoStaff } from './azioni'
+import type { StatoReparto } from '@/comande/comande-repo'
+import { ChipComande } from './DaPortare'
 import { annullaRigaStaff } from './azioni'
 import { accettaOrdineStaff, annullaOrdineCasaStaff, apriOrdiniOnline, avanzaOrdineCasaStaff, chiudiOrdiniOnline, rifiutaOrdineStaff } from './azioni-casa'
 type Esegui = (azione: () => Promise<EsitoStaff>) => void
@@ -53,7 +55,7 @@ function RifiutaOrdine({ ordine,inCorso,esegui }: { ordine: OrdineCasaClient; in
 }
 const VERBO: Record<string,string> = { 'In preparazione': 'Inizia a preparare',Pronto: 'Segna pronto',Partito: 'Segna partito',Consegnato: 'Segna consegnato',Ritirato: 'Segna ritirato' }
 /** Ordine da casa: `daAccettare` mostra accetta/rifiuta, altrimenti il prossimo passo della cucina. */
-export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare }: { ordine: OrdineCasaClient; ora: string; inCorso: boolean; esegui: Esegui; daAccettare: boolean }) {
+export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare,comande }: { ordine: OrdineCasaClient; ora: string; inCorso: boolean; esegui: Esegui; daAccettare: boolean; comande?: StatoReparto[] }) {
   const lunga = daAccettare && attesaLunga(o.creatoIl,new Date(ora))
   const avanza = azioneAvanzaCasa(o.tipo,o.stato)
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
@@ -64,6 +66,7 @@ export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare }: { o
       {daAccettare && <span className="b-num b-comanda__timer" aria-label={`${minuti} min`}>{minuti}′</span>}
     </div>
     {etichettaOrigine(o.origine) && <span className="b-etichetta">{etichettaOrigine(o.origine)}</span>}
+    {!daAccettare && <ChipComande comande={comande} />}
     {lunga && <p className="b-avviso b-avviso--ritardo"><strong>In attesa da più di 10 minuti</strong></p>}
     <p className="b-comanda__meta">{o.clienteNome} · {o.clienteTelefono && <a href={`tel:${o.clienteTelefono}`}>{o.clienteTelefono}</a>} · <span className="b-num">{formatEuro(o.totaleCent)}</span> · {o.pagamento === 'carta' ? 'Carta' : `Contanti${o.contantiDaCent ? ` (paga con ${formatEuro(o.contantiDaCent)})` : ''}`}</p>
     {o.tipo === 'domicilio' && <p className="b-comanda__meta">{o.indirizzo} · {o.zonaNome}{o.noteConsegna && ` · ${o.noteConsegna}`}{o.consegnaCent > 0 && ` · consegna ${formatEuro(o.consegnaCent)}`}</p>}

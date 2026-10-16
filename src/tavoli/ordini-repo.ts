@@ -6,6 +6,7 @@ import type { OrigineOrdine } from '@/domain/origine-ordine'
 import { CATEGORIA_POKE, type Reparto } from '@/domain/reparti'
 import { leggiAllergeniPoke, leggiPokeConfig } from './poke-repo'
 import { idValido } from './validazione'
+import { cascataComande, creaComande, segnaComandeAnnullate } from '@/comande/comande-repo'
 
 export interface RigaOrdine { id: string; numero: number | null; nome: string; prezzoUnitCent: number; quantita: number; nota: string | null; poke: SceltePoke | null; annullata: boolean; reparto: Reparto }
 export interface Ordine { id: string; numero: number; stato: StatoOrdineTavolo; totaleCent: number; creatoIl: Date; sessioneId: string; tavoloNome: string; tavoloChiuso: boolean; origine: OrigineOrdine; righe: RigaOrdine[] }
@@ -86,6 +87,7 @@ export async function creaOrdineTavolo(db: Db, sessioneId: string, input: RigaCa
     if (!prezzi.ok) return prezzi
     const [ordine] = await tx.query<{ id: string }>('insert into ordini(sessione_id,totale_cent,chiave_invio,origine,creato_il) values ($1,$2,$3,$4,clock_timestamp()) returning id',[sessioneId,prezzi.totaleCent,chiaveInvio,origine])
     await salvaRighe(tx,ordine.id,prezzi.righe)
+    await creaComande(tx,ordine.id)
     return { ok: true, ordine: (await leggiOrdini(tx,'o.id=$1',[ordine.id]))[0] }
   }) } catch (err) {
     // Dopo il rollback possiamo rileggere anche il conflitto tra sessioni diverse.
@@ -114,6 +116,8 @@ export async function avanzaStato(db: Db, ordineId: string, da: StatoOrdineTavol
     const [o] = await tx.query<{ stato: StatoOrdineTavolo }>("select stato from ordini where id=$1 and tipo='tavolo' for update",[ordineId])
     if (o?.stato !== da) return null
     await tx.query('update ordini set stato=$2,aggiornato_il=now() where id=$1',[ordineId,prossimoStato(da)])
+    // Bottone d'emergenza della cassa: tutte le comande dell'ordine passano insieme.
+    await cascataComande(tx,ordineId,prossimoStato(da)!)
     return (await leggiOrdini(tx,'o.id=$1',[ordineId]))[0] ?? null
   })
 }
@@ -137,6 +141,7 @@ export async function annullaOrdine(db: Db, ordineId: string, utenteId: string):
     if (await contoChiuso(tx,s.sessioneId)) return 'conto_chiuso'
     const [o] = await tx.query<{ totaleCent: number }>("update ordini set stato='annullato',aggiornato_il=now() where id=$1 and stato in ('inviato','in_preparazione') returning totale_cent as \"totaleCent\"",[ordineId])
     if (!o) return 'non_disponibile'
+    await cascataComande(tx,ordineId,'annullato')
     await registraAnnulli(tx,utenteId,[{ tipo: 'ordine',ordineId,rigaId: null,importoCent: o.totaleCent }])
     return 'ok'
   })
@@ -160,6 +165,7 @@ export async function annullaRiga(db: Db, rigaId: string, utenteId: string): Pro
 // Totale = righe attive + consegna (solo domicilio). Senza righe attive l'ordine è annullato; da casa il cliente riceve l'email.
 async function ricalcolaOrdine(db: Db,id: string) {
   await db.query(`update ordini set totale_cent=case when r.n=0 then 0 else r.totale+coalesce(ordini.consegna_cent,0) end,stato=case when r.n=0 then 'annullato' else ordini.stato end,aggiornato_il=clock_timestamp() from (select coalesce(sum(prezzo_unit_cent*quantita),0)::int as totale,count(*) as n from righe_ordine where ordine_id=$1 and not annullata) r where ordini.id=$1`,[id])
+  await segnaComandeAnnullate(db,id)
   await db.query(`insert into email_ordini (ordine_id,tipo) select id,'annullato' from ordini where id=$1 and tipo<>'tavolo' and origine='cliente' and stato='annullato' on conflict (ordine_id,tipo) do nothing`,[id])
 }
 export interface IdentitaVoce { nome: string; numero: number | null; prezzoUnitCent: number; poke: SceltePoke | null }
