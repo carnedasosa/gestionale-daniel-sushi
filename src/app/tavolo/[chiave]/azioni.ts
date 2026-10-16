@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { db } from '@/server/db'
+import { erroreDiAttesa } from '@/server/db-adapter'
 import { normalizzaCodice } from '@/domain/codice-tavolo'
 import { bloccato, FINESTRA_MINUTI } from '@/domain/limiti-tentativi'
 import { tavoloDaChiave, sessioneDelTavolo, contaErrori, registraTentativoFallito, verificaCodice, sessioneApertaPerId, sessionePerId } from '@/tavoli/repo'
@@ -88,6 +89,8 @@ export async function inviaOrdine(chiave: string, carrelloJson: string, chiaveIn
     return esito.ok ? { ok: true, numero: esito.ordine.numero } : esito
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')
+    // Lock o istruzione scaduti: l'ordine non è partito (rollback) e la chiave di invio evita doppioni.
+    if (erroreDiAttesa(err)) return { ok: false, errore: 'Il sistema è occupato, riprova tra qualche secondo.' }
     return { ok: false, errore: 'Invio non riuscito: controlla la connessione e riprova.' }
   }
 }

@@ -73,3 +73,12 @@ it('genera un dispositivo se il cookie manca e restituisce errori DB italiani', 
   m.tavoloDaChiave.mockRejectedValueOnce(new Error('connessione'))
   expect((await entraAlTavolo('abcdefghijkl',{ errore: null },fd())).errore).toContain('riprova')
 })
+it('invio: errore del database generico o lock scaduto diventano messaggi italiani', async () => {
+  const json = JSON.stringify([{ piattoId: id, quantita: 1, nota: '' }])
+  m.creaOrdineTavolo.mockRejectedValueOnce(new Error('connessione'))
+  expect(await inviaOrdine('abcdefghijkl',json,keyInvio)).toEqual({ ok: false, errore: 'Invio non riuscito: controlla la connessione e riprova.' })
+  for (const code of ['55P03','57014']) {
+    m.creaOrdineTavolo.mockRejectedValueOnce(Object.assign(new Error('canceling statement due to timeout'),{ code }))
+    expect(await inviaOrdine('abcdefghijkl',json,keyInvio)).toEqual({ ok: false, errore: 'Il sistema è occupato, riprova tra qualche secondo.' })
+  }
+})
