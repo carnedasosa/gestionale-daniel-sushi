@@ -3,6 +3,7 @@ import type { Db } from '@/server/db-tipi'
 import { validaCarrello, type RigaCarrello } from '@/domain/carrello'
 import { totaliCasa, type CampoCheckout, type DatiCheckout, type Pagamento } from '@/domain/checkout'
 import type { Servizio } from '@/domain/fasce'
+import type { OrigineOrdine } from '@/domain/origine-ordine'
 import { TESTO_MOTIVO } from '@/domain/apertura-casa'
 import { formatEuro } from '@/domain/soldi'
 import { prossimoStatoCasa, puoAnnullareCasa, STATI_CASA, type StatoCasa } from '@/domain/stati-casa'
@@ -13,7 +14,7 @@ import { leggiDisponibilita } from './disponibilita'
 export interface OrdineCasa {
   id: string; numero: number; tipo: Servizio; stato: StatoCasa; token: string; totaleCent: number; consegnaCent: number; fascia: Date; creatoIl: Date; aggiornatoIl: Date
   clienteNome: string | null; clienteTelefono: string | null; clienteEmail: string | null; zonaNome: string | null; indirizzo: string | null; noteConsegna: string | null
-  pagamento: Pagamento; contantiDaCent: number | null; motivoRifiuto: string | null; anonimizzato: boolean; righe: RigaOrdine[]
+  pagamento: Pagamento; contantiDaCent: number | null; motivoRifiuto: string | null; anonimizzato: boolean; origine: OrigineOrdine; righe: RigaOrdine[]
 }
 export type OrdineCasaClient = Omit<OrdineCasa,'fascia' | 'creatoIl' | 'aggiornatoIl'> & { fascia: string; creatoIl: string; aggiornatoIl: string }
 export function perClient(o: OrdineCasa): OrdineCasaClient { return { ...o,fascia: o.fascia.toISOString(),creatoIl: new Date(o.creatoIl).toISOString(),aggiornatoIl: new Date(o.aggiornatoIl).toISOString() } }
@@ -25,7 +26,7 @@ export const MASSIMO_ORDINI_RETE_ORA = 10
 export function tokenValido(t: unknown): t is string { return typeof t === 'string' && /^[A-Za-z0-9_-]{32}$/.test(t) }
 const COLONNE = `o.id,o.numero,o.tipo,o.stato,o.token,o.totale_cent as "totaleCent",o.consegna_cent as "consegnaCent",o.fascia,o.creato_il as "creatoIl",o.aggiornato_il as "aggiornatoIl",
   o.cliente_nome as "clienteNome",o.cliente_telefono as "clienteTelefono",o.cliente_email as "clienteEmail",o.zona_nome as "zonaNome",o.indirizzo,
-  o.note_consegna as "noteConsegna",o.pagamento,o.contanti_da_cent as "contantiDaCent",o.motivo_rifiuto as "motivoRifiuto",(o.anonimizzato_il is not null) as anonimizzato`
+  o.note_consegna as "noteConsegna",o.pagamento,o.contanti_da_cent as "contantiDaCent",o.motivo_rifiuto as "motivoRifiuto",(o.anonimizzato_il is not null) as anonimizzato,o.origine`
 const COLONNE_RIGA = `id,numero,nome,prezzo_unit_cent as "prezzoUnitCent",quantita,nota,poke,annullata`
 async function leggiOrdiniCasa(db: Db, condizione: string, parametri: unknown[] = []): Promise<OrdineCasa[]> {
   const ordini = await db.query<Omit<OrdineCasa,'righe'>>(`select ${COLONNE} from ordini o where o.tipo<>'tavolo' and ${condizione} order by o.fascia,o.creato_il,o.numero`,parametri)
@@ -49,10 +50,15 @@ async function giaInviato(db: Db, chiave: string): Promise<EsitoCasa | null> {
   const ordine = o.tipo === 'tavolo' ? null : await ordineCasaPerId(db,o.id)
   return ordine ? { ok: true,ordine } : { ok: false,errore: 'Invio non valido: ricarica la pagina e riprova.' }
 }
-export interface InputOrdineCasa { righe: RigaCarrello[]; dati: DatiCheckout; totaleVistoCent: number; chiaveInvio: string; rete: string | null; adesso: Date; prova: boolean }
-/** Crea l'ordine in attesa di accettazione. Tutti gli invii da casa si mettono in fila sul lock delle impostazioni. */
+/** `origine: 'cassa'`: ordine preso a voce dalla cassa, nasce già accettato, senza email né limiti per telefono/rete; `forzaFascia` ammette un orario pieno. */
+export interface InputOrdineCasa {
+  righe: RigaCarrello[]; dati: DatiCheckout; totaleVistoCent: number; chiaveInvio: string; rete: string | null; adesso: Date; prova: boolean
+  origine?: 'cliente' | 'cassa'; forzaFascia?: boolean
+}
+/** Crea l'ordine in attesa di accettazione (dalla cassa: già accettato). Tutti gli invii da casa si mettono in fila sul lock delle impostazioni. */
 export async function creaOrdineCasa(db: Db, input: InputOrdineCasa): Promise<EsitoCasa> {
   const { dati,chiaveInvio } = input
+  const cassa = input.origine === 'cassa', forza = cassa && input.forzaFascia === true
   if (!idValido(chiaveInvio)) return { ok: false,errore: 'Chiave di invio non valida: ricarica la pagina e riprova.' }
   if (!Number.isSafeInteger(input.totaleVistoCent)) return { ok: false,errore: 'Totale non valido: ricarica la pagina e riprova.' }
   const carrello = validaCarrello(input.righe)
@@ -64,15 +70,19 @@ export async function creaOrdineCasa(db: Db, input: InputOrdineCasa): Promise<Es
     // Un invio con la stessa chiave può aver concluso mentre aspettavamo il lock.
     const dopoLock = await giaInviato(tx,chiaveInvio)
     if (dopoLock) return dopoLock
-    const disponibilita = await leggiDisponibilita(tx,input.adesso,input.prova)
+    const disponibilita = await leggiDisponibilita(tx,input.adesso,input.prova,cassa ? 'cassa' : 'cliente')
     const servizio = disponibilita.servizi[dati.tipo]
-    if (!servizio.apertura.aperto) return { ok: false,errore: TESTO_MOTIVO[servizio.apertura.motivo],campo: 'tipo' }
-    if (!servizio.fasce.includes(dati.fascia.toISOString())) return { ok: false,errore: 'L’orario scelto non è più disponibile: scegline un altro.',campo: 'fascia',fasce: servizio.fasce }
+    // Con la forzatura la cassa può ordinare anche se tutte le fasce sono piene, non se il locale è chiuso.
+    if (!servizio.apertura.aperto && !(forza && servizio.apertura.motivo === 'fasce')) return { ok: false,errore: TESTO_MOTIVO[servizio.apertura.motivo],campo: 'tipo' }
+    const fascia = dati.fascia.toISOString()
+    if (!(forza ? servizio.future : servizio.fasce).includes(fascia)) return { ok: false,errore: forza ? 'L’orario scelto è già passato: scegline un altro.' : 'L’orario scelto non è più disponibile: scegline un altro.',campo: 'fascia',fasce: servizio.fasce }
     const zona = dati.tipo === 'domicilio' ? disponibilita.zone.find(z => z.id === dati.zonaId) ?? null : null
     if (dati.tipo === 'domicilio' && !zona) return { ok: false,errore: 'Questa zona non è servita: scegline un’altra.',campo: 'zonaId' }
-    const [{ n: inAttesa }] = await tx.query<{ n: number }>(`select count(*)::int as n from ordini where cliente_telefono=$1 and stato='in_attesa'`,[dati.telefono])
-    if (inAttesa >= MASSIMO_IN_ATTESA_TELEFONO) return { ok: false,errore: 'Hai già degli ordini in attesa di conferma: aspetta la nostra risposta o chiamaci.',campo: 'telefono' }
-    if (input.rete) {
+    if (!cassa) {
+      const [{ n: inAttesa }] = await tx.query<{ n: number }>(`select count(*)::int as n from ordini where cliente_telefono=$1 and stato='in_attesa'`,[dati.telefono])
+      if (inAttesa >= MASSIMO_IN_ATTESA_TELEFONO) return { ok: false,errore: 'Hai già degli ordini in attesa di conferma: aspetta la nostra risposta o chiamaci.',campo: 'telefono' }
+    }
+    if (input.rete && !cassa) {
       const [{ n }] = await tx.query<{ n: number }>(`select count(*)::int as n from ordini where rete=$1 and creato_il > $2::timestamptz - interval '1 hour'`,[input.rete,input.adesso])
       if (n >= MASSIMO_ORDINI_RETE_ORA) return { ok: false,errore: 'Troppi ordini da questa connessione: riprova più tardi o chiamaci.' }
     }
@@ -83,11 +93,13 @@ export async function creaOrdineCasa(db: Db, input: InputOrdineCasa): Promise<Es
     if (totali.totaleCent !== input.totaleVistoCent) return { ok: false,errore: `I prezzi sono cambiati: il totale ora è ${formatEuro(totali.totaleCent)}. Controlla il riepilogo e conferma di nuovo.`,campo: 'carrello',totaleCent: totali.totaleCent }
     if (dati.contantiDaCent !== null && dati.contantiDaCent < totali.totaleCent) return { ok: false,errore: `L’importo in contanti deve coprire il totale di ${formatEuro(totali.totaleCent)}.`,campo: 'contantiDa' }
     const token = randomBytes(24).toString('base64url')
-    const [ordine] = await tx.query<{ id: string }>(`insert into ordini (tipo,stato,totale_cent,chiave_invio,creato_il,token,fascia,cliente_nome,cliente_telefono,cliente_email,zona_id,zona_nome,consegna_cent,indirizzo,note_consegna,pagamento,contanti_da_cent,privacy_il,rete)
-      values ($1,'in_attesa',$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,clock_timestamp(),$16) returning id`,
-    [dati.tipo,totali.totaleCent,chiaveInvio,token,dati.fascia,dati.nome,dati.telefono,dati.email,zona?.id ?? null,zona?.nome ?? null,totali.consegnaCent,dati.indirizzo,dati.noteConsegna,dati.pagamento,dati.contantiDaCent,input.rete])
+    // Dalla cassa: già accettato, senza consenso privacy (dettato a voce), senza rete e senza email.
+    const [ordine] = await tx.query<{ id: string }>(`insert into ordini (tipo,stato,totale_cent,chiave_invio,creato_il,token,fascia,cliente_nome,cliente_telefono,cliente_email,zona_id,zona_nome,consegna_cent,indirizzo,note_consegna,pagamento,contanti_da_cent,privacy_il,rete,origine)
+      values ($1,$17,$2,$3,clock_timestamp(),$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,case when $18::text='cliente' then clock_timestamp() end,$16,$18) returning id`,
+    [dati.tipo,totali.totaleCent,chiaveInvio,token,dati.fascia,dati.nome,dati.telefono,dati.email,zona?.id ?? null,zona?.nome ?? null,totali.consegnaCent,dati.indirizzo,dati.noteConsegna,dati.pagamento,dati.contantiDaCent,
+      cassa ? null : input.rete,cassa ? 'accettato' : 'in_attesa',cassa ? 'cassa' : 'cliente'])
     await salvaRighe(tx,ordine.id,prezzi.righe)
-    await tx.query(`insert into email_ordini (ordine_id,tipo) values ($1,'ricevuto')`,[ordine.id])
+    if (!cassa) await tx.query(`insert into email_ordini (ordine_id,tipo) values ($1,'ricevuto')`,[ordine.id])
     return { ok: true,ordine: (await ordineCasaPerId(tx,ordine.id))! }
   }) } catch (err) {
     // Due invii con la stessa chiave: il secondo trova l'ordine del primo dopo il rollback.
@@ -107,7 +119,8 @@ async function cambiaStato(db: Db, id: string, da: StatoCasa[], verso: (o: { tip
     const nuovo = verso(o)
     if (!nuovo) return null
     await tx.query(`update ordini set stato=$2,aggiornato_il=clock_timestamp()${extra.set ? `,${extra.set}` : ''} where id=$1`,[id,nuovo,...(extra.parametri ?? [])])
-    if (extra.email) await tx.query(`insert into email_ordini (ordine_id,tipo) values ($1,$2) on conflict (ordine_id,tipo) do nothing`,[id,extra.email])
+    // Le email partono solo per gli ordini del cliente: quelli della cassa non hanno indirizzo né consenso.
+    if (extra.email) await tx.query(`insert into email_ordini (ordine_id,tipo) select id,$2 from ordini where id=$1 and origine='cliente' on conflict (ordine_id,tipo) do nothing`,[id,extra.email])
     return ordineCasaPerId(tx,id)
   })
 }

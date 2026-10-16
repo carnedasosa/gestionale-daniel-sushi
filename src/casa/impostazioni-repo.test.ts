@@ -62,8 +62,10 @@ it('disponibilità: fasce di oggi per servizio, con capacità e consegne occupat
   await prepara()
   const d = await leggiDisponibilita(db,ADESSO,true)
   expect(d.oggi).toBe('2026-10-12')
-  expect(d.servizi.asporto).toEqual({ apertura: { aperto: true },fasce: ['2026-10-12T16:30:00.000Z','2026-10-12T16:45:00.000Z'],piene: [] })
-  expect(d.servizi.domicilio).toEqual({ apertura: { aperto: true },fasce: ['2026-10-12T16:30:00.000Z','2026-10-12T16:45:00.000Z'],piene: [] })
+  expect(d.servizi.asporto).toMatchObject({ apertura: { aperto: true },fasce: ['2026-10-12T16:30:00.000Z','2026-10-12T16:45:00.000Z'],piene: [] })
+  expect(d.servizi.domicilio).toMatchObject({ apertura: { aperto: true },fasce: ['2026-10-12T16:30:00.000Z','2026-10-12T16:45:00.000Z'],piene: [] })
+  // Per la cassa: tutte le fasce non ancora iniziate, anche quelle dentro l'anticipo.
+  expect(d.servizi.asporto.future.length).toBeGreaterThanOrEqual(2); expect(d.servizi.asporto.future).toContain('2026-10-12T16:30:00.000Z'); expect(d.occupazione).toEqual([])
   await db.query(`insert into ordini (tipo,stato,totale_cent,token,fascia,cliente_nome,cliente_telefono,cliente_email,zona_nome,consegna_cent,indirizzo,pagamento,privacy_il)
     values ('domicilio','in_attesa',1700,$1,'2026-10-12T16:30:00Z','A','3331234567','a@b.it','Bitetto',200,'Via Roma 1','carta',now()),
            ('asporto','rifiutato',1700,$2,'2026-10-12T16:45:00Z','A','3331234567','a@b.it',null,0,null,'carta',now())`,['A'.repeat(32),'B'.repeat(32)])
@@ -77,7 +79,9 @@ it('disponibilità: allergeni, interruttore di ieri e giorno di chiusura', async
   await prepara()
   await db.query(`insert into categorie (id,nome,posizione) values ('c','C',1)`)
   await db.query(`insert into piatti (categoria_id,nome,prezzo_cent,posizione) values ('c','A',100,1)`)
-  expect((await leggiDisponibilita(db,ADESSO,false)).servizi.asporto).toEqual({ apertura: { aperto: false,motivo: 'allergeni' },fasce: [],piene: [] })
+  expect((await leggiDisponibilita(db,ADESSO,false)).servizi.asporto).toEqual({ apertura: { aperto: false,motivo: 'allergeni' },fasce: [],piene: [],future: [] })
+  // La cassa prende ordini a voce anche senza allergeni confermati.
+  expect((await leggiDisponibilita(db,ADESSO,false,'cassa')).servizi.asporto.apertura).toEqual({ aperto: true })
   await impostaApertura(db,'2026-10-11')
   expect((await leggiDisponibilita(db,ADESSO,true)).servizi.asporto.apertura).toEqual({ aperto: false,motivo: 'spenti' })
   await impostaApertura(db,'2026-10-12'); await aggiungiChiusura(db,'2026-10-12',null)
@@ -89,5 +93,8 @@ it('disponibilità: con tutte le fasce piene il servizio è chiuso per «fasce»
   await db.query(`insert into ordini (tipo,stato,totale_cent,token,fascia,cliente_nome,cliente_telefono,cliente_email,zona_nome,consegna_cent,indirizzo,pagamento,privacy_il)
     values ('domicilio','accettato',1700,$1,'2026-10-12T16:30:00Z','A','3331234567','a@b.it','Bitetto',200,'Via Roma 1','carta',now()),
            ('domicilio','in_attesa',1700,$2,'2026-10-12T16:45:00Z','A','3331234567','a@b.it','Bitetto',200,'Via Roma 1','carta',now())`,['C'.repeat(32),'D'.repeat(32)])
-  expect((await leggiDisponibilita(db,ADESSO,true)).servizi.domicilio).toEqual({ apertura: { aperto: false,motivo: 'fasce' },fasce: [],piene: ['2026-10-12T16:30:00.000Z','2026-10-12T16:45:00.000Z'] })
+  const pieno = (await leggiDisponibilita(db,ADESSO,true)).servizi.domicilio
+  expect(pieno).toMatchObject({ apertura: { aperto: false,motivo: 'fasce' },fasce: [],piene: ['2026-10-12T16:30:00.000Z','2026-10-12T16:45:00.000Z'] })
+  expect(pieno.future).toEqual(expect.arrayContaining(['2026-10-12T16:30:00.000Z','2026-10-12T16:45:00.000Z']))
+  expect((await leggiDisponibilita(db,ADESSO,true)).occupazione).toEqual([{ fascia: '2026-10-12T16:30:00.000Z',totale: 1,domicilio: 1 },{ fascia: '2026-10-12T16:45:00.000Z',totale: 1,domicilio: 1 }])
 })

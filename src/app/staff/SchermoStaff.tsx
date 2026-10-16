@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useContext, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatEuro } from '@/domain/soldi'
@@ -113,7 +114,8 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita }: { dati: DatiS
     .sort((a,b) => a.quando.localeCompare(b.quando))
   const aperti = tavoli.filter(t => t.sessione).map(t => ({ id: t.sessione!.id,nome: t.nome,totaleCent: riepiloghi.find(r => r.sessioneId === t.sessione!.id)?.totaleCent ?? 0 }))
   return <>
-    <BarraStaff vista={vista} daGuardare={daAccettare.length + nuovi.length} ora={ora} online={<OrdiniOnlineBarra stato={ordiniOnline} inCorso={inCorso} esegui={esegui} uscita={uscita} />} />
+    <BarraStaff vista={vista} daGuardare={daAccettare.length + nuovi.length} ora={ora} azioni={<Link href="/staff/nuovo-ordine" className="b-staff-barra__bottone">Nuovo ordine</Link>}
+      online={<OrdiniOnlineBarra stato={ordiniOnline} inCorso={inCorso} esegui={esegui} uscita={uscita} />} />
     {errore && <p role="alert" className="b-avviso b-avviso--ritardo b-staff__avviso">{errore}</p>}
     <section aria-label="Ordini" hidden={vista !== 'ordini'} className="b-staff__vista">
       <div className="b-colonne">

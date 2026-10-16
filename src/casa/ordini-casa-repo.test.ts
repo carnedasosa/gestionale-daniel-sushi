@@ -160,3 +160,44 @@ it('l’ordine riporta l’ora dell’ultimo cambio di stato, per la cronologia 
   expect(letto.aggiornatoIl).toBeInstanceOf(Date)
   expect(letto.aggiornatoIl.getTime()).toBeGreaterThanOrEqual(new Date(letto.creatoIl).getTime())
 })
+it('dalla cassa: già accettato, senza email né privacy, conta nella fascia e ignora i limiti', async () => {
+  const { db } = ambiente
+  await impostaApertura(db,null); await db.query('update piatti set allergeni_confermati=false where numero=2'); await db.query('update impostazioni_casa set telefono=null')
+  const dallaCassa = { origine: 'cassa' as const,rete: null,dati: { ...asporto,email: null } }
+  const o = await crea(dallaCassa)
+  expect(o).toMatchObject({ stato: 'accettato',origine: 'cassa',clienteEmail: null,clienteNome: 'Anna' })
+  expect(await db.query('select privacy_il,rete from ordini where id=$1',[o.id])).toEqual([{ privacy_il: null,rete: null }])
+  expect(await db.query('select tipo from email_ordini')).toEqual([])
+  await avanzaOrdineCasa(db,o.id,'accettato'); expect(await annullaOrdineCasa(db,o.id)).toMatchObject({ stato: 'annullato' })
+  expect(await db.query('select tipo from email_ordini')).toEqual([])
+  // Un'email scritta a mano resta salvata ma non fa partire nulla.
+  const conEmail = await crea({ ...dallaCassa,dati: asporto })
+  expect(conEmail.clienteEmail).toBe('anna@esempio.it'); expect(await db.query('select tipo from email_ordini')).toEqual([])
+  // Niente limite di tre in attesa per telefono (gli ordini della cassa non restano mai in attesa) né di dieci per rete.
+  await db.query('update impostazioni_casa set capacita_fascia=50')
+  for (let i = 0; i < 3; i++) await crea({ ...dallaCassa,dati: { ...asporto,fascia: F1845 } })
+  for (let i = 0; i < 10; i++) await crea({ ...dallaCassa,dati: { ...asporto,fascia: F1845 },rete: '192.0.2.1' })
+  // La fascia è occupata come dal sito: con capacità 2 il cliente trova le 18:30 piene (conEmail + questo; l'annullato non conta).
+  await db.query('update impostazioni_casa set capacita_fascia=2')
+  await crea(dallaCassa)
+  await impostaApertura(db,'2026-10-12'); await db.query('update piatti set allergeni_confermati=true'); await db.query(`update impostazioni_casa set telefono='0801234567'`)
+  expect(await invia()).toMatchObject({ ok: false,campo: 'fascia' })
+})
+it('dalla cassa: fascia piena solo con la forzatura, mai una fascia passata o un giorno di chiusura', async () => {
+  const { db } = ambiente
+  const dallaCassa = { origine: 'cassa' as const,rete: null,dati: { ...asporto,email: null } }
+  await crea(dallaCassa); await crea(dallaCassa)
+  expect(await invia(dallaCassa)).toMatchObject({ ok: false,campo: 'fascia',errore: expect.stringContaining('non è più disponibile') })
+  expect(await crea({ ...dallaCassa,forzaFascia: true })).toMatchObject({ stato: 'accettato' })
+  // Dentro l'anticipo minimo (18:15 con anticipo 30') la forzatura vale: l'ordine è dettato adesso.
+  expect(await crea({ ...dallaCassa,forzaFascia: true,dati: { ...asporto,email: null,fascia: new Date('2026-10-12T16:15:00.000Z') } })).toMatchObject({ stato: 'accettato' })
+  expect(await invia({ ...dallaCassa,forzaFascia: true,dati: { ...asporto,email: null,fascia: new Date('2026-10-12T15:45:00.000Z') } })).toMatchObject({ ok: false,campo: 'fascia',errore: expect.stringContaining('già passato') })
+  // Dal cliente la forzatura non vale.
+  expect(await invia({ forzaFascia: true })).toMatchObject({ ok: false,campo: 'fascia' })
+  // Tutte le fasce piene (resta solo quella delle 18:30): il sito è chiuso per «fasce», la cassa forza lo stesso; con il locale chiuso no.
+  await db.query('delete from orari_casa'); await aggiungiOrario(db,{ servizio: 'asporto',giorno: 1,dalle: '18:30',alle: '18:45' })
+  expect(await invia(dallaCassa)).toMatchObject({ ok: false,campo: 'tipo',errore: 'Nessuna fascia libera per oggi.' })
+  expect(await crea({ ...dallaCassa,forzaFascia: true })).toMatchObject({ stato: 'accettato' })
+  await db.query(`insert into chiusure_casa (data) values ('2026-10-12')`)
+  expect(await invia({ ...dallaCassa,forzaFascia: true })).toMatchObject({ ok: false,campo: 'tipo',errore: 'Oggi siamo chiusi.' })
+})

@@ -35,3 +35,8 @@
 .b-cronologia__testo { flex-grow: 1; padding-top: 2px; }
 .b-cronologia__passo--attuale .b-cronologia__testo { font-weight: 800; color: var(--b-st-preparazione-testo); }
 .b-cronologia__passo--da_fare .b-cronologia__testo { color: var(--b-grafite); }
+/* Orari con l'occupazione sotto (cassa): celle più larghe, orari pieni forzabili. */
+.b-orari--cassa { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+.b-orari--cassa .b-orario { flex-direction: column; gap: 2px; min-height: 60px; }
+.b-orario__sotto { font-size: .6875rem; font-weight: 600; opacity: .8; }
+.b-orario--forzato { border-style: dashed; }
