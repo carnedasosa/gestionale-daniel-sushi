@@ -8,12 +8,15 @@ Il lavoro è diviso in tappe:
 - **Tappa 2**: tavoli, QR, codice del cameriere, carrello con note e poke, cucina e conto.
 - **Tappa 3**: asporto e domicilio: zone, orari, fasce, checkout, accettazione con suono, pagina dello stato ed email.
 - **Tappa 4**: messa online: connessione cifrata al database, Vercel a Francoforte, prove end-to-end, poi dominio ed email.
+- **Il locale**: ordini dalla cassa (telefono e WhatsApp), comanda del cameriere, reparti nel menù (banco sushi, cucina, sala), comande per reparto e postazioni dei dispositivi.
 
 Documentazione di progetto:
 
 - Specifica: [`docs/superpowers/specs/2026-10-11-gestionale-ordini-design.md`](docs/superpowers/specs/2026-10-11-gestionale-ordini-design.md)
 - Specifica della tappa 3: [`docs/superpowers/specs/2026-10-12-tappa-3-domicilio-asporto-design.md`](docs/superpowers/specs/2026-10-12-tappa-3-domicilio-asporto-design.md)
 - Specifica della tappa 4: [`docs/superpowers/specs/2026-10-13-tappa-4-messa-online-design.md`](docs/superpowers/specs/2026-10-13-tappa-4-messa-online-design.md)
+- Specifica del locale (reparti, postazioni, cassa e cameriere): [`docs/superpowers/specs/2026-10-16-reparti-e-cassa-design.md`](docs/superpowers/specs/2026-10-16-reparti-e-cassa-design.md)
+- Verbali delle prove: [`docs/verifiche/`](docs/verifiche/) (l'ultima serata simulata: [`2026-10-16-serata-quattro-dispositivi.md`](docs/verifiche/2026-10-16-serata-quattro-dispositivi.md))
 - Piani di lavoro: [`docs/superpowers/plans/`](docs/superpowers/plans/)
 
 ## Requisiti
@@ -60,11 +63,14 @@ Documentazione di progetto:
 | `npm run typecheck` | controlla i tipi TypeScript |
 | `npm run lint` | esegue ESLint |
 | `npm run build` | compila l'app per la produzione |
-| `npm run e2e` | prove end-to-end nel browser (tavolo e ordine da casa) sulla build di produzione, con un database finto |
+| `npm run e2e` | prove end-to-end nel browser (tavolo, ordine da casa, ordine dalla cassa, reparti) sulla build di produzione, con un database finto |
+| `npm run serata` | simulazione di una serata intera a quattro dispositivi dello staff (circa 5 minuti con la compilazione), sullo stesso database finto |
 
 ## Prove end-to-end
 
 `npm run e2e` compila l'app, la avvia su http://127.0.0.1:3100 e la collega a un database PGlite in memoria (`e2e/db-locale.ts`) con migrazioni, seed e dati di prova: il database reale non viene mai toccato. Il login dello staff usa Supabase Auth con l'utente di prova (`E2E_EMAIL`, `E2E_PASSWORD`), che riceve il ruolo admin solo nel database finto. La prima volta serve `npx playwright install chromium`. Dopo le 23:00 la prova da casa si salta, perché le fasce non attraversano la mezzanotte. Con `E2E_DEBUG=1` il database finto stampa le interrogazioni che riceve.
+
+`npm run serata` simula una serata con il tablet della cassa, quelli del banco sushi e della cucina, il telefono di un cameriere, 6 tavoli e 7 ordini da casa (5 dal sito, 2 presi dalla cassa), con gli imprevisti di una serata vera. Alla fine controlla sul database ordini, conti, comande per reparto e origini, e scrive tempi e problemi in `test-results/serata/risultati.json`. Va lanciata prima delle 22 di Roma.
 
 ## Pubblicazione
 
@@ -72,7 +78,10 @@ L'app gira su Vercel, con le funzioni a Francoforte (`regions` in `vercel.json`)
 
 ## Database
 
-- Le migrazioni sono in `supabase/migrations/`.
+- Le migrazioni sono in `supabase/migrations/` e si applicano in ordine di nome. Le ultime tre, del locale, vanno applicate **in quest'ordine**, ognuna prima del deploy che la legge:
+  1. `20261016120000_origine_ordini.sql` — colonna `ordini.origine` (`cliente`, `cassa`, `cameriere`) e vincoli per gli ordini della cassa;
+  2. `20261017120000_reparti_menu.sql` — `categorie.reparto` e `righe_ordine.reparto`, con i reparti delle righe già esistenti;
+  3. `20261018120000_comande_reparto.sql` — tabella `comande`, con le comande anche per gli ordini già esistenti.
 - Il seed del menù è generato da `data/menu-sito.json` con `npm run seed`, che scrive `supabase/seed.sql`. Il seed è pensato per un database vuoto.
 
 ## Utenti
@@ -121,11 +130,13 @@ Apri `/staff` e tocca **Inizia turno**: il browser sblocca il suono e richiede d
 
 Apri un tavolo e comunica il codice di quattro cifre al cliente. Non ci sono codici uguali fra tavoli aperti; alla riapertura il codice cambia. In cucina gli ordini passano da **Inviato** a **In preparazione**, poi **Servito**. Puoi annullare un ordine prima che sia servito, oppure una singola riga. Il conto esclude gli annullati e raggruppa le voci con lo stesso prezzo e le stesse scelte poke.
 
-Dal dettaglio di un tavolo aperto (scheda **Tavoli**) il cameriere, loggato sul proprio telefono, può toccare **Ordina per il tavolo**: stesso menù e stesso carrello dei clienti, ma senza codice né cookie del tavolo, perché conta il login dello staff. La comanda nasce con origine `cameriere`, va in cucina con il chip «Dal cameriere», compare con lo stesso chip in «Ordinato finora» sui telefoni del tavolo e finisce nello stesso conto. Se il tavolo viene chiuso nel frattempo l'invio è rifiutato e la pagina rimanda alla piantina.
-
 Il conto è stampabile dal browser ed è solo un riepilogo da battere in cassa, **non uno scontrino fiscale**. Chiudendo il tavolo i clienti non possono più inviare ordini. Se restano comande in cucina o sono arrivate dopo il conto viene chiesta una conferma esplicita. La chiusura apre il conto; la cucina conserva le comande con «Tavolo chiuso» e «Conti recenti» conserva i link per sei ore. Dal conto puoi annullare una voce anche servita.
 
-### Postazioni e comande per reparto
+### Comanda del cameriere
+
+Il cliente ordina dal QR; il cameriere è la riserva per il tavolo che non vuole farlo da solo. Dal dettaglio di un tavolo aperto (scheda **Tavoli**) il cameriere, loggato sul proprio telefono (postazione **Sala**), tocca **Ordina per il tavolo** (`/staff/tavolo/[sessione]/ordina`): stesso menù e stesso carrello dei clienti, ma senza codice né cookie del tavolo, perché conta il login dello staff. La comanda nasce con origine `cameriere`, si divide nei reparti come le altre, compare con il chip «Dal cameriere» sugli schermi dello staff e in «Ordinato finora» sui telefoni del tavolo e finisce nello stesso conto. Il carrello del cameriere è separato per tavolo (`sessionStorage`), e come per i clienti ritentare lo stesso invio non crea doppioni. Se il tavolo viene chiuso nel frattempo l'invio è rifiutato e la pagina rimanda alla piantina. Non serve nessuna migrazione oltre a quella dell'origine (`20261016120000_origine_ordini.sql`).
+
+### Postazioni
 
 Ogni dispositivo dello staff ha una **postazione**, scelta all'inizio del turno («Questo dispositivo è») o in seguito da **Postazione…** nella barra, e ricordata in un cookie (`ds_postazione`, solo sotto `/staff`, un anno). L'indirizzo `/staff?postazione=banco` la impone per quella pagina senza salvarla: «Inizia turno» la salva.
 
@@ -134,6 +145,12 @@ Ogni dispositivo dello staff ha una **postazione**, scelta all'inizio del turno 
 | Cassa | Ordini, Tavoli, Conti, Menù, **Nuovo ordine**, ordini online | tutti gli ordini come prima, con un chip per reparto e la striscia «Da portare al tavolo» | ogni 10 s finché c'è un ordine da casa da accettare; tre bip per ogni voce nuova da portare |
 | Banco sushi / Cucina | Ordini, Menù | Da preparare · In preparazione · Pronte, solo le comande del proprio reparto | tre bip per ogni comanda nuova |
 | Sala (telefoni dei camerieri) | Ordini, Tavoli, Conti | come la cassa, senza interruttore online e senza «Nuovo ordine» | tre bip per ogni voce nuova da portare |
+
+Banco e cucina non vedono gli ordini da accettare, i tavoli né i conti: il server carica solo le comande del loro reparto. Gli ordini da casa compaiono al banco e in cucina solo dopo che la cassa li ha accettati. Senza cookie e senza `?postazione=` il dispositivo è la cassa.
+
+### Reparti e comande
+
+Ogni categoria del menù ha un **reparto**, cioè chi la prepara: **Banco sushi** (tartare, sashimi, sushi-gio, hosomaki, nigiri, triangolini, uramaki, special roll, poke bowl, box), **Cucina** (starter, primi, dessert) e **Sala** (beverage: le bevande le prende la sala, non la cucina). Il reparto si cambia in `/admin/menu`, nell'intestazione di ogni categoria, e vale per gli ordini da quel momento: ogni riga d'ordine copia il reparto alla creazione (`righe_ordine.reparto`), così cambiare categoria non sposta le comande già in corso. La poke composta va al reparto della categoria `poke-bowl`. Il seed parte con questa divisione (`REPARTO_SEED` in `src/domain/reparti.ts`); la migrazione `20261017120000_reparti_menu.sql` aggiunge le colonne e assegna il reparto anche alle righe già esistenti. Sugli schermi della cassa e della sala le righe di un ordine che tocca più reparti si dividono sotto «Banco sushi», «Cucina», «Sala», e la card ha un chip per reparto con il suo stato (es. «Cucina: In preparazione», «Sala: da portare»), con i colori di stato già esistenti.
 
 Ogni ordine ha una **comanda per reparto** presente nelle righe (tabella `comande`): banco, cucina, sala (= bevande). Il reparto avanza solo la propria («Inizia a preparare», «Segna pronta») e lo stato dell'ordine si ricava dalle comande nella stessa transazione:
 
@@ -171,7 +188,7 @@ Sullo schermo staff gli ordini da casa compaiono in **Da accettare** con un suon
 
 Applica la migrazione `20261016120000_origine_ordini.sql`: aggiunge la colonna `origine` (`cliente`, `cassa`, `cameriere`) agli ordini e allenta i vincoli per quelli della cassa. Va autorizzata prima di applicarla al database reale.
 
-Gli ordini presi al telefono o su WhatsApp si inseriscono da **Nuovo ordine** nella barra dello schermo staff (`/staff/nuovo-ordine`): stesso menù del sito, poi **Dati del cliente** con asporto o domicilio, orario, nome e telefono, pagamento; l'email è facoltativa e non si chiede il consenso privacy (l'ordine è dettato a voce). L'ordine nasce già **accettato**, va in cucina con il chip «Dalla cassa» e **occupa l'orario** come quelli del sito; per questi ordini non partono email e non valgono i limiti per telefono e per rete. La cassa può ordinare anche con gli ordini online chiusi o con allergeni da confermare (l'obbligo vale per la vendita a distanza), ma non in un giorno di chiusura e solo nei turni impostati. Sotto ogni orario c'è l'occupazione (es. `3/4`); gli orari pieni o troppo vicini sono barrati e si sbloccano con **Forza**: il sito vedrà quell'orario pieno.
+Gli ordini presi al telefono o su WhatsApp si inseriscono da **Nuovo ordine** nella barra dello schermo staff (`/staff/nuovo-ordine`): stesso menù del sito, poi **Dati del cliente** con asporto o domicilio, orario, nome e telefono, pagamento; l'email è facoltativa e non si chiede il consenso privacy (l'ordine è dettato a voce). L'ordine nasce già **accettato**, va in cucina con il chip «Dalla cassa» e **occupa l'orario** come quelli del sito; per questi ordini non partono email e non valgono i limiti per telefono e per rete. Gli ordini dalla cassa valgono anche con **Apri ordini di oggi** spento (l'interruttore governa solo il sito): la cassa può ordinare anche con gli ordini online chiusi o con allergeni da confermare (l'obbligo vale per la vendita a distanza), ma non in un giorno di chiusura e solo nei turni impostati. Sotto ogni orario c'è l'occupazione (es. `3/4`); gli orari pieni o troppo vicini sono barrati e si sbloccano con **Forza**: il sito vedrà quell'orario pieno.
 
 Le email (ricevuto, accettato, rifiutato, annullato) si accodano nel database e partono subito dopo l'azione; quelle non riuscite si ritentano a ogni aggiornamento dello schermo staff, fino a 5 volte. Servono `RESEND_API_KEY`, `EMAIL_MITTENTE` con un dominio verificato e `APP_URL`; senza, le email restano in coda e l'app funziona lo stesso. Ogni giorno alle 3 il cron di Vercel (`vercel.json`) chiama `/api/cron/anonimizza`, che toglie i dati personali dagli ordini da casa più vecchi di 12 mesi.
 
