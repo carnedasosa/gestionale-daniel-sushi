@@ -2,6 +2,7 @@ import type { Db } from '@/server/db-tipi'
 import { validaCarrello, type RigaCarrello } from '@/domain/carrello'
 import { validaPoke, type SceltePoke } from '@/domain/poke'
 import { prossimoStato, type StatoOrdineTavolo } from '@/domain/stati-tavolo'
+import { puoAnnullareCasa, type StatoCasa } from '@/domain/stati-casa'
 import type { OrigineOrdine } from '@/domain/origine-ordine'
 import { CATEGORIA_POKE, type Reparto } from '@/domain/reparti'
 import { leggiAllergeniPoke, leggiPokeConfig } from './poke-repo'
@@ -121,8 +122,11 @@ export async function avanzaStato(db: Db, ordineId: string, da: StatoOrdineTavol
     return (await leggiOrdini(tx,'o.id=$1',[ordineId]))[0] ?? null
   })
 }
-/** Esito di un annullamento: `conto_chiuso` se il tavolo è già stato chiuso (il conto incassato non si tocca più). */
-export type EsitoAnnullo = 'ok' | 'conto_chiuso' | 'non_disponibile'
+/**
+ * Esito di un annullamento: `conto_chiuso` se il tavolo è già stato chiuso (il conto incassato non si tocca più),
+ * `ordine_concluso` se l'ordine da casa è già completato (consegnato o ritirato, quindi incassato).
+ */
+export type EsitoAnnullo = 'ok' | 'conto_chiuso' | 'ordine_concluso' | 'non_disponibile'
 // Blocca la sessione prima degli ordini (stesso ordine di chiudiSessione e annullaVoceConto): una chiusura in corso aspetta o viene vista.
 async function contoChiuso(tx: Db,sessioneId: string | null): Promise<boolean> {
   if (!sessioneId) return false
@@ -151,10 +155,13 @@ export async function annullaRiga(db: Db, rigaId: string, utenteId: string): Pro
   return db.transazione(async tx => {
     const [s] = await tx.query<{ sessioneId: string | null }>('select o.sessione_id as "sessioneId" from ordini o join righe_ordine r on r.ordine_id=o.id where r.id=$1',[rigaId])
     if (!s) return 'non_disponibile'
+    // Al tavolo decide la sessione (bloccata prima dell'ordine); da casa sessione_id è null e decide lo stato dell'ordine.
     if (await contoChiuso(tx,s.sessioneId)) return 'conto_chiuso'
-    // Il lock sull'ordine serializza annullamenti di righe diverse e il ricalcolo.
-    const [o] = await tx.query<{ id: string }>(`select o.id from ordini o join righe_ordine r on r.ordine_id=o.id where r.id=$1 and o.stato not in ('annullato','rifiutato') for update of o`,[rigaId])
-    if (!o) return 'non_disponibile'
+    // Il lock sull'ordine serializza annullamenti di righe diverse, i cambi di stato e il ricalcolo: lo stato letto qui è quello aggiornato.
+    const [o] = await tx.query<{ id: string; tipo: 'tavolo' | 'asporto' | 'domicilio'; stato: string }>('select o.id,o.tipo,o.stato from ordini o join righe_ordine r on r.ordine_id=o.id where r.id=$1 for update of o',[rigaId])
+    if (!o || o.stato === 'annullato') return 'non_disponibile'
+    // Da casa una riga si annulla solo dove si annullerebbe l'intero ordine (stessa regola di annullaOrdineCasa).
+    if (o.tipo !== 'tavolo' && !puoAnnullareCasa(o.stato as StatoCasa)) return o.stato === 'completato' ? 'ordine_concluso' : 'non_disponibile'
     const [r] = await tx.query<{ importoCent: number }>('update righe_ordine set annullata=true where id=$1 and not annullata returning prezzo_unit_cent*quantita as "importoCent"',[rigaId])
     if (!r) return 'non_disponibile'
     await ricalcolaOrdine(tx,o.id)

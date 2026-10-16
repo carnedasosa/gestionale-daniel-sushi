@@ -62,3 +62,9 @@ it('gli annullamenti registrano l’utente staff e rifiutano i conti chiusi con 
     expect(await chiama()).toEqual({ ok: false,errore: 'Operazione non disponibile: aggiorna lo schermo.' })
   }
 })
+it('una riga di un ordine da casa già completato si rifiuta con un messaggio che non parla di tavolo', async () => {
+  m.annullaRiga.mockResolvedValueOnce('ordine_concluso')
+  expect(await annullaRigaStaff(id)).toEqual({ ok: false,errore: 'L’ordine è già completato: non si può più modificare.' })
+  expect(m.richiediRuolo.mock.invocationCallOrder[0]).toBeLessThan(m.annullaRiga.mock.invocationCallOrder[0])
+  expect(m.revalidatePath).not.toHaveBeenCalled()
+})
