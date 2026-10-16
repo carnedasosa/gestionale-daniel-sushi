@@ -1,19 +1,27 @@
 import { expect, type Browser, type Page } from '@playwright/test'
 
-/** Login dell'utente di prova (E2E_EMAIL/E2E_PASSWORD in .env.local) e schermo staff con il turno iniziato. */
-export async function apriSchermoStaff(browser: Browser): Promise<Page> {
+export type PostazioneStaff = 'cassa' | 'banco' | 'cucina' | 'sala'
+/** Login dell'utente di prova (E2E_EMAIL/E2E_PASSWORD in .env.local) e schermo staff della postazione con il turno iniziato. */
+export async function apriSchermoStaff(browser: Browser, postazione: PostazioneStaff = 'cassa', viewport = { width: 1280,height: 900 }, opzioni: { hasTouch?: boolean } = {}): Promise<Page> {
   const { E2E_EMAIL: email,E2E_PASSWORD: password } = process.env
   if (!email || !password) throw new Error('Servono E2E_EMAIL ed E2E_PASSWORD in .env.local')
-  const page = await (await browser.newContext({ viewport: { width: 1280,height: 900 } })).newPage()
+  const page = await (await browser.newContext({ viewport,...opzioni })).newPage()
   await page.goto('/accesso')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button',{ name: 'Entra' }).click()
   await page.waitForURL('**/admin')
-  await page.goto('/staff')
-  await page.getByRole('button',{ name: 'Inizia turno' }).click()
-  await expect(page.getByRole('heading',{ name: /^Da preparare/ })).toBeVisible()
+  await iniziaTurno(page,postazione)
   return page
+}
+
+/** Apre /staff con la postazione e tocca «Inizia turno», che la salva nel cookie del dispositivo. */
+export async function iniziaTurno(page: Page, postazione: PostazioneStaff = 'cassa', vista?: string) {
+  await page.goto(`/staff?postazione=${postazione}${vista ? `&vista=${vista}` : ''}`)
+  await expect(page.getByRole('radio',{ name: { cassa: 'Cassa',banco: 'Banco sushi',cucina: 'Cucina',sala: 'Sala' }[postazione] })).toBeChecked()
+  await page.getByRole('button',{ name: 'Inizia turno' }).click()
+  await expect.poll(async () => (await page.context().cookies()).find(c => c.name === 'ds_postazione')?.value).toBe(postazione)
+  if (!vista) await expect(page.getByRole('heading',{ name: /^Da preparare/ })).toBeVisible()
 }
 
 /** Passa a una scheda dello schermo staff (Ordini, Tavoli, Conti): le altre restano montate ma nascoste. */

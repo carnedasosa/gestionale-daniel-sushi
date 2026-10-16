@@ -8,9 +8,13 @@ import { idValido } from '@/tavoli/validazione'
 // Ordine dei lock, uguale per tutti: sessione → ordine → comande. Le comande si toccano solo
 // dopo aver bloccato l'ordine, così la cassa (bottoni a cascata, annullamenti) e i reparti non si incrociano.
 
-/** Una comanda per ogni reparto delle righe appena salvate. Dentro la transazione dell'invio. */
+/**
+ * Una comanda per ogni reparto delle righe appena salvate. Dentro la transazione dell'invio.
+ * Da casa niente comanda «sala»: le bevande le mette nel sacchetto la cassa, che porta avanti l'ordine.
+ */
 export async function creaComande(tx: Db, ordineId: string): Promise<void> {
-  await tx.query('insert into comande (ordine_id,reparto) select distinct $1::uuid,reparto from righe_ordine where ordine_id=$1 order by reparto',[ordineId])
+  await tx.query(`insert into comande (ordine_id,reparto) select distinct r.ordine_id,r.reparto from righe_ordine r join ordini o on o.id=r.ordine_id
+    where r.ordine_id=$1 and (o.tipo='tavolo' or r.reparto<>'sala') order by r.reparto`,[ordineId])
 }
 
 /** Riallinea ordini.stato alle comande. L'ordine deve essere già bloccato. */

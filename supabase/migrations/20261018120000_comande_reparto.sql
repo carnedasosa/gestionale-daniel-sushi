@@ -3,6 +3,7 @@
 -- ricava dalle comande nella stessa transazione (tutte da preparare → inviato/accettato,
 -- qualcuna avanzata → in_preparazione, tutte pronte → servito/pronto).
 -- portata_il: quando la sala ha portato al tavolo la parte pronta (non entra nello stato dell'ordine).
+-- Gli ordini da casa non hanno comanda «sala»: le bevande le mette nel sacchetto la cassa.
 create table public.comande (
   id uuid primary key default gen_random_uuid(),
   ordine_id uuid not null references public.ordini(id) on delete cascade,
@@ -29,7 +30,8 @@ cross join lateral (select case
   when g.tutte_annullate or o.stato in ('annullato','rifiutato') then 'annullata'
   when o.stato = 'in_preparazione' then 'in_preparazione'
   when o.stato in ('servito','pronto','in_consegna','completato') then 'pronta'
-  else 'da_preparare' end as stato) s;
+  else 'da_preparare' end as stato) s
+where o.tipo = 'tavolo' or g.reparto <> 'sala';
 
 alter table public.comande enable row level security;
 revoke all on public.comande from anon, authenticated;

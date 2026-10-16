@@ -41,10 +41,11 @@ it('backfill: una comanda per reparto, con lo stato coerente con l’ordine', as
   expect((await comande(ids.in_preparazione)).map(c => [c.reparto,c.stato,c.iniziata,c.pronta])).toEqual([['banco','in_preparazione',true,false],['cucina','in_preparazione',true,false]])
   expect(await comande(ids.servito)).toEqual([{ reparto: 'banco',stato: 'pronta',pronta: true,portata: true,iniziata: true },{ reparto: 'cucina',stato: 'pronta',pronta: true,portata: true,iniziata: true }])
   expect((await comande(ids.annullato)).map(c => c.stato)).toEqual(['annullata','annullata'])
-  expect((await comande(ids.in_attesa)).map(c => [c.reparto,c.stato])).toEqual([['banco','da_preparare'],['sala','da_preparare']])
-  expect((await comande(ids.accettato)).map(c => c.stato)).toEqual(['da_preparare','da_preparare'])
-  expect((await comande(ids.rifiutato)).map(c => c.stato)).toEqual(['annullata','annullata'])
-  for (const s of ['pronto','completato']) expect((await comande(ids[s])).map(c => [c.stato,c.portata])).toEqual([['pronta',true],['pronta',true]])
+  // Da casa le bevande non hanno comanda: le insacchetta la cassa.
+  expect((await comande(ids.in_attesa)).map(c => [c.reparto,c.stato])).toEqual([['banco','da_preparare']])
+  expect((await comande(ids.accettato)).map(c => c.stato)).toEqual(['da_preparare'])
+  expect((await comande(ids.rifiutato)).map(c => c.stato)).toEqual(['annullata'])
+  for (const s of ['pronto','completato']) expect((await comande(ids[s])).map(c => [c.stato,c.portata])).toEqual([['pronta',true]])
 })
 it('backfill: reparto con tutte le righe annullate → annullata; ordine senza righe → nessuna comanda', async () => {
   expect((await comande(ids.mezzo)).map(c => [c.reparto,c.stato])).toEqual([['banco','da_preparare'],['cucina','annullata']])

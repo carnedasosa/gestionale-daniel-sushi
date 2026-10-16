@@ -137,6 +137,17 @@ it('da portare: bibite da servire e piatti pronti; «Portate» li toglie dalla s
   expect(await chiudiSessione(ambiente.db,sessione,null)).toEqual({ ok: true })
   expect(await daPortare(ambiente.db)).toEqual([])
 })
+it('da casa niente comanda per le bevande: le mette nel sacchetto la cassa', async () => {
+  const { creaOrdineCasa } = await import('@/casa/ordini-casa-repo')
+  await preparaCasa(ambiente.db)
+  const { F1830,ADESSO } = await import('../../tests/db/casa-pronta')
+  const e = await creaOrdineCasa(ambiente.db,{ righe: [{ piattoId: piatti.tartare,quantita: 1,nota: '' },{ piattoId: piatti.beverage,quantita: 1,nota: '' }],totaleVistoCent: 850,chiaveInvio: randomUUID(),rete: null,adesso: ADESSO,prova: false,origine: 'cassa',
+    dati: { tipo: 'asporto',zonaId: null,indirizzo: null,noteConsegna: null,fascia: F1830,nome: 'Anna',telefono: '3331234567',email: null,pagamento: 'carta',contantiDaCent: null } })
+  if (!e.ok) throw new Error(e.errore)
+  expect(await comande(e.ordine.id)).toEqual({ banco: 'da_preparare' })
+  await avanzaComanda(ambiente.db,await idComanda(e.ordine.id,'banco'),'da_preparare'); await avanzaComanda(ambiente.db,await idComanda(e.ordine.id,'banco'),'in_preparazione')
+  expect(await statoOrdine(e.ordine.id)).toBe('pronto')
+})
 it('da casa niente striscia e niente «Portate»', async () => {
   const { piatto } = await preparaCasa(ambiente.db)
   const casa = await ordineAsporto(ambiente.db,piatto)
