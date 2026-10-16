@@ -83,6 +83,7 @@ L'app gira su Vercel, con le funzioni a Francoforte (`regions` in `vercel.json`)
   2. `20261017120000_reparti_menu.sql` — `categorie.reparto` e `righe_ordine.reparto`, con i reparti delle righe già esistenti;
   3. `20261018120000_comande_reparto.sql` — tabella `comande`, con le comande anche per gli ordini già esistenti.
 - Il seed del menù è generato da `data/menu-sito.json` con `npm run seed`, che scrive `supabase/seed.sql`. Il seed è pensato per un database vuoto.
+- **Controlli di coerenza degli ordini.** Lo stato degli ordini e i totali li tiene allineati il codice, non il database. `scripts/sql/coerenza-ordini.sql` raccoglie interrogazioni di sola lettura che cercano gli ordini incoerenti: totale diverso da righe attive + consegna, stato che non segue le comande dei reparti, comande senza righe attive o righe attive senza comanda, comande «sala» negli ordini da casa, chiavi d'invio e comande doppie. Sul DB reale si eseguono in una transazione read only con `npx tsx --env-file=.env.local scripts/interroga-sql.ts scripts/sql/coerenza-ordini.sql`. Ogni controllo stampa una tabella: **zero righe vuol dire tutto coerente**, altrimenti ogni riga è un ordine da sistemare, con i valori trovati e quelli attesi. Il test `tests/db/coerenza-ordini.test.ts` esegue lo stesso file su PGlite.
 
 ## Utenti
 
