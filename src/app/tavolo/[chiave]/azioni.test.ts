@@ -48,8 +48,8 @@ it('tavolo assente o chiuso non accetta codice', async () => {
   m.sessioneDelTavolo.mockResolvedValueOnce(null)
   expect((await entraAlTavolo('abcdefghijkl',{ errore: null },fd())).errore).toContain('non è ancora aperto')
 })
-it('blocca anche il codice giusto dopo cinque errori o trenta per tavolo', async () => {
-  for (const errori of [{ dispositivo: 5, ip: 0, sessione: 5 }, { dispositivo: 0, ip: 0, sessione: 30 }]) {
+it('blocca anche il codice giusto dopo cinque errori del telefono, venti della rete o trenta per tavolo', async () => {
+  for (const errori of [{ dispositivo: 5, ip: 0, sessione: 5 }, { dispositivo: 0, ip: 20, sessione: 20 }, { dispositivo: 0, ip: 0, sessione: 30 }]) {
     m.contaErrori.mockResolvedValueOnce(errori)
     expect((await entraAlTavolo('abcdefghijkl',{ errore: null },fd())).errore).toContain('Troppi tentativi')
   }

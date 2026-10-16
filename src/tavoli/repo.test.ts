@@ -49,6 +49,10 @@ it('limite end-to-end su repo reale: dispositivo, IP, finestra, sblocco e riaper
   expect(await contaErrori(db,{ sessioneId: s.id,dispositivo,ip,minuti: 10 })).toEqual({ dispositivo: 5,ip: 5,sessione: 5 })
   const entra = async (d: string,i: string) => !bloccato(await contaErrori(db,{ sessioneId: s.id,dispositivo: d,ip: i,minuti: 10 })) && !!await verificaCodice(db,t.id,s.codice)
   expect(await entra(dispositivo,'192.0.2.2')).toBe(false)
+  // Un vicino sullo stesso Wi-Fi entra: la rete si blocca solo a venti errori.
+  expect(await entra(randomUUID(),ip)).toBe(true)
+  for (let i=0; i<15; i++) await registraTentativoFallito(db,{ tavoloId: t.id,sessioneId: s.id,dispositivo: randomUUID(),ip })
+  expect(await contaErrori(db,{ sessioneId: s.id,dispositivo: randomUUID(),ip,minuti: 10 })).toEqual({ dispositivo: 0,ip: 20,sessione: 20 })
   expect(await entra(randomUUID(),ip)).toBe(false)
   expect(await entra(randomUUID(),'192.0.2.2')).toBe(true)
   await sbloccaSessione(db,s.id)
