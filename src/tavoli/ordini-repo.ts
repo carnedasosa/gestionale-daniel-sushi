@@ -2,14 +2,15 @@ import type { Db } from '@/server/db-tipi'
 import { validaCarrello, type RigaCarrello } from '@/domain/carrello'
 import { validaPoke, type SceltePoke } from '@/domain/poke'
 import { prossimoStato, type StatoOrdineTavolo } from '@/domain/stati-tavolo'
+import type { OrigineOrdine } from '@/domain/origine-ordine'
 import { leggiAllergeniPoke, leggiPokeConfig } from './poke-repo'
 import { idValido } from './validazione'
 
 export interface RigaOrdine { id: string; numero: number | null; nome: string; prezzoUnitCent: number; quantita: number; nota: string | null; poke: SceltePoke | null; annullata: boolean }
-export interface Ordine { id: string; numero: number; stato: StatoOrdineTavolo; totaleCent: number; creatoIl: Date; sessioneId: string; tavoloNome: string; tavoloChiuso: boolean; righe: RigaOrdine[] }
+export interface Ordine { id: string; numero: number; stato: StatoOrdineTavolo; totaleCent: number; creatoIl: Date; sessioneId: string; tavoloNome: string; tavoloChiuso: boolean; origine: OrigineOrdine; righe: RigaOrdine[] }
 export type OrdineClient = Omit<Ordine,'creatoIl'> & { creatoIl: string }
 export type EsitoCreazione = { ok: true; ordine: Ordine } | { ok: false; errore: string; nonDisponibili?: string[]; nonDisponibiliIds?: string[] }
-const COLONNE_ORDINE = `o.id,o.numero,o.stato,o.totale_cent as "totaleCent",o.creato_il as "creatoIl",o.sessione_id as "sessioneId",t.nome as "tavoloNome",(s.chiusa_il is not null) as "tavoloChiuso"`
+const COLONNE_ORDINE = `o.id,o.numero,o.stato,o.totale_cent as "totaleCent",o.creato_il as "creatoIl",o.sessione_id as "sessioneId",t.nome as "tavoloNome",(s.chiusa_il is not null) as "tavoloChiuso",o.origine`
 const COLONNE_RIGA = `id,numero,nome,prezzo_unit_cent as "prezzoUnitCent",quantita,nota,poke,annullata`
 async function leggiOrdini(db: Db, condizione: string, parametri: unknown[] = []): Promise<Ordine[]> {
   const ordini = await db.query<Omit<Ordine,'righe'>>(`select ${COLONNE_ORDINE} from ordini o join sessioni_tavolo s on s.id=o.sessione_id join tavoli t on t.id=s.tavolo_id where ${condizione} order by o.creato_il,o.numero`,parametri)
@@ -55,7 +56,8 @@ async function ordineGiaInviato(db: Db,sessioneId: string,key: string): Promise<
   const [o] = await leggiOrdini(db,'o.chiave_invio=$1',[key])
   return o ? o.sessioneId === sessioneId ? { ok: true,ordine: o } : { ok: false,errore: 'Invio non valido: ricarica il carrello e riprova.' } : null
 }
-export async function creaOrdineTavolo(db: Db, sessioneId: string, input: RigaCarrello[], chiaveInvio: string): Promise<EsitoCreazione> {
+/** `origine`: 'cliente' dal telefono al tavolo, 'cameriere' dallo staff loggato che ordina per un tavolo aperto. */
+export async function creaOrdineTavolo(db: Db, sessioneId: string, input: RigaCarrello[], chiaveInvio: string, origine: Extract<OrigineOrdine,'cliente' | 'cameriere'> = 'cliente'): Promise<EsitoCreazione> {
   const chiuso = { ok: false as const, errore: 'Il tavolo è stato chiuso: chiedi al personale' }
   if (!idValido(sessioneId)) return chiuso
   if (!idValido(chiaveInvio)) return { ok: false,errore: 'Chiave di invio non valida.' }
@@ -71,7 +73,7 @@ export async function creaOrdineTavolo(db: Db, sessioneId: string, input: RigaCa
     if (!s || s.chiusaIl) return chiuso
     const prezzi = await prezzaRighe(tx,carrello.righe)
     if (!prezzi.ok) return prezzi
-    const [ordine] = await tx.query<{ id: string }>('insert into ordini(sessione_id,totale_cent,chiave_invio,creato_il) values ($1,$2,$3,clock_timestamp()) returning id',[sessioneId,prezzi.totaleCent,chiaveInvio])
+    const [ordine] = await tx.query<{ id: string }>('insert into ordini(sessione_id,totale_cent,chiave_invio,origine,creato_il) values ($1,$2,$3,$4,clock_timestamp()) returning id',[sessioneId,prezzi.totaleCent,chiaveInvio,origine])
     await salvaRighe(tx,ordine.id,prezzi.righe)
     return { ok: true, ordine: (await leggiOrdini(tx,'o.id=$1',[ordine.id]))[0] }
   }) } catch (err) {

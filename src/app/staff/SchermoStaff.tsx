@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useContext, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatEuro } from '@/domain/soldi'
+import { etichettaOrigine } from '@/domain/origine-ordine'
 import { arriviCucina, leggiStatoArrivi, segnaLetto, type StatoArrivi } from '@/domain/arrivi-cucina'
 import type { OrdineClient, RiepilogoTavolo } from '@/tavoli/ordini-repo'
 import type { TavoloConSessione, ContoRecente } from '@/tavoli/repo'
@@ -31,7 +32,7 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui }: { ordin
       <h3 className="b-comanda__titolo"><span className="b-comanda__nome">{o.tavoloNome}</span> <span className="b-num b-comanda__numero">· n. {o.numero}</span></h3>
       <span className="b-num b-comanda__timer" aria-label={`${minuti} min`}>{minuti}′</span>
     </div>
-    {nuovo && <span className="b-etichetta b-etichetta--accettare">Nuovo ordine</span>}
+    {(nuovo || etichettaOrigine(o.origine)) && <div className="b-comanda__etichette">{nuovo && <span className="b-etichetta b-etichetta--accettare">Nuovo ordine</span>}{etichettaOrigine(o.origine) && <span className="b-etichetta">{etichettaOrigine(o.origine)}</span>}</div>}
     <p className="b-comanda__meta b-num">{formatEuro(o.totaleCent)}</p>
     {o.tavoloChiuso && <p className="b-nota">Tavolo chiuso</p>}
     <DettaglioRighe righe={o.righe} area="staff" />
