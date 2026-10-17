@@ -468,6 +468,8 @@ test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli e 
     await Promise.all([perIlTavolo,...telefoni.map(async (tel,p) => {
       const chi = `${nome} · ${String.fromCharCode(65 + p)}`
       await attendi(tra(0,4000))
+      // Tavolo 3 · A: col limite per rete a 20 entra già mentre B è bloccato, quindi dopo lo sblocco non rifà l'ingresso.
+      let giaSeduto = false
       if (indice === 2 && p === 0) {
         await bloccato
         await tel.goto(`/tavolo/${chiave}`)
@@ -475,7 +477,7 @@ test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli e 
         await Promise.all([tel.waitForResponse(r => r.request().method() === 'POST'),tel.getByRole('button',{ name: 'Entra al tavolo' }).click()])
         await attendi(500)
         if (await avviso(tel).count()) osserva(chi,`codice GIUSTO, ma stessa rete del telefono bloccato: «${(await avviso(tel).textContent())!.trim()}»`)
-        else log(chi,'entra col codice giusto nonostante il telefono bloccato')
+        else { giaSeduto = true; log(chi,'entra col codice giusto nonostante il telefono bloccato') }
         await sbloccato
       } else if (indice === 2 && p > 1) await sbloccato
       if (indice === 2 && p === 1) {
@@ -497,7 +499,8 @@ test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli e 
         await sblocca(nome)
         segnalaSbloccato()
       }
-      await entra(tel,chiave,codice,chi)
+      if (giaSeduto) { await expect(tel.getByRole('button',{ name: /^Rivedi e manda in cucina · / })).toBeVisible({ timeout: 30_000 }); log(chi,'seduto al tavolo') }
+      else await entra(tel,chiave,codice,chi)
       const giri = tra(1,3)
       for (let g = 0; g < giri; g++) {
         let imprevisto: Imprevisto = null
