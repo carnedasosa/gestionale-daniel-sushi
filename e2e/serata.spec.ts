@@ -6,7 +6,8 @@
 //   bibite e piatti pronti), Menù (esauriti) e Nuovo ordine (2 ordini presi al telefono, asporto e domicilio);
 // - il tablet del banco sushi e quello della cucina, ognuno con le sole comande del proprio reparto;
 // - il telefono di un cameriere (postazione sala), che ordina per un tavolo da /staff/tavolo/[sessione]/ordina.
-// Clienti: 6 tavoli con 2–4 telefoni ciascuno e 5 clienti da casa. In mezzo, gli imprevisti di una serata vera.
+// Clienti: 6 tavoli con 3–4 ordini ciascuno (da 2–4 telefoni) e 5 ordini a domicilio dal sito: la serata
+// tipo del locale secondo Daniel. In mezzo, gli imprevisti di una serata vera.
 // Alla fine controlla sul database che nessun ordine sia andato perso o doppio, che i conti tornino e che
 // le comande per reparto siano coerenti, e scrive tempi (anche per reparto) e problemi in
 // test-results/serata/risultati.json.
@@ -362,7 +363,7 @@ async function comandaCameriere(cam: Page, tavolo: string, piatti: [string,strin
 }
 
 // ── La serata ─────────────────────────────────────────────────────────────────────────────────
-test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli e ordini da casa', async ({ browser }) => {
+test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli con 3–4 ordini e 5 ordini a domicilio', async ({ browser }) => {
   test.skip(oraDiRoma() >= 22,'Servono orari liberi per gli ordini da casa: lanciare prima delle 22 di Roma.')
   const db = new pg.Client({ connectionString: URL_DB })
   await db.connect()
@@ -458,7 +459,11 @@ test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli e 
     const { nome,chiave } = TAVOLI[indice]
     await attendi(indice * 15_000)
     const codice = await apri(nome)
-    const persone = tra(2,4)
+    // Ogni tavolo manda 3 o 4 ordini, divisi tra 2–4 telefoni: ogni telefono ne manda almeno uno.
+    const ordiniPrevisti = tra(3,4)
+    const persone = tra(2,Math.min(4,ordiniPrevisti))
+    const giriPerTelefono = Array.from({ length: persone },() => 1)
+    for (let resto = ordiniPrevisti - persone; resto > 0; resto--) giriPerTelefono[tra(0,persone - 1)]++
     const telefoni = await Promise.all(Array.from({ length: persone },() => apriTelefono(browser)))
     // Tavolo 3: B sbaglia il codice 5 volte; A, sulla stessa rete, prova subito dopo con il codice giusto.
     let segnalaBloccato!: () => void, segnalaSbloccato!: () => void
@@ -501,7 +506,7 @@ test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli e 
       }
       if (giaSeduto) { await expect(tel.getByRole('button',{ name: /^Rivedi e manda in cucina · / })).toBeVisible({ timeout: 30_000 }); log(chi,'seduto al tavolo') }
       else await entra(tel,chiave,codice,chi)
-      const giri = tra(1,3)
+      const giri = giriPerTelefono[p]
       for (let g = 0; g < giri; g++) {
         let imprevisto: Imprevisto = null
         if (g === 0 && p === 0 && indice === 1) imprevisto = 'doppio-tocco'
@@ -554,12 +559,13 @@ test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli e 
   })()
 
   const clienti = (async () => {
+    // 5 ordini a domicilio dal sito (uno rifiutato); con 2 consegne per fascia, dal terzo si passa all'orario dopo.
     const lista: [string,string,'asporto' | 'domicilio',[string,string][]][] = [
-      ['Anna Rossi','3330000001','asporto',[['special-roll','Sake roll'],['nigiri','Salmone']]],
+      ['Anna Rossi','3330000001','domicilio',[['special-roll','Sake roll'],['nigiri','Salmone']]],
       ['Marco Bianchi','3330000002','domicilio',[['poke-bowl','Daniel\'s poke'],['beverage','Coca Cola']]],
-      [RIFIUTA,'3330000003','asporto',[['primi','Ramen']]],
+      [RIFIUTA,'3330000003','domicilio',[['primi','Ramen']]],
       ['Giulia Verdi','3330000004','domicilio',[['special-roll','Rainbow roll'],['tartare','Tonno']]],
-      ['Luca Neri','3330000005','asporto',[['sushi-gio','Gio salmone'],['hosomaki','Tonno']]],
+      ['Luca Neri','3330000005','domicilio',[['sushi-gio','Gio salmone'],['hosomaki','Tonno']]],
     ]
     const aperti: { tel: Page; numero: number; nome: string }[] = []
     for (const [i,[nome,telefono,tipo,piatti]] of lista.entries()) {
@@ -670,6 +676,13 @@ test('serata simulata: cassa, banco, cucina, telefono del cameriere, 6 tavoli e 
   }
   if (daCasa.filter(d => d.origine === 'cassa').length !== 2) problema('controlli','gli ordini presi dalla cassa non sono 2')
   if (dalCameriere.length !== 1) problema('controlli','la comanda del cameriere non è arrivata')
+  // La serata tipo: 3–4 ordini dai clienti di ogni tavolo (più quello del cameriere al Tavolo 5) e 5 domicili dal sito.
+  for (const { nome } of TAVOLI) {
+    const dagliOspiti = inviati.filter(i => i.tavolo === nome && !dalCameriere.includes(i.numero)).length
+    if (dagliOspiti < 3 || dagliOspiti > 4) problema('controlli',`${nome}: ${dagliOspiti} ordini dai clienti, attesi 3 o 4`)
+  }
+  const domiciliDalSito = daCasa.filter(d => d.origine === 'cliente' && d.tipo === 'domicilio').length
+  if (domiciliDalSito !== 5) problema('controlli',`ordini a domicilio dal sito: ${domiciliDalSito}, attesi 5`)
 
   const statistiche = (xs: number[]) => {
     const s = [...xs].sort((a,b) => a - b)
