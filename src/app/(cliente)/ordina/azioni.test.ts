@@ -33,3 +33,10 @@ it('errore del database: messaggio italiano che invita a riprovare senza paura d
   m.creaOrdineCasa.mockRejectedValueOnce(new Error('connessione'))
   expect(await inviaOrdineCasa(corpo())).toEqual({ ok: false,errore: 'Non siamo sicuri che l’ordine sia arrivato. Riprova: se era già arrivato non verrà duplicato.' })
 })
+it('lock o istruzione scaduti: messaggio «sistema occupato», niente email', async () => {
+  for (const code of ['55P03','57014']) {
+    m.creaOrdineCasa.mockRejectedValueOnce(Object.assign(new Error('canceling statement due to timeout'),{ code }))
+    expect(await inviaOrdineCasa(corpo())).toEqual({ ok: false,errore: 'Il sistema è occupato, riprova tra qualche secondo: se l’ordine era già arrivato non verrà duplicato.' })
+  }
+  expect(m.avviaInvioEmail).not.toHaveBeenCalled()
+})

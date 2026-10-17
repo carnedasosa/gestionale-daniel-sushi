@@ -24,7 +24,7 @@ export function SchermoReparto({ postazione,dati,ora,vista = 'ordini',uscita }: 
   const mostrati = useUltimiDati(dati)
   const comande = mostrati?.comande
   const suona = useContext(SuonoTurno)
-  const { esegui,inCorso,errore } = useEsegui()
+  const { azioniDi,errore } = useEsegui()
   const { nuovi,leggi } = useArrivi(`ds_arrivi_${postazione}`,comande?.map(c => c.id),() => suona(3))
   const barra = (n: number) => <BarraStaff postazione={postazione} vista={vista} daGuardare={n} online={null} ora={ora} uscita={uscita} />
   if (!comande) return <>{barra(0)}<p role="status" className="b-staff__vuoto">Caricamento dello schermo…</p></>
@@ -38,7 +38,7 @@ export function SchermoReparto({ postazione,dati,ora,vista = 'ordini',uscita }: 
           return <section key={col.chiave} className="b-colonna" aria-labelledby={`col-${col.chiave}`}>
             <h2 id={`col-${col.chiave}`} className="b-colonna__titolo"><span className={`b-punto ${col.punto}`} aria-hidden="true" />{col.titolo} <span className="b-num b-secondario">{qui.length}</span></h2>
             {!qui.length && <p className="b-secondario">Nessuna comanda.</p>}
-            {qui.map(c => <CardComanda key={c.id} comanda={c} ora={ora} nuova={nuovi.includes(c.id)} inCorso={inCorso} leggi={() => leggi(c.id)} esegui={esegui} />)}
+            {qui.map(c => <CardComanda key={c.id} comanda={c} ora={ora} nuova={nuovi.includes(c.id)} {...azioniDi(`comanda:${c.id}`)} leggi={() => leggi(c.id)} />)}
           </section> })}
       </div>
     </section>

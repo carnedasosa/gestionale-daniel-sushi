@@ -18,6 +18,7 @@ it('crea un solo pool con le opzioni condivise, ne ascolta gli errori e restitui
   expect(await db.query('select 2')).toEqual([])
   expect(m.Pool).toHaveBeenCalledOnce()
   expect(m.Pool).toHaveBeenCalledWith({ connectionString: 'postgres://prova', max: 5, connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000,
+    statement_timeout: 15000, lock_timeout: 5000, idle_in_transaction_session_timeout: 30000,
     ssl: { ca: CA_SUPABASE_2021, rejectUnauthorized: true } })
   expect(m.on).toHaveBeenCalledWith('error', expect.any(Function))
   expect(m.query).toHaveBeenNthCalledWith(1, 'select $1 as a', [1])

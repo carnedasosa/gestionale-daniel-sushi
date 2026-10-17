@@ -9,12 +9,11 @@ import { DettaglioRighe } from '@/componenti/DettaglioRighe'
 import { ConfermaAzione } from '@/componenti/ConfermaAzione'
 import { AltreAzioni } from '@/componenti/AltreAzioni'
 import { Pannello } from '@/componenti/Pannello'
-import type { EsitoStaff } from './azioni'
 import type { StatoReparto } from '@/comande/comande-repo'
 import { ChipComande } from './DaPortare'
 import { annullaRigaStaff } from './azioni'
 import { accettaOrdineStaff, annullaOrdineCasaStaff, apriOrdiniOnline, avanzaOrdineCasaStaff, chiudiOrdiniOnline, rifiutaOrdineStaff } from './azioni-casa'
-type Esegui = (azione: () => Promise<EsitoStaff>) => void
+import type { Esegui } from './useEsegui'
 export interface OrdiniOnline { accesi: boolean; asporto: string | null; domicilio: string | null }
 /** Contenuto del pannello «Ordini online»: stato dei due servizi e interruttore della giornata. */
 export function PannelloOrdiniOnline({ stato,inCorso,esegui }: { stato: OrdiniOnline; inCorso: boolean; esegui: Esegui }) {

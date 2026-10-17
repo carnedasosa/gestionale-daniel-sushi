@@ -8,7 +8,8 @@ import { prossimoStato, type StatoOrdineTavolo } from '@/domain/stati-tavolo'
 import { idValido } from '@/tavoli/validazione'
 export interface EsitoStaff { ok: boolean; errore?: string; codice?: string; avviso?: { motivo: 'ordini_in_cucina' | 'ordini_dopo_conto'; n: number } }
 const NON_DISPONIBILE = 'Operazione non disponibile: aggiorna lo schermo.'
-// Gli annullamenti rispondono con un EsitoAnnullo ('ok' | 'conto_chiuso' | 'non_disponibile'), le altre operazioni con un valore o null.
+// Gli annullamenti rispondono con un EsitoAnnullo ('ok' | 'conto_chiuso' | 'ordine_concluso' | 'non_disponibile'), le altre operazioni con un valore o null.
+// `conto_chiuso` riguarda solo i tavoli, `ordine_concluso` gli ordini da casa già consegnati o ritirati.
 async function operazione(fn: () => Promise<unknown>,nonDisponibile = NON_DISPONIBILE): Promise<EsitoStaff> {
   let risultato: unknown
   try { risultato = await fn() } catch (err) {
@@ -16,6 +17,7 @@ async function operazione(fn: () => Promise<unknown>,nonDisponibile = NON_DISPON
     return { ok: false, errore: 'Operazione non riuscita, riprova.' }
   }
   if (risultato === 'conto_chiuso') return { ok: false, errore: 'Il conto di questo tavolo è già chiuso: non si può più modificare.' }
+  if (risultato === 'ordine_concluso') return { ok: false, errore: 'L’ordine è già completato: non si può più modificare.' }
   if (!risultato || risultato === 'non_disponibile') return { ok: false, errore: nonDisponibile }
   revalidatePath('/staff')
   revalidatePath('/staff/conto/[sessione]','page')

@@ -38,5 +38,7 @@ it('rifiuto del repository riportato con i piatti esauriti; eccezione del DB div
   expect(await inviaOrdineCameriere(sessione,json,chiaveInvio)).toMatchObject({ ok: false,nonDisponibili: ['Salmone'] })
   m.creaOrdineTavolo.mockRejectedValueOnce(new Error('connessione'))
   expect(await inviaOrdineCameriere(sessione,json,chiaveInvio)).toMatchObject({ ok: false,errore: expect.stringContaining('Non siamo sicuri') })
+  m.creaOrdineTavolo.mockRejectedValueOnce(Object.assign(new Error('istruzione scaduta'),{ code: '57014' }))
+  expect(await inviaOrdineCameriere(sessione,json,chiaveInvio)).toMatchObject({ ok: false,errore: expect.stringContaining('sistema è occupato') })
   expect(m.revalidatePath).not.toHaveBeenCalled()
 })

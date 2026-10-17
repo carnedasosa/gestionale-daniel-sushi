@@ -100,6 +100,8 @@
 .b-requisito--da-fare .b-requisito__segno { background: var(--b-accettare-pieno); color: var(--b-su-pieno); }
 .b-requisito__testo { flex: 1 1 240px; }
 .b-requisito a { font-weight: 700; min-height: 44px; display: inline-flex; align-items: center; }
+.b-avviso-email { flex-direction: column; align-items: stretch; gap: 6px; }
+.b-avviso-email > p { flex: none; }
 .b-turni { display: flex; flex-wrap: wrap; gap: 6px; }
 .b-turno { display: inline-flex; align-items: center; gap: 2px; padding: 2px 2px 2px 12px; border-radius: 999px; background: var(--b-carta); font-family: var(--b-font-numeri), monospace; font-weight: 700; font-size: .875rem; }
 .b-turno .b-btn { min-width: 40px; min-height: 40px; padding: 0; border-radius: 50%; }

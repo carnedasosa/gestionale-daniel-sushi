@@ -70,9 +70,19 @@ it('dettaglio del tavolo: la conferma di chiusura nomina il tavolo; tocco sul ta
   const { VistaTavoli } = await import('./VistaTavoli')
   const sessione = { id: 's2',tavoloId: 't2',codice: '1593',apertaIl: '2026-10-11T18:05:00.000Z',tentativi: 0 }
   const tavoli = [{ id: 't2',nome: 'Tavolo 2',slug: 'tavolo-2',chiave: 'k2',posizione: 2,attivo: true,sessione }]
-  const html = renderToStaticMarkup(<VistaTavoli tavoli={tavoli} riepiloghi={[]} ordini={[]} inCorso={false} esegui={() => {}} />)
+  const html = renderToStaticMarkup(<VistaTavoli tavoli={tavoli} riepiloghi={[]} ordini={[]} azioniDi={() => ({ inCorso: false,esegui: () => {} })} />)
   expect(html).toContain('Chiudere Tavolo 2? I clienti non potranno più ordinare.')
   expect(html).toMatch(/<aside[^>]*id="dettaglio-tavolo"/); expect(html).toMatch(/aria-controls="dettaglio-tavolo"/); expect(html).toMatch(/<h2[^>]*tabindex="-1"[^>]*>Tavolo 2<\/h2>/)
+})
+it('piantina: l’azione in corso su un tavolo disabilita solo il suo bottone, gli altri tavoli restano usabili', async () => {
+  const { VistaTavoli } = await import('./VistaTavoli')
+  const libero = (id: string,nome: string) => ({ id,nome,slug: id,chiave: `k${id}`,posizione: 1,attivo: true,sessione: null })
+  const chiavi: string[] = []
+  const html = renderToStaticMarkup(<VistaTavoli tavoli={[libero('t1','Tavolo 1'),libero('t2','Tavolo 2')]} riepiloghi={[]} ordini={[]}
+    azioniDi={chiave => { chiavi.push(chiave); return { inCorso: chiave === 'tavolo:t1',esegui: () => {} } }} />)
+  expect(chiavi).toEqual(['tavolo:t1','tavolo:t2'])
+  const bottoni = html.match(/<button[^>]*>Apri tavolo<\/button>/g)!
+  expect(bottoni).toHaveLength(2); expect(bottoni[0]).toContain('disabled'); expect(bottoni[1]).not.toContain('disabled')
 })
 it('dettaglio del tavolo: se il tavolo scelto non è più aperto non si passa da soli a un altro', async () => {
   const { tavoloDelDettaglio } = await import('./VistaTavoli')

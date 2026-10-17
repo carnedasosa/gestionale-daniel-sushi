@@ -103,6 +103,17 @@ export async function sbloccaSessione(db: Db, id: string): Promise<boolean> {
   await db.query('delete from tentativi_codice where sessione_id=$1',[id])
   return true
 }
+/**
+ * Cancella i tentativi di codice al tavolo (IP e identificativo del dispositivo) più vecchi di `giorni` giorni.
+ * I limiti guardano solo gli ultimi FINESTRA_MINUTI minuti: oltre, quei dati non servono più. Idempotente; la chiama il cron notturno.
+ * Nessun indice sul solo creato_il (quelli esistenti partono da tavolo_id o sessione_id): la tabella resta piccola proprio
+ * grazie a questa pulizia quotidiana, quindi una scansione sequenziale una volta al giorno è accettabile.
+ */
+export async function eliminaTentativiVecchi(db: Db, adesso: Date, giorni = 30): Promise<number> {
+  if (Number.isNaN(adesso.getTime()) || !Number.isSafeInteger(giorni) || giorni < 1) throw new Error('Parametri della pulizia dei tentativi non validi')
+  return (await db.query<{ n: number }>(`with tolti as (delete from tentativi_codice where creato_il < $1::timestamptz - make_interval(days => $2::int) returning 1)
+    select count(*)::int as n from tolti`,[adesso,giorni]))[0].n
+}
 export async function verificaCodice(db: Db, tavoloId: string, codice: string): Promise<SessioneAperta | null> {
   if (!idValido(tavoloId) || typeof codice !== 'string' || !/^\d{4}$/.test(codice)) return null
   return (await db.query<SessioneAperta>(`select ${SESSIONE} from sessioni_tavolo where tavolo_id=$1 and codice=$2 and chiusa_il is null`, [tavoloId,codice]))[0] ?? null

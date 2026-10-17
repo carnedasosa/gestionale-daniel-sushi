@@ -34,5 +34,7 @@ it('errori del repository: campo evidenziato, prezzi cambiati, eccezione', async
   expect(await inviaOrdineCassa(json())).toEqual({ ok: false,errore: 'I prezzi sono cambiati',totaleCent: 1300 })
   m.creaOrdineCasa.mockRejectedValueOnce(new Error('connessione'))
   expect(await inviaOrdineCassa(json())).toMatchObject({ ok: false,errore: expect.stringContaining('Non siamo sicuri') })
+  m.creaOrdineCasa.mockRejectedValueOnce(Object.assign(new Error('lock scaduto'),{ code: '55P03' }))
+  expect(await inviaOrdineCassa(json())).toMatchObject({ ok: false,errore: expect.stringContaining('sistema è occupato') })
   expect(m.revalidatePath).not.toHaveBeenCalled()
 })

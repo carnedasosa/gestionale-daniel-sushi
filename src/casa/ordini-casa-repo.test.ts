@@ -4,7 +4,7 @@ import { creaDbDiTest } from '../../tests/db/pglite'
 import type { DatiCheckout } from '@/domain/checkout'
 import type { RigaCarrello } from '@/domain/carrello'
 import { aggiungiOrario, creaZona, impostaApertura, salvaImpostazioni, type Zona } from './impostazioni-repo'
-import { accettaOrdine, anonimizzaOrdiniCasa, annullaOrdineCasa, avanzaOrdineCasa, creaOrdineCasa, ordineCasaPerToken, ordiniCasaAttivi, rifiutaOrdine, type InputOrdineCasa } from './ordini-casa-repo'
+import { accettaOrdine, anonimizzaOrdiniCasa, annullaOrdineCasa, avanzaOrdineCasa, azzeraRetiVecchie, creaOrdineCasa, ordineCasaPerToken, ordiniCasaAttivi, rifiutaOrdine, type InputOrdineCasa } from './ordini-casa-repo'
 import { annullaRiga, ordiniAttivi } from '@/tavoli/ordini-repo'
 import { leggiPokeConfig, salvaAllergeniPoke, salvaPokeConfig, leggiAllergeniPoke } from '@/tavoli/poke-repo'
 const UTENTE = '22222222-2222-4222-8222-222222222222'
@@ -151,6 +151,21 @@ it('anonimizzazione dopo 12 mesi, idempotente', async () => {
     .toEqual([{ cliente_nome: null,cliente_telefono: null,cliente_email: null,indirizzo: null,note_consegna: null,rete: null,fatto: true,zona_nome: 'Bitetto',totale_cent: 2000 }])
   expect(await db.query('select nota from righe_ordine where ordine_id=$1',[vecchio.id])).toEqual([{ nota: null }])
   expect(await db.query('select cliente_nome from ordini where id=$1',[recente.id])).toEqual([{ cliente_nome: 'Anna' }])
+})
+it('la rete si azzera dopo 30 giorni, il resto dei dati personali resta fino ai 12 mesi; idempotente', async () => {
+  const { db } = ambiente
+  const vecchio = await crea({ dati: domicilio(),righe: righe(3),totaleVistoCent: 2000 })
+  const recente = await crea({ rete: '198.51.100.0/24' })
+  const giorniFa = (id: string, giorni: number) => db.query('update ordini set creato_il=$2::timestamptz - make_interval(days => $3::int) where id=$1',[id,ADESSO,giorni])
+  await giorniFa(vecchio.id,31); await giorniFa(recente.id,29)
+  expect(await azzeraRetiVecchie(db,ADESSO)).toBe(1)
+  expect(await azzeraRetiVecchie(db,ADESSO)).toBe(0)
+  expect(await db.query(`select rete,cliente_nome,cliente_telefono,cliente_email,indirizzo,note_consegna,anonimizzato_il from ordini where id=$1`,[vecchio.id]))
+    .toEqual([{ rete: null,cliente_nome: 'Anna',cliente_telefono: '3331234567',cliente_email: 'anna@esempio.it',indirizzo: 'Via Roma 1',note_consegna: 'citofono Rossi',anonimizzato_il: null }])
+  expect(await db.query('select nota from righe_ordine where ordine_id=$1',[vecchio.id])).toEqual([{ nota: 'senza sesamo' }])
+  expect(await db.query('select rete from ordini where id=$1',[recente.id])).toEqual([{ rete: '198.51.100.0/24' }])
+  // I 12 mesi non sono passati: l'anonimizzazione non tocca nessuno dei due.
+  expect(await anonimizzaOrdiniCasa(db,ADESSO)).toBe(0)
 })
 it('l’ordine riporta l’ora dell’ultimo cambio di stato, per la cronologia del cliente', async () => {
   const { db } = ambiente

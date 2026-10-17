@@ -69,7 +69,8 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'ca
   const mostrati = useUltimiDati(dati)
   const ordini = mostrati?.ordini
   const suona = useContext(SuonoTurno)
-  const { esegui,inCorso,errore } = useEsegui()
+  // «In corso» per card: un'azione lenta (o il suo aggiornamento) non blocca le altre card.
+  const { azioniDi,errore } = useEsegui()
   // Ordini al tavolo nuovi: evidenziati finché non si toccano. Suonano le cose da portare al tavolo.
   const { nuovi,leggi } = useArrivi(`ds_arrivi_${postazione}`,ordini?.map(o => o.id),() => {})
   const { nuovi: nuoviDaPortare } = useArrivi(`ds_arrivi_portare_${postazione}`,mostrati?.daPortare?.map(v => v.id),() => suona(3))
@@ -92,27 +93,27 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'ca
   return <>
     <BarraStaff postazione={postazione} vista={vista} daGuardare={daAccettare.length + nuovi.length + nuoviDaPortare.length} ora={ora} uscita={uscita}
       azioni={nuovoOrdineAmmesso(postazione) ? <Link href="/staff/nuovo-ordine" className="b-staff-barra__bottone">Nuovo ordine</Link> : null}
-      online={onlineAmmesso(postazione) ? <OrdiniOnlineBarra stato={ordiniOnline} inCorso={inCorso} esegui={esegui} uscita={uscita} /> : null} />
+      online={onlineAmmesso(postazione) ? <OrdiniOnlineBarra stato={ordiniOnline} {...azioniDi('ordini-online')} uscita={uscita} /> : null} />
     {errore && <p role="alert" className="b-avviso b-avviso--ritardo b-staff__avviso">{errore}</p>}
     <section aria-label="Ordini" hidden={vista !== 'ordini'} className="b-staff__vista">
-      <DaPortare voci={mostrati.daPortare ?? []} nuove={nuoviDaPortare} inCorso={inCorso} esegui={esegui} />
+      <DaPortare voci={mostrati.daPortare ?? []} nuove={nuoviDaPortare} azioniDi={azioniDi} />
       <div className="b-colonne">
         <section className="b-colonna" aria-labelledby="col-accettare">
           <h2 id="col-accettare" className="b-colonna__titolo"><span className="b-punto b-punto--accettare" aria-hidden="true" />Da accettare <span className="b-num b-secondario">{daAccettare.length}</span></h2>
           {!daAccettare.length && <p className="b-secondario">Nessun ordine da accettare.</p>}
-          {daAccettare.map(o => <CardOrdineCasa key={o.id} ordine={o} ora={ora} inCorso={inCorso} esegui={esegui} daAccettare comande={comande[o.id]} />)}
+          {daAccettare.map(o => <CardOrdineCasa key={o.id} ordine={o} ora={ora} {...azioniDi(`casa:${o.id}`)} daAccettare comande={comande[o.id]} />)}
         </section>
         {COLONNE.map(col => { const qui = cucina.filter(x => colonnaCucina(x.o.stato) === col.chiave)
           return <section key={col.chiave} className="b-colonna" aria-labelledby={`col-${col.chiave}`}>
             <h2 id={`col-${col.chiave}`} className="b-colonna__titolo"><span className={`b-punto ${col.punto}`} aria-hidden="true" />{col.titolo} <span className="b-num b-secondario">{qui.length}</span></h2>
             {!qui.length && <p className="b-secondario">Nessun ordine.</p>}
-            {qui.map(x => x.casa ? <CardOrdineCasa key={x.o.id} ordine={x.o} ora={ora} inCorso={inCorso} esegui={esegui} daAccettare={false} comande={comande[x.o.id]} />
-              : <CardOrdine key={x.o.id} ordine={x.o} ora={ora} nuovo={nuovi.includes(x.o.id)} inCorso={inCorso} leggi={() => leggi(x.o.id)} esegui={esegui} comande={comande[x.o.id]} />)}
+            {qui.map(x => x.casa ? <CardOrdineCasa key={x.o.id} ordine={x.o} ora={ora} {...azioniDi(`casa:${x.o.id}`)} daAccettare={false} comande={comande[x.o.id]} />
+              : <CardOrdine key={x.o.id} ordine={x.o} ora={ora} nuovo={nuovi.includes(x.o.id)} {...azioniDi(`ordine:${x.o.id}`)} leggi={() => leggi(x.o.id)} comande={comande[x.o.id]} />)}
           </section> })}
       </div>
     </section>
     <section aria-label="Tavoli" hidden={vista !== 'tavoli'} className="b-staff__vista">
-      <VistaTavoli tavoli={tavoli} riepiloghi={riepiloghi} ordini={ordini} inCorso={inCorso} esegui={esegui} />
+      <VistaTavoli tavoli={tavoli} riepiloghi={riepiloghi} ordini={ordini} azioniDi={azioniDi} />
     </section>
     <section aria-label="Conti" hidden={vista !== 'conti'} className="b-staff__vista">
       <div className="b-conti"><ElencoConti aperti={aperti} recenti={contiRecenti.map(c => ({ id: c.id,nome: c.tavoloNome,chiusaIl: c.chiusaIl }))} corrente={null} />

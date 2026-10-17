@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
+import { erroreDiAttesa } from '@/server/db-adapter'
 import { validaCarrello } from '@/domain/carrello'
 import { validaCheckout } from '@/domain/checkout'
 import { modalitaProva } from '@/domain/apertura-casa'
@@ -33,6 +34,8 @@ export async function inviaOrdineCassa(json: string): Promise<EsitoCheckout> {
     return { ok: true,token: esito.ordine.token,numero: esito.ordine.numero }
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')
+    // Lock o istruzione scaduti: la transazione è annullata e la chiave di invio evita doppioni.
+    if (erroreDiAttesa(err)) return { ok: false,errore: 'Il sistema è occupato, riprova tra qualche secondo: se l’ordine era già arrivato non verrà duplicato.' }
     return { ok: false,errore: 'Non siamo sicuri che l’ordine sia arrivato. Riprova: se era già arrivato non verrà duplicato.' }
   }
 }

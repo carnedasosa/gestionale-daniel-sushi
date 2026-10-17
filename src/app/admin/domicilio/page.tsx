@@ -1,6 +1,7 @@
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
 import { allergeniCompleti, elencoChiusure, elencoOrari, elencoZone, leggiImpostazioni } from '@/casa/impostazioni-repo'
+import { emailInErroreDefinitivo } from '@/casa/email-repo'
 import { leggiAllergeniPoke, leggiPokeConfig } from '@/tavoli/poke-repo'
 import { pokeOrdinabile } from '@/domain/poke'
 import { requisitiCasa } from '@/domain/apertura-casa'
@@ -10,17 +11,20 @@ import { GIORNI } from '@/domain/valida-domicilio'
 import { ApriInPannello } from '@/componenti/ApriInPannello'
 import { BottoneRimuovi, ModuloChiusura, ModuloImpostazioni, ModuloOrario, ModuloZona } from './ModuliDomicilio'
 import { Requisiti } from './Requisiti'
+import { AvvisoEmail } from './AvvisoEmail'
 import { rimuoviChiusuraCasa, rimuoviOrarioCasa } from './azioni'
 export default async function DomicilioAdmin() {
   await richiediRuolo('admin')
   const oggi = dataRoma(new Date())
-  const [impostazioni,zone,orari,chiusure,completi,config] = [await leggiImpostazioni(db),await elencoZone(db),await elencoOrari(db),await elencoChiusure(db,oggi),await allergeniCompleti(db),await leggiPokeConfig(db)]
+  const [impostazioni,zone,orari,chiusure,completi,config,emailInErrore] = [await leggiImpostazioni(db),await elencoZone(db),await elencoOrari(db),await elencoChiusure(db,oggi),await allergeniCompleti(db),await leggiPokeConfig(db),
+    await emailInErroreDefinitivo(db)]
   const poke = config && pokeOrdinabile(config) ? await leggiAllergeniPoke(db,config) : null
   const voci = requisitiCasa({ telefono: impostazioni.telefono,allergeniCompleti: completi,pokeConfermati: poke ? poke.confermati : null,zoneAttive: zone.filter(z => z.attiva).length })
   return <>
     <div className="b-admin-testa"><div className="b-admin-testa__testi"><h1 className="b-titolo-1">Domicilio e asporto</h1>
       <p className="b-secondario">Gli ordini da casa arrivano solo per oggi, negli orari qui sotto, e solo dopo che lo staff li apre dal tablet.</p></div></div>
     <section className="b-card" aria-labelledby="titolo-requisiti"><h2 id="titolo-requisiti" className="b-titolo-3">Si possono aprire gli ordini da casa?</h2><Requisiti voci={voci} /></section>
+    <AvvisoEmail errori={emailInErrore} />
     <div className="b-admin-due">
       <section className="b-card b-admin-largo" aria-labelledby="titolo-orari">
         <div className="b-admin-sezione__testa"><h2 id="titolo-orari" className="b-titolo-3">Orari della settimana</h2><ApriInPannello etichetta="Aggiungi turno" titolo="Aggiungi turno"><ModuloOrario /></ApriInPannello></div>

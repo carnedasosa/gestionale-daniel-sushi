@@ -8,6 +8,8 @@ import { annullaOrdine, annullaRiga, annullaVoceConto, avanzaStato, contoSession
 import { contiRecenti } from './repo'
 import { leggiPokeConfig, salvaPokeConfig } from './poke-repo'
 import { validaCarrello } from '@/domain/carrello'
+import { accettaOrdine, avanzaOrdineCasa, creaOrdineCasa } from '@/casa/ordini-casa-repo'
+import { ADESSO, F1830, ordineAsporto, preparaCasa } from '../../tests/db/casa-pronta'
 const UTENTE = '22222222-2222-4222-8222-222222222222'
 let ambiente: Awaited<ReturnType<typeof creaDbDiTest>>, sessione: string, piatto: string
 beforeEach(async () => {
@@ -196,6 +198,29 @@ it('a conto chiuso voci, righe e ordini non si annullano più e il totale incass
   expect(await contoSessione(db,sessione)).toMatchObject({ totaleCent: 2400,voci: [{ quantita: 4 }] })
   expect((await ordiniDellaSessione(db,sessione)).map(o => o.stato)).toEqual(['servito','inviato'])
   expect(await db.query('select * from registro_annullamenti')).toEqual([])
+})
+it('da casa: un ordine completato non perde righe, uno accettato sì con il totale ricalcolato', async () => {
+  const { db } = ambiente
+  const { piatto: p1 } = await preparaCasa(db)
+  const concluso = await ordineAsporto(db,p1)
+  await accettaOrdine(db,concluso.id,0)
+  for (const da of ['accettato','in_preparazione','pronto'] as const) await avanzaOrdineCasa(db,concluso.id,da)
+  expect(await db.query('select stato,totale_cent from ordini where id=$1',[concluso.id])).toEqual([{ stato: 'completato',totale_cent: 1200 }])
+  expect(await annullaRiga(db,concluso.righe[0].id,UTENTE)).toBe('ordine_concluso')
+  // annullaOrdine lavora solo sui tavoli: un ordine da casa non si annulla da lì.
+  expect(await annullaOrdine(db,concluso.id,UTENTE)).toBe('non_disponibile')
+  expect(await db.query('select stato,totale_cent from ordini where id=$1',[concluso.id])).toEqual([{ stato: 'completato',totale_cent: 1200 }])
+  expect(await db.query('select annullata from righe_ordine where ordine_id=$1',[concluso.id])).toEqual([{ annullata: false }])
+  // Ancora da accettare: le righe si toccano solo dopo l'accettazione, come l'annullamento dell'intero ordine.
+  const [p2] = await db.query<{ id: string; p: number }>('select id,prezzo_cent as p from piatti where numero=2')
+  const e = await creaOrdineCasa(db,{ righe: [{ piattoId: p1,quantita: 2,nota: '' },{ piattoId: p2.id,quantita: 1,nota: '' }],totaleVistoCent: 1200 + p2.p,chiaveInvio: randomUUID(),rete: null,adesso: ADESSO,prova: false,
+    dati: { tipo: 'asporto',zonaId: null,indirizzo: null,noteConsegna: null,fascia: F1830,nome: 'Bruno',telefono: '3337654321',email: 'bruno@esempio.it',pagamento: 'carta',contantiDaCent: null } })
+  if (!e.ok) throw new Error(e.errore)
+  expect(await annullaRiga(db,e.ordine.righe[1].id,UTENTE)).toBe('non_disponibile')
+  await accettaOrdine(db,e.ordine.id,0)
+  expect(await annullaRiga(db,e.ordine.righe[1].id,UTENTE)).toBe('ok')
+  expect(await db.query('select stato,totale_cent from ordini where id=$1',[e.ordine.id])).toEqual([{ stato: 'accettato',totale_cent: 1200 }])
+  expect(await db.query('select tipo,ordine_id,importo_cent from registro_annullamenti')).toEqual([{ tipo: 'riga',ordine_id: e.ordine.id,importo_cent: p2.p }])
 })
 it('registra chi ha annullato cosa, quando e per quale importo', async () => {
   const { db } = ambiente

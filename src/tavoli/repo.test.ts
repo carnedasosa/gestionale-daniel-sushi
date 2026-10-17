@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { bloccato } from '@/domain/limiti-tentativi'
 import { creaDbDiTest } from '../../tests/db/pglite'
-import { apriSessione, aggiornaTavolo, chiudiSessione, contaErrori, creaTavolo, elencoTavoli, registraTentativoFallito, sessioneApertaPerId, tavoloDaChiave, verificaCodice, rigeneraChiave, sbloccaSessione } from './repo'
+import { apriSessione, aggiornaTavolo, chiudiSessione, contaErrori, creaTavolo, elencoTavoli, eliminaTentativiVecchi, registraTentativoFallito, sessioneApertaPerId, tavoloDaChiave, verificaCodice, rigeneraChiave, sbloccaSessione } from './repo'
 
 let ambiente: Awaited<ReturnType<typeof creaDbDiTest>>
 beforeEach(async () => { ambiente = await creaDbDiTest() })
@@ -49,6 +49,10 @@ it('limite end-to-end su repo reale: dispositivo, IP, finestra, sblocco e riaper
   expect(await contaErrori(db,{ sessioneId: s.id,dispositivo,ip,minuti: 10 })).toEqual({ dispositivo: 5,ip: 5,sessione: 5 })
   const entra = async (d: string,i: string) => !bloccato(await contaErrori(db,{ sessioneId: s.id,dispositivo: d,ip: i,minuti: 10 })) && !!await verificaCodice(db,t.id,s.codice)
   expect(await entra(dispositivo,'192.0.2.2')).toBe(false)
+  // Un vicino sullo stesso Wi-Fi entra: la rete si blocca solo a venti errori.
+  expect(await entra(randomUUID(),ip)).toBe(true)
+  for (let i=0; i<15; i++) await registraTentativoFallito(db,{ tavoloId: t.id,sessioneId: s.id,dispositivo: randomUUID(),ip })
+  expect(await contaErrori(db,{ sessioneId: s.id,dispositivo: randomUUID(),ip,minuti: 10 })).toEqual({ dispositivo: 0,ip: 20,sessione: 20 })
   expect(await entra(randomUUID(),ip)).toBe(false)
   expect(await entra(randomUUID(),'192.0.2.2')).toBe(true)
   await sbloccaSessione(db,s.id)
@@ -89,4 +93,20 @@ it('due aperture in sequenza riusano una sola sessione e mantengono codici disti
   await chiudiSessione(db,s1.id)
   const codici = [s1.codice,'9876','8765']
   expect((await apriSessione(db,a.id,() => codici.shift()!)).codice).not.toBe(s1.codice)
+})
+it('pulizia notturna: cancella i tentativi più vecchi di 30 giorni, tiene i recenti, idempotente', async () => {
+  const { db } = ambiente
+  const t = await creaTavolo(db, 'P', 'p'), s = await apriSessione(db,t.id)
+  const adesso = new Date()
+  const tentativo = (giorniFa: number, ip: string | null) => db.query('insert into tentativi_codice(tavolo_id,sessione_id,dispositivo,ip,creato_il) values ($1,$2,$3,$4,$5::timestamptz - make_interval(days => $6::int))',[t.id,s.id,randomUUID(),ip,adesso,giorniFa])
+  await tentativo(31,'192.0.2.1'); await tentativo(400,null); await tentativo(30,'192.0.2.2'); await tentativo(0,'192.0.2.3')
+  // Un tentativo registrato davvero (creato_il = now() del database) è recente e resta.
+  await registraTentativoFallito(db,{ tavoloId: t.id,sessioneId: s.id,dispositivo: randomUUID(),ip: '192.0.2.4' })
+  expect(await eliminaTentativiVecchi(db,adesso)).toBe(2)
+  expect((await db.query<{ ip: string }>('select ip from tentativi_codice order by ip')).map(r => r.ip)).toEqual(['192.0.2.2','192.0.2.3','192.0.2.4'])
+  expect(await eliminaTentativiVecchi(db,adesso)).toBe(0)
+  // Con una soglia più corta il confine resta stretto: il tentativo di 30 giorni fa va via con giorni=29, quello di oggi no.
+  expect(await eliminaTentativiVecchi(db,adesso,29)).toBe(1)
+  await expect(eliminaTentativiVecchi(db,adesso,0)).rejects.toThrow()
+  await expect(eliminaTentativiVecchi(db,new Date('x'))).rejects.toThrow()
 })

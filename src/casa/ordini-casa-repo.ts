@@ -140,7 +140,11 @@ export async function avanzaOrdineCasa(db: Db, id: string, da: StatoCasa): Promi
 export async function annullaOrdineCasa(db: Db, id: string): Promise<OrdineCasa | null> {
   return cambiaStato(db,id,STATI_CASA.filter(puoAnnullareCasa),() => 'annullato',{ email: 'annullato' })
 }
-/** Toglie i dati personali dagli ordini da casa più vecchi di 12 mesi. Idempotente. */
+/**
+ * Toglie i dati personali dagli ordini da casa più vecchi di 12 mesi: nome, telefono, email, indirizzo, note, contanti e note
+ * delle righe. Azzera anche la rete per sicurezza, anche se di norma l'ha già tolta azzeraRetiVecchie dopo GIORNI_RETE giorni.
+ * Idempotente; la chiama il cron notturno.
+ */
 export async function anonimizzaOrdiniCasa(db: Db, adesso: Date): Promise<number> {
   return db.transazione(async tx => {
     const ordini = await tx.query<{ id: string }>(`update ordini set cliente_nome=null,cliente_telefono=null,cliente_email=null,indirizzo=null,note_consegna=null,contanti_da_cent=null,rete=null,anonimizzato_il=clock_timestamp()
@@ -148,4 +152,15 @@ export async function anonimizzaOrdiniCasa(db: Db, adesso: Date): Promise<number
     if (ordini.length) await tx.query('update righe_ordine set nota=null where ordine_id=any($1::uuid[])',[ordini.map(o => o.id)])
     return ordini.length
   })
+}
+/** Giorni dopo cui si azzera la rete del cliente da casa: serve solo al limite di MASSIMO_ORDINI_RETE_ORA ordini nell'ultima ora. */
+export const GIORNI_RETE = 30
+/**
+ * Azzera la rete (indirizzo o prefisso di rete del cliente) degli ordini più vecchi di GIORNI_RETE giorni: il limite per rete
+ * guarda solo l'ultima ora, quindi non serve tenerla 12 mesi come il nome. Usa l'indice parziale ordini_casa_rete. Idempotente;
+ * la chiama il cron notturno.
+ */
+export async function azzeraRetiVecchie(db: Db, adesso: Date): Promise<number> {
+  return (await db.query<{ n: number }>(`with azzerati as (update ordini set rete=null where rete is not null and creato_il < $1::timestamptz - make_interval(days => $2::int) returning 1)
+    select count(*)::int as n from azzerati`,[adesso,GIORNI_RETE]))[0].n
 }
