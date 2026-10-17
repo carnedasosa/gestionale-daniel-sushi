@@ -7,7 +7,7 @@ import { configEmail, inviaConResend } from './resend'
 type Ambiente = Record<string,string | undefined>
 /**
  * Registra l'errore; all'ultimo tentativo lo scrive anche nei log, perché quell'email non ripartirà più.
- * Nel log niente dati personali: numero d'ordine (o id, se l'ordine non c'è più) e l'errore, con gli indirizzi email mascherati.
+ * Nel log niente dati personali: numero d'ordine globale, unico anche fra giornate diverse (o id, se l'ordine non c'è più) e l'errore, con gli indirizzi email mascherati.
  */
 async function registraErrore(db: Db, e: EmailDaInviare, errore: string, numero: number | null): Promise<void> {
   await segnaErrore(db,e.id,errore)
@@ -26,7 +26,7 @@ export async function smaltisciCodaEmail(db: Db, env: Ambiente = process.env, fe
   for (const e of da) {
     const o = await ordineCasaPerId(db,e.ordineId)
     if (!o || o.anonimizzato || !o.clienteEmail || !o.clienteNome) { await registraErrore(db,e,'Ordine non disponibile',o?.numero ?? null); errori++; continue }
-    const email = componiEmail({ tipo: e.tipo,numero: o.numero,servizio: o.tipo,fascia: o.fascia,nome: o.clienteNome,totaleCent: o.totaleCent,consegnaCent: o.consegnaCent,zonaNome: o.zonaNome,
+    const email = componiEmail({ tipo: e.tipo,numero: o.numeroGiorno,servizio: o.tipo,fascia: o.fascia,nome: o.clienteNome,totaleCent: o.totaleCent,consegnaCent: o.consegnaCent,zonaNome: o.zonaNome,
       indirizzo: o.indirizzo,pagamento: o.pagamento,motivoRifiuto: o.motivoRifiuto,righe: o.righe,link: `${config.origine}/ordine/${o.token}`,telefono })
     const esito = await inviaConResend(config,o.clienteEmail,email,e.id,fetchFn)
     if (esito.ok) { await segnaInviata(db,e.id); inviate++ } else { await registraErrore(db,e,esito.errore,o.numero); errori++ }

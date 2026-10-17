@@ -3,6 +3,7 @@ import { comandeInCascata, prossimoStatoComanda, statoOrdineDaComande, type Stat
 import type { OrigineOrdine } from '@/domain/origine-ordine'
 import type { Reparto } from '@/domain/reparti'
 import { leggiRigheOrdini, type RigaOrdine } from '@/tavoli/ordini-repo'
+import { numeroGiorno } from '@/tavoli/numero-giorno'
 import { idValido } from '@/tavoli/validazione'
 
 // Ordine dei lock, uguale per tutti: sessione → ordine → comande. Le comande si toccano solo
@@ -96,7 +97,7 @@ export async function portaComanda(db: Db, id: string): Promise<true | null> {
 }
 
 export interface ComandaAttiva {
-  id: string; reparto: Reparto; stato: StatoComanda; creataIl: Date; ordineId: string; numero: number; tipo: TipoOrdine; origine: OrigineOrdine
+  id: string; reparto: Reparto; stato: StatoComanda; creataIl: Date; ordineId: string; numero: number; numeroGiorno: number; tipo: TipoOrdine; origine: OrigineOrdine
   tavoloNome: string | null; tavoloChiuso: boolean; fascia: Date | null; creatoIl: Date; righe: RigaOrdine[]; altreRighe: { reparto: Reparto; n: number }[]
 }
 export type ComandaClient = Omit<ComandaAttiva,'creataIl' | 'fascia' | 'creatoIl'> & { creataIl: string; fascia: string | null; creatoIl: string }
@@ -105,7 +106,7 @@ export function comandaPerClient(c: ComandaAttiva): ComandaClient {
 }
 /** Comande del reparto ancora da fare (o pronte in attesa degli altri reparti), con ordine in cucina. Casa per fascia, tavoli per arrivo. */
 export async function comandeAttive(db: Db, reparto: Reparto): Promise<ComandaAttiva[]> {
-  const comande = await db.query<Omit<ComandaAttiva,'righe' | 'altreRighe'>>(`select c.id,c.reparto,c.stato,c.creata_il as "creataIl",o.id as "ordineId",o.numero,o.tipo,o.origine,
+  const comande = await db.query<Omit<ComandaAttiva,'righe' | 'altreRighe'>>(`select c.id,c.reparto,c.stato,c.creata_il as "creataIl",o.id as "ordineId",o.numero,${numeroGiorno('o')},o.tipo,o.origine,
       t.nome as "tavoloNome",(s.chiusa_il is not null) as "tavoloChiuso",o.fascia,o.creato_il as "creatoIl"
     from comande c join ordini o on o.id=c.ordine_id left join sessioni_tavolo s on s.id=o.sessione_id left join tavoli t on t.id=s.tavolo_id
     where c.reparto=$1 and c.stato in ('da_preparare','in_preparazione','pronta') and o.stato in ${ORDINE_IN_CUCINA}
@@ -120,11 +121,11 @@ export async function comandeAttive(db: Db, reparto: Reparto): Promise<ComandaAt
   })
 }
 
-export interface VoceDaPortare { id: string; reparto: Reparto; stato: StatoComanda; ordineId: string; numero: number; tavoloNome: string; quando: Date; righe: RigaOrdine[] }
+export interface VoceDaPortare { id: string; reparto: Reparto; stato: StatoComanda; ordineId: string; numero: number; numeroGiorno: number; tavoloNome: string; quando: Date; righe: RigaOrdine[] }
 export type VoceDaPortareClient = Omit<VoceDaPortare,'quando'> & { quando: string }
 /** Striscia «Da portare al tavolo»: bevande da servire e piatti pronti di banco e cucina non ancora portati, solo tavoli aperti. */
 export async function daPortare(db: Db): Promise<VoceDaPortare[]> {
-  const voci = await db.query<Omit<VoceDaPortare,'righe'>>(`select c.id,c.reparto,c.stato,o.id as "ordineId",o.numero,t.nome as "tavoloNome",coalesce(c.pronta_il,c.creata_il) as quando
+  const voci = await db.query<Omit<VoceDaPortare,'righe'>>(`select c.id,c.reparto,c.stato,o.id as "ordineId",o.numero,${numeroGiorno('o')},t.nome as "tavoloNome",coalesce(c.pronta_il,c.creata_il) as quando
     from comande c join ordini o on o.id=c.ordine_id join sessioni_tavolo s on s.id=o.sessione_id join tavoli t on t.id=s.tavolo_id
     where o.tipo='tavolo' and s.chiusa_il is null and (
       (c.reparto='sala' and c.stato in ('da_preparare','in_preparazione') and o.stato in ('inviato','in_preparazione'))

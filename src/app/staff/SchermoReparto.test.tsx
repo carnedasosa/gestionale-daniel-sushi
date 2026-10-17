@@ -8,9 +8,9 @@ import type { ComandaClient } from '@/comande/comande-repo'
 import { CardComanda } from './CardComanda'
 import { SchermoReparto } from './SchermoReparto'
 const riga = (id: string, nome: string, reparto: 'banco' | 'cucina' | 'sala') => ({ id,numero: 1,nome,prezzoUnitCent: 600,quantita: 2,nota: null,poke: null,annullata: false,reparto })
-const tavolo: ComandaClient = { id: 'c1',reparto: 'banco',stato: 'da_preparare',creataIl: '2026-10-11T18:00:00.000Z',ordineId: 'o1',numero: 12,tipo: 'tavolo',origine: 'cliente',
+const tavolo: ComandaClient = { id: 'c1',reparto: 'banco',stato: 'da_preparare',creataIl: '2026-10-11T18:00:00.000Z',ordineId: 'o1',numero: 4812,numeroGiorno: 12,tipo: 'tavolo',origine: 'cliente',
   tavoloNome: 'Tavolo 3',tavoloChiuso: false,fascia: null,creatoIl: '2026-10-11T18:00:00.000Z',righe: [riga('r1','Salmone','banco')],altreRighe: [{ reparto: 'cucina',n: 2 },{ reparto: 'sala',n: 1 }] }
-const asporto: ComandaClient = { ...tavolo,id: 'c2',stato: 'in_preparazione',ordineId: 'o2',numero: 9,tipo: 'asporto',origine: 'cassa',tavoloNome: null,fascia: '2026-10-11T17:30:00.000Z',altreRighe: [] }
+const asporto: ComandaClient = { ...tavolo,id: 'c2',stato: 'in_preparazione',ordineId: 'o2',numero: 4809,numeroGiorno: 9,tipo: 'asporto',origine: 'cassa',tavoloNome: null,fascia: '2026-10-11T17:30:00.000Z',altreRighe: [] }
 const titolo = (html: string) => html.match(/<h3[^>]*>(.*?)<\/h3>/)![1].replace(/<[^>]+>/g,'')
 it('comanda del tavolo: titolo come le card della cassa, righe del reparto, piatti degli altri reparti, primo passo', () => {
   const html = renderToStaticMarkup(<CardComanda comanda={tavolo} ora="2026-10-11T18:05:00Z" nuova inCorso={false} leggi={() => {}} esegui={() => {}} />)

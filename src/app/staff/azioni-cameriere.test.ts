@@ -9,7 +9,7 @@ const sessione = '11111111-1111-4111-8111-111111111111', piatto = '22222222-2222
 const json = JSON.stringify([{ piattoId: piatto,quantita: 1,nota: '',prezzoCent: 1 }])
 beforeEach(() => {
   vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {})
-  m.creaOrdineTavolo.mockResolvedValue({ ok: true,ordine: { numero: 12 } })
+  m.creaOrdineTavolo.mockResolvedValue({ ok: true,ordine: { numero: 4812,numeroGiorno: 12 } })
 })
 it('verifica lo staff prima del repository, salva con origine cameriere e aggiorna cucina, telefoni e conto', async () => {
   expect(await inviaOrdineCameriere(sessione,json,chiaveInvio)).toEqual({ ok: true,numero: 12 })

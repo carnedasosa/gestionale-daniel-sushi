@@ -86,7 +86,7 @@ export async function inviaOrdine(chiave: string, carrelloJson: string, chiaveIn
     const carrello = validaCarrello(input)
     if (!carrello.ok) return carrello
     const esito = await creaOrdineTavolo(db,sessione.id,carrello.righe,chiaveInvio)
-    return esito.ok ? { ok: true, numero: esito.ordine.numero } : esito
+    return esito.ok ? { ok: true, numero: esito.ordine.numeroGiorno } : esito
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')
     // Lock o istruzione scaduti: l'ordine non è partito (rollback) e la chiave di invio evita doppioni.

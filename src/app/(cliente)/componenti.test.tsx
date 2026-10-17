@@ -6,7 +6,7 @@ import { StatoOrdine, ordineConcluso } from './ordine/[token]/StatoOrdine'
 import { Checkout, siSceglie } from './ordina/Checkout'
 import { etichettaOrdineInCorso } from './OrdineInCorso'
 import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
-const ordine: OrdineCasaClient = { id: 'o',numero: 12,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-12T17:15:00.000Z',creatoIl: '2026-10-12T16:00:00.000Z',aggiornatoIl: '2026-10-12T16:03:00.000Z',
+const ordine: OrdineCasaClient = { id: 'o',numero: 4812,numeroGiorno: 12,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-12T17:15:00.000Z',creatoIl: '2026-10-12T16:00:00.000Z',aggiornatoIl: '2026-10-12T16:03:00.000Z',
   clienteNome: 'Anna',clienteTelefono: '3331234567',clienteEmail: 'anna@esempio.it',zonaNome: 'Bitetto',indirizzo: 'Via Roma 1',noteConsegna: null,pagamento: 'contanti',contantiDaCent: 5000,motivoRifiuto: null,anonimizzato: false,origine: 'cliente',
   righe: [{ id: 'r',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 3,nota: null,poke: null,annullata: false,reparto: 'banco' }] }
 it('stato: in attesa, poi dopo 10 minuti il telefono del locale', () => {

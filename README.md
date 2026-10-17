@@ -131,6 +131,8 @@ Apri `/staff` e tocca **Inizia turno**: il browser sblocca il suono e richiede d
 
 Apri un tavolo e comunica il codice di quattro cifre al cliente. Non ci sono codici uguali fra tavoli aperti; alla riapertura il codice cambia. In cucina gli ordini passano da **Inviato** a **In preparazione**, poi **Servito**. Puoi annullare un ordine prima che sia servito, oppure una singola riga. Il conto esclude gli annullati e raggruppa le voci con lo stesso prezzo e le stesse scelte poke.
 
+Il numero d'ordine («Tavolo 3 · n. 12», «Asporto 19:30 · n. 9») riparte da 1 ogni giornata ed è unico fra tavoli, asporto e domicilio. La giornata comincia alle 5 di Roma: una serata che passa la mezzanotte continua la stessa numerazione. Cucina, cassa, pagina del cliente ed email mostrano lo stesso numero. Si calcola in lettura dal contatore globale `ordini.numero`, che resta nel database e nei log, quindi un ordine nuovo non sposta i numeri già letti. Raramente può mancare un numero, quando un invio fallisce dopo averlo preso.
+
 Il conto è stampabile dal browser ed è solo un riepilogo da battere in cassa, **non uno scontrino fiscale**. Chiudendo il tavolo i clienti non possono più inviare ordini. Se restano comande in cucina o sono arrivate dopo il conto viene chiesta una conferma esplicita. La chiusura apre il conto; la cucina conserva le comande con «Tavolo chiuso» e «Conti recenti» conserva i link per sei ore. Dal conto puoi annullare una voce anche servita.
 
 ### Comanda del cameriere

@@ -10,7 +10,7 @@ const dati = { tipo: 'asporto',fascia: '2026-10-12T17:15:00.000Z',nome: 'Anna',t
 const json = (diverso: Record<string,unknown> = {}) => JSON.stringify({ righe: [{ piattoId: piatto,quantita: 2,nota: '' }],dati,totaleVistoCent: 1200,chiaveInvio,...diverso })
 beforeEach(() => {
   vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {})
-  m.creaOrdineCasa.mockResolvedValue({ ok: true,ordine: { token: 't'.repeat(32),numero: 7 } })
+  m.creaOrdineCasa.mockResolvedValue({ ok: true,ordine: { token: 't'.repeat(32),numero: 4807,numeroGiorno: 7 } })
 })
 it('verifica lo staff prima del repository e passa origine cassa, forzatura e nessuna rete', async () => {
   expect(await inviaOrdineCassa(json())).toEqual({ ok: true,token: 't'.repeat(32),numero: 7 })

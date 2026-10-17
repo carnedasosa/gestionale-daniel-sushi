@@ -23,7 +23,8 @@ export function RicordaOrdine({ token,numero }: { token: string; numero: number 
   useEffect(() => {
     try {
       const attuale = leggiUltimoOrdine(localStorage.getItem(CHIAVE_ULTIMO_ORDINE),Date.now())
-      if (attuale?.token !== token) localStorage.setItem(CHIAVE_ULTIMO_ORDINE,JSON.stringify({ token,numero,salvatoIl: Date.now() }))
+      // Riscrive anche lo stesso ordine se il numero è cambiato (prima si salvava il numero globale).
+      if (attuale?.token !== token || attuale.numero !== numero) localStorage.setItem(CHIAVE_ULTIMO_ORDINE,JSON.stringify({ token,numero,salvatoIl: Date.now() }))
     } catch { /* Facoltativo. */ }
   },[token,numero])
   return null

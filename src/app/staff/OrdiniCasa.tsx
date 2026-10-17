@@ -40,7 +40,7 @@ function RifiutaOrdine({ ordine,inCorso,esegui }: { ordine: OrdineCasaClient; in
   const [altro,setAltro] = useState('')
   return <>
     <button type="button" className="b-btn b-btn--pericolo" disabled={inCorso} onClick={() => setAperto(true)}>Rifiuta…</button>
-    <Pannello aperto={aperto} chiudi={() => setAperto(false)} titolo={`Rifiuta l’ordine n. ${ordine.numero}`}>
+    <Pannello aperto={aperto} chiudi={() => setAperto(false)} titolo={`Rifiuta l’ordine n. ${ordine.numeroGiorno}`}>
       <fieldset className="b-scelte b-scelte--colonna"><legend className="b-occhiello">Motivo, che il cliente leggerà</legend>
         {[...MOTIVI_RIFIUTO,'Altro'].map(m => <label key={m} className="b-scelta"><input type="radio" name={`motivo-${ordine.id}`} value={m} checked={motivo === m} onChange={() => setMotivo(m)} />{m}</label>)}
       </fieldset>
@@ -58,10 +58,10 @@ export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare,comand
   const lunga = daAccettare && attesaLunga(o.creatoIl,new Date(ora))
   const avanza = azioneAvanzaCasa(o.tipo,o.stato)
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
-  const titolo = `${o.tipo === 'domicilio' ? 'Domicilio' : 'Asporto'} ${oraRoma(new Date(o.fascia))} · n. ${o.numero}`
+  const titolo = `${o.tipo === 'domicilio' ? 'Domicilio' : 'Asporto'} ${oraRoma(new Date(o.fascia))} · n. ${o.numeroGiorno}`
   return <article className={`b-comanda${daAccettare ? ' b-comanda--accettare' : ''}${lunga ? ' b-comanda--ritardo' : ''}${!daAccettare && o.stato === 'in_preparazione' ? ' b-comanda--preparazione' : ''}${['pronto','in_consegna'].includes(o.stato) ? ' b-comanda--pronto' : ''}`}>
     <div className="b-comanda__testa">
-      <h3 className="b-comanda__titolo"><span className="b-comanda__tipo">{o.tipo === 'domicilio' ? 'Domicilio' : 'Asporto'}</span> <span className="b-comanda__nome b-num">{oraRoma(new Date(o.fascia))}</span> <span className="b-num b-comanda__numero">· n. {o.numero}</span></h3>
+      <h3 className="b-comanda__titolo"><span className="b-comanda__tipo">{o.tipo === 'domicilio' ? 'Domicilio' : 'Asporto'}</span> <span className="b-comanda__nome b-num">{oraRoma(new Date(o.fascia))}</span> <span className="b-num b-comanda__numero">· n. {o.numeroGiorno}</span></h3>
       {daAccettare && <span className="b-num b-comanda__timer" aria-label={`${minuti} min`}>{minuti}′</span>}
     </div>
     {etichettaOrigine(o.origine) && <span className="b-etichetta">{etichettaOrigine(o.origine)}</span>}
@@ -81,7 +81,7 @@ export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare,comand
       {avanza && <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => esegui(() => avanzaOrdineCasaStaff(o.id,o.stato))}>{VERBO[avanza] ?? avanza}</button>}
       <AltreAzioni titolo={`Altre azioni · ${titolo}`}>{chiudi => <>
         {o.righe.filter(r => !r.annullata).map(r => <ConfermaAzione key={r.id} inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => { chiudi(); esegui(() => annullaRigaStaff(r.id)) }}>Annulla {r.nome}</ConfermaAzione>)}
-        <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numero}? Il cliente riceverà un’email.`} conferma={() => { chiudi(); esegui(() => annullaOrdineCasaStaff(o.id)) }}>Annulla tutto l’ordine</ConfermaAzione>
+        <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numeroGiorno}? Il cliente riceverà un’email.`} conferma={() => { chiudi(); esegui(() => annullaOrdineCasaStaff(o.id)) }}>Annulla tutto l’ordine</ConfermaAzione>
       </>}</AltreAzioni>
     </div>}
   </article>
