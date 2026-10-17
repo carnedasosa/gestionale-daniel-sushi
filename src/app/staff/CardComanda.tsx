@@ -23,8 +23,8 @@ export function CardComanda({ comanda: c,ora,nuova,inCorso,leggi,esegui }: { com
   return <article className={`b-comanda${nuova ? ' b-comanda--nuovo' : ''}${c.stato === 'in_preparazione' ? ' b-comanda--preparazione' : ''}${c.stato === 'pronta' ? ' b-comanda--pronto' : ''}`} onClick={leggi}>
     <div className="b-comanda__testa">
       {c.tipo === 'tavolo'
-        ? <h3 className="b-comanda__titolo"><span className="b-comanda__nome">{c.tavoloNome}</span> <span className="b-num b-comanda__numero">· n. {c.numero}</span></h3>
-        : <h3 className="b-comanda__titolo"><span className="b-comanda__tipo">{c.tipo === 'domicilio' ? 'Domicilio' : 'Asporto'}</span> <span className="b-comanda__nome b-num">{oraRoma(new Date(c.fascia!))}</span> <span className="b-num b-comanda__numero">· n. {c.numero}</span></h3>}
+        ? <h3 className="b-comanda__titolo"><span className="b-comanda__nome">{c.tavoloNome}</span> <span className="b-num b-comanda__numero">· n. {c.numeroGiorno}</span></h3>
+        : <h3 className="b-comanda__titolo"><span className="b-comanda__tipo">{c.tipo === 'domicilio' ? 'Domicilio' : 'Asporto'}</span> <span className="b-comanda__nome b-num">{oraRoma(new Date(c.fascia!))}</span> <span className="b-num b-comanda__numero">· n. {c.numeroGiorno}</span></h3>}
       <span className="b-num b-comanda__timer" aria-label={`${minuti} min`}>{minuti}′</span>
     </div>
     {(nuova || origine) && <div className="b-comanda__etichette">{nuova && <span className="b-etichetta b-etichetta--accettare">Nuova comanda</span>}{origine && <span className="b-etichetta">{origine}</span>}</div>}

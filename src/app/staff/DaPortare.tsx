@@ -17,10 +17,10 @@ export function DaPortare({ voci,nuove,azioniDi }: { voci: VoceDaPortareClient[]
     <ul className="b-portare__voci">{voci.map(v => { const { inCorso,esegui } = azioniDi(`comanda:${v.id}`)
     return <li key={v.id} className={`b-portare__voce${nuove.includes(v.id) ? ' b-portare__voce--nuova' : ''}`}>
       <div className="b-portare__testo">
-        <p className="b-portare__dove"><strong>{v.tavoloNome}</strong> <span className="b-num b-secondario">· n. {v.numero}</span> · <span className={`b-etichetta ${v.reparto === 'sala' ? 'b-etichetta--preparare' : 'b-etichetta--pronto'}`}>{cosa(v)}</span></p>
+        <p className="b-portare__dove"><strong>{v.tavoloNome}</strong> <span className="b-num b-secondario">· n. {v.numeroGiorno}</span> · <span className={`b-etichetta ${v.reparto === 'sala' ? 'b-etichetta--preparare' : 'b-etichetta--pronto'}`}>{cosa(v)}</span></p>
         <p className="b-portare__righe">{v.righe.map(r => `${r.quantita}× ${r.nome}`).join(', ')}</p>
       </div>
-      <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} aria-label={`Portate · ${v.tavoloNome} n. ${v.numero} · ${cosa(v)}`} onClick={() => esegui(() => portaComandaStaff(v.id))}>Portate</button>
+      <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} aria-label={`Portate · ${v.tavoloNome} n. ${v.numeroGiorno} · ${cosa(v)}`} onClick={() => esegui(() => portaComandaStaff(v.id))}>Portate</button>
     </li> })}</ul>
   </section>
 }

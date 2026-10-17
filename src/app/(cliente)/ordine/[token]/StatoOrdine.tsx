@@ -13,7 +13,7 @@ export function StatoOrdine({ ordine: o,telefono,ora }: { ordine: OrdineCasaClie
   const passi = passiOrdine(o.tipo,o.stato)
   return <>
     <div className="b-stato-ordine">
-      <h1 className="b-num b-secondario b-stato-ordine__numero">Ordine n. {o.numero}</h1>
+      <h1 className="b-num b-secondario b-stato-ordine__numero">Ordine n. {o.numeroGiorno}</h1>
       <p className="b-titolo-1" role="status">{etichettaClienteCasa(o.tipo,o.stato)}</p>
       {o.stato === 'in_attesa' && <p className="b-stato-ordine__orario">Orario richiesto: <strong>{domicilio ? 'consegna verso le' : 'ritiro alle'} {orario}</strong></p>}
       {['accettato','in_preparazione','pronto','in_consegna'].includes(o.stato) && <p className="b-stato-ordine__orario"><strong>{domicilio ? `Consegna verso le ${orario}` : `Ritiro alle ${orario} in Via Beato Giacomo 72, Bitetto`}</strong></p>}

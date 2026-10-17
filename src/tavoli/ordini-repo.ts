@@ -8,12 +8,13 @@ import { CATEGORIA_POKE, type Reparto } from '@/domain/reparti'
 import { leggiAllergeniPoke, leggiPokeConfig } from './poke-repo'
 import { idValido } from './validazione'
 import { cascataComande, creaComande, segnaComandeAnnullate } from '@/comande/comande-repo'
+import { numeroGiorno } from './numero-giorno'
 
 export interface RigaOrdine { id: string; numero: number | null; nome: string; prezzoUnitCent: number; quantita: number; nota: string | null; poke: SceltePoke | null; annullata: boolean; reparto: Reparto }
-export interface Ordine { id: string; numero: number; stato: StatoOrdineTavolo; totaleCent: number; creatoIl: Date; sessioneId: string; tavoloNome: string; tavoloChiuso: boolean; origine: OrigineOrdine; righe: RigaOrdine[] }
+export interface Ordine { id: string; numero: number; numeroGiorno: number; stato: StatoOrdineTavolo; totaleCent: number; creatoIl: Date; sessioneId: string; tavoloNome: string; tavoloChiuso: boolean; origine: OrigineOrdine; righe: RigaOrdine[] }
 export type OrdineClient = Omit<Ordine,'creatoIl'> & { creatoIl: string }
 export type EsitoCreazione = { ok: true; ordine: Ordine } | { ok: false; errore: string; nonDisponibili?: string[]; nonDisponibiliIds?: string[] }
-const COLONNE_ORDINE = `o.id,o.numero,o.stato,o.totale_cent as "totaleCent",o.creato_il as "creatoIl",o.sessione_id as "sessioneId",t.nome as "tavoloNome",(s.chiusa_il is not null) as "tavoloChiuso",o.origine`
+const COLONNE_ORDINE = `o.id,o.numero,${numeroGiorno('o')},o.stato,o.totale_cent as "totaleCent",o.creato_il as "creatoIl",o.sessione_id as "sessioneId",t.nome as "tavoloNome",(s.chiusa_il is not null) as "tavoloChiuso",o.origine`
 const COLONNE_RIGA = `id,numero,nome,prezzo_unit_cent as "prezzoUnitCent",quantita,nota,poke,annullata,reparto`
 /** Righe degli ordini indicati, raggruppate per ordine e nell'ordine di inserimento: le usano tavoli e ordini da casa. */
 export async function leggiRigheOrdini(db: Db, ordiniIds: string[]): Promise<Map<string,RigaOrdine[]>> {

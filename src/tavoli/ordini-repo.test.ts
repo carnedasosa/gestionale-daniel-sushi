@@ -8,7 +8,8 @@ import { annullaOrdine, annullaRiga, annullaVoceConto, avanzaStato, contoSession
 import { contiRecenti } from './repo'
 import { leggiPokeConfig, salvaPokeConfig } from './poke-repo'
 import { validaCarrello } from '@/domain/carrello'
-import { accettaOrdine, avanzaOrdineCasa, creaOrdineCasa } from '@/casa/ordini-casa-repo'
+import { accettaOrdine, avanzaOrdineCasa, creaOrdineCasa, ordiniCasaAttivi } from '@/casa/ordini-casa-repo'
+import { comandeAttive } from '@/comande/comande-repo'
 import { ADESSO, F1830, ordineAsporto, preparaCasa } from '../../tests/db/casa-pronta'
 const UTENTE = '22222222-2222-4222-8222-222222222222'
 let ambiente: Awaited<ReturnType<typeof creaDbDiTest>>, sessione: string, piatto: string
@@ -278,4 +279,26 @@ it('reparto: cambiare la categoria vale per gli ordini da adesso, le righe passa
   const [vecchio,nuovo] = await ordiniDellaSessione(db,sessione)
   expect(vecchio.righe.map(r => r.reparto)).toEqual(['banco'])
   expect(nuovo.righe.map(r => r.reparto)).toEqual(['cucina'])
+})
+it('numero del giorno: riparte ogni giornata (dalle 5), è lo stesso per tavoli, casa e comande e non si sposta con i nuovi ordini', async () => {
+  const { db } = ambiente
+  const { piatto: piattoCasa } = await preparaCasa(db)
+  const nuovo = async () => { const e = await creaOrdineTavolo(db,sessione,righe()); if (!e.ok) throw new Error(e.errore); return e.ordine.id }
+  const quando = (id: string, ora: string) => db.query(`update ordini set creato_il=$2::timestamp at time zone 'Europe/Rome' where id=$1`,[id,ora])
+  const ieri = await nuovo(), dopoMezzanotte = await nuovo(), casa = (await ordineAsporto(db,piattoCasa)).id, tavolo = await nuovo()
+  await quando(ieri,'2026-10-16 21:00'); await quando(dopoMezzanotte,'2026-10-17 01:30')
+  await quando(casa,'2026-10-17 18:00'); await quando(tavolo,'2026-10-17 19:00')
+  const delGiorno = async () => new Map([...(await ordiniDellaSessione(db,sessione)),...(await ordiniCasaAttivi(db))].map(o => [o.id,o.numeroGiorno]))
+  // La serata del 16 continua dopo mezzanotte; il 17 riparte da 1 e tavoli e casa condividono la numerazione.
+  expect(await delGiorno()).toEqual(new Map([[ieri,1],[dopoMezzanotte,2],[tavolo,2],[casa,1]]))
+  await accettaOrdine(db,casa,0)
+  const comande = await comandeAttive(db,'banco')
+  expect(comande.find(c => c.ordineId === tavolo)?.numeroGiorno).toBe(2)
+  expect(comande.find(c => c.ordineId === casa)?.numeroGiorno).toBe(1)
+  // Un ordine nuovo prende il numero successivo senza spostare quelli già letti; un numero consumato da un invio fallito lascia un buco.
+  const dopo = await nuovo(); await quando(dopo,'2026-10-17 20:00')
+  await db.query("select nextval('ordini_numero_seq')")
+  const ultimo = await nuovo(); await quando(ultimo,'2026-10-17 20:05')
+  expect(await delGiorno()).toEqual(new Map([[ieri,1],[dopoMezzanotte,2],[tavolo,2],[dopo,3],[ultimo,5],[casa,1]]))
+  expect((await ordiniAttivi(db)).find(o => o.id === ultimo)).toMatchObject({ numeroGiorno: 5,numero: (await ordiniDellaSessione(db,sessione)).at(-1)!.numero })
 })

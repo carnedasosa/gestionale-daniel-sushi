@@ -25,7 +25,7 @@ export async function inviaOrdineCameriere(sessioneId: string, carrelloJson: str
     if (!esito.ok) return esito
     // Cucina, telefoni del tavolo e conto vedono il nuovo ordine al prossimo aggiornamento.
     revalidatePath('/staff'); revalidatePath('/tavolo/[chiave]','page'); revalidatePath('/staff/conto/[sessione]','page')
-    return { ok: true,numero: esito.ordine.numero }
+    return { ok: true,numero: esito.ordine.numeroGiorno }
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')
     // Lock o istruzione scaduti: la transazione è annullata e la chiave di invio evita doppioni.

@@ -30,7 +30,7 @@ export async function inviaOrdineCasa(json: string): Promise<EsitoCheckout> {
       return { ok,...resto,...(campo && campo !== 'carrello' ? { errori: { [campo]: esito.errore } } : {}) }
     }
     avviaInvioEmail()
-    return { ok: true,token: esito.ordine.token,numero: esito.ordine.numero }
+    return { ok: true,token: esito.ordine.token,numero: esito.ordine.numeroGiorno }
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')
     // Lock o istruzione scaduti (troppi invii insieme): la transazione è annullata, riprovare è sicuro.

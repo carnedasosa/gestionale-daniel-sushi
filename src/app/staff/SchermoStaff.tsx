@@ -31,7 +31,7 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui,comande }:
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
   return <article className={`b-comanda${nuovo ? ' b-comanda--nuovo' : ''}${o.stato === 'in_preparazione' ? ' b-comanda--preparazione' : ''}`} onClick={leggi}>
     <div className="b-comanda__testa">
-      <h3 className="b-comanda__titolo"><span className="b-comanda__nome">{o.tavoloNome}</span> <span className="b-num b-comanda__numero">· n. {o.numero}</span></h3>
+      <h3 className="b-comanda__titolo"><span className="b-comanda__nome">{o.tavoloNome}</span> <span className="b-num b-comanda__numero">· n. {o.numeroGiorno}</span></h3>
       <span className="b-num b-comanda__timer" aria-label={`${minuti} min`}>{minuti}′</span>
     </div>
     {(nuovo || etichettaOrigine(o.origine)) && <div className="b-comanda__etichette">{nuovo && <span className="b-etichetta b-etichetta--accettare">Nuovo ordine</span>}{etichettaOrigine(o.origine) && <span className="b-etichetta">{etichettaOrigine(o.origine)}</span>}</div>}
@@ -41,12 +41,12 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui,comande }:
     <DettaglioRighe righe={o.righe} area="staff" perReparto />
     <div className="b-comanda__azioni">
       <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => { leggi(); esegui(() => avanzaOrdine(o.id,o.stato)) }}>{o.stato === 'inviato' ? 'Inizia a preparare' : 'Segna servito'}</button>
-      <AltreAzioni titolo={`Altre azioni · ${o.tavoloNome} n. ${o.numero}`}>{chiudi => <>
+      <AltreAzioni titolo={`Altre azioni · ${o.tavoloNome} n. ${o.numeroGiorno}`}>{chiudi => <>
         {nuovo && <button type="button" className="b-btn b-btn--secondario" onClick={() => { leggi(); chiudi() }}>Segna come letto</button>}
         {/* Il conto di un tavolo chiuso è già stato incassato: niente annullamenti, il server li rifiuterebbe. */}
         {o.tavoloChiuso ? <p className="b-secondario">Tavolo chiuso: il conto non si può più modificare.</p> : <>
           {o.righe.filter(r => !r.annullata).map(r => <ConfermaAzione key={r.id} inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => { chiudi(); esegui(() => annullaRigaStaff(r.id)) }}>Annulla {r.nome}</ConfermaAzione>)}
-          <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numero}?`} conferma={() => { chiudi(); esegui(() => annullaOrdineStaff(o.id)) }}>Annulla tutto l’ordine</ConfermaAzione>
+          <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numeroGiorno}?`} conferma={() => { chiudi(); esegui(() => annullaOrdineStaff(o.id)) }}>Annulla tutto l’ordine</ConfermaAzione>
         </>}
       </>}</AltreAzioni>
     </div>

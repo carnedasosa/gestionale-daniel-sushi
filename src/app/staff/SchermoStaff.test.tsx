@@ -11,8 +11,8 @@ import { CardOrdineCasa } from './OrdiniCasa'
 import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 import type { OrdineClient } from '@/tavoli/ordini-repo'
 const online = { accesi: true,asporto: null,domicilio: 'Consegne a domicilio non disponibili.' }
-const tavolo: OrdineClient = { id: 'o',numero: 8,stato: 'inviato',totaleCent: 900,creatoIl: '2026-10-11T18:00:00Z',sessioneId: 's',tavoloNome: 'Tavolo 1',tavoloChiuso: false,origine: 'cliente',righe: [{ id: 'r',numero: null,nome: 'Poke composta',prezzoUnitCent: 900,quantita: 1,nota: 'senza sesamo',poke: { Base: ['Riso'],Proteine: ['Tonno'] },annullata: false,reparto: 'banco' },{ id: 'r2',numero: 2,nome: 'Salmone',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: true,reparto: 'banco' }] }
-const casa: OrdineCasaClient = { id: 'c',numero: 9,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-11T17:30:00.000Z',creatoIl: '2026-10-11T17:00:00.000Z',aggiornatoIl: '2026-10-11T17:00:00.000Z',
+const tavolo: OrdineClient = { id: 'o',numero: 4808,numeroGiorno: 8,stato: 'inviato',totaleCent: 900,creatoIl: '2026-10-11T18:00:00Z',sessioneId: 's',tavoloNome: 'Tavolo 1',tavoloChiuso: false,origine: 'cliente',righe: [{ id: 'r',numero: null,nome: 'Poke composta',prezzoUnitCent: 900,quantita: 1,nota: 'senza sesamo',poke: { Base: ['Riso'],Proteine: ['Tonno'] },annullata: false,reparto: 'banco' },{ id: 'r2',numero: 2,nome: 'Salmone',prezzoUnitCent: 600,quantita: 1,nota: null,poke: null,annullata: true,reparto: 'banco' }] }
+const casa: OrdineCasaClient = { id: 'c',numero: 4809,numeroGiorno: 9,tipo: 'domicilio',stato: 'in_attesa',token: 't'.repeat(32),totaleCent: 2000,consegnaCent: 200,fascia: '2026-10-11T17:30:00.000Z',creatoIl: '2026-10-11T17:00:00.000Z',aggiornatoIl: '2026-10-11T17:00:00.000Z',
   clienteNome: 'Anna',clienteTelefono: '3331234567',clienteEmail: 'anna@esempio.it',zonaNome: 'Bitetto',indirizzo: 'Via Roma 1',noteConsegna: 'citofono Rossi',pagamento: 'contanti',contantiDaCent: 5000,motivoRifiuto: null,anonimizzato: false,origine: 'cliente',
   righe: [{ id: 'rc',numero: 1,nome: 'Salmone',prezzoUnitCent: 600,quantita: 3,nota: null,poke: null,annullata: false,reparto: 'banco' }] }
 it('evidenzia note e poke, barra annullati e mostra tempo e stato', () => {
@@ -36,7 +36,7 @@ it('ordine da accettare: orario di Roma, cliente, indirizzo, pagamento e i quatt
 it('cucina: tavoli e casa insieme per orario, con il passaggio giusto per la casa', async () => {
   const { SchermoStaff } = await import('./SchermoStaff')
   const html = renderToStaticMarkup(<SchermoStaff ora="2026-10-11T17:05:00Z" dati={{ tavoli: [],riepiloghi: [],contiRecenti: [],ordiniOnline: online,
-    ordini: [tavolo],casa: [{ ...casa,stato: 'accettato' },{ ...casa,id: 'c2',numero: 10,tipo: 'asporto',stato: 'pronto',fascia: '2026-10-11T17:45:00.000Z' },{ ...casa,id: 'c3',numero: 11 }] }} />)
+    ordini: [tavolo],casa: [{ ...casa,stato: 'accettato' },{ ...casa,id: 'c2',numero: 4810,numeroGiorno: 10,tipo: 'asporto',stato: 'pronto',fascia: '2026-10-11T17:45:00.000Z' },{ ...casa,id: 'c3',numero: 4811,numeroGiorno: 11 }] }} />)
   expect(html).toContain('Ordini online: aperti oggi'); expect(html).toContain('Domicilio: Consegne a domicilio non disponibili.')
   expect(html.indexOf('>19:30<')).toBeLessThan(html.indexOf('>Tavolo 1<'))
   expect(html).toContain('Pronti e in consegna'); expect(html).toContain('>Segna ritirato<')
@@ -132,8 +132,8 @@ it('sala: niente interruttore degli ordini online né «Nuovo ordine»; la posta
 })
 it('cassa: striscia «Da portare al tavolo» senza card, chip per reparto quando l’ordine ne tocca più di uno', async () => {
   const { SchermoStaff } = await import('./SchermoStaff')
-  const daPortare = [{ id: 'v1',reparto: 'sala' as const,stato: 'da_preparare' as const,ordineId: 'o',numero: 8,tavoloNome: 'Tavolo 1',quando: '2026-10-11T18:00:00Z',righe: [{ ...tavolo.righe[0],id: 'b',nome: 'Coca Cola',quantita: 2,reparto: 'sala' as const }] },
-    { id: 'v2',reparto: 'banco' as const,stato: 'pronta' as const,ordineId: 'o',numero: 8,tavoloNome: 'Tavolo 1',quando: '2026-10-11T18:03:00Z',righe: [tavolo.righe[0]] }]
+  const daPortare = [{ id: 'v1',reparto: 'sala' as const,stato: 'da_preparare' as const,ordineId: 'o',numero: 4808,numeroGiorno: 8,tavoloNome: 'Tavolo 1',quando: '2026-10-11T18:00:00Z',righe: [{ ...tavolo.righe[0],id: 'b',nome: 'Coca Cola',quantita: 2,reparto: 'sala' as const }] },
+    { id: 'v2',reparto: 'banco' as const,stato: 'pronta' as const,ordineId: 'o',numero: 4808,numeroGiorno: 8,tavoloNome: 'Tavolo 1',quando: '2026-10-11T18:03:00Z',righe: [tavolo.righe[0]] }]
   const comande = { o: [{ reparto: 'banco' as const,stato: 'pronta' as const,portata: false },{ reparto: 'cucina' as const,stato: 'in_preparazione' as const,portata: false },{ reparto: 'sala' as const,stato: 'da_preparare' as const,portata: false }] }
   const html = renderToStaticMarkup(<SchermoStaff ora="2026-10-11T18:05:00Z" dati={{ tavoli: [],ordini: [tavolo],riepiloghi: [],contiRecenti: [],casa: [],ordiniOnline: online,daPortare,comande }} />)
   const striscia = html.slice(html.indexOf('Da portare al tavolo'),html.indexOf('b-colonne'))

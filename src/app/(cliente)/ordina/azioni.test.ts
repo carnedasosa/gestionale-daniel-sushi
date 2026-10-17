@@ -10,7 +10,7 @@ const dati = { tipo: 'asporto',fascia: '2026-10-12T16:30:00.000Z',nome: 'Anna',t
 const corpo = (diverso: Record<string,unknown> = {}) => JSON.stringify({ righe: [{ piattoId: piatto,quantita: 2,nota: '' }],dati,totaleVistoCent: 1200,chiaveInvio,...diverso })
 beforeEach(() => { vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {}) })
 it('invio riuscito: dati normalizzati, rete del client, email avviate', async () => {
-  m.creaOrdineCasa.mockResolvedValue({ ok: true,ordine: { token: 't'.repeat(32),numero: 7 } })
+  m.creaOrdineCasa.mockResolvedValue({ ok: true,ordine: { token: 't'.repeat(32),numero: 4807,numeroGiorno: 7 } })
   expect(await inviaOrdineCasa(corpo())).toEqual({ ok: true,token: 't'.repeat(32),numero: 7 })
   expect(m.creaOrdineCasa).toHaveBeenCalledWith({},expect.objectContaining({ totaleVistoCent: 1200,chiaveInvio,rete: '192.0.2.1',prova: false,dati: expect.objectContaining({ fascia: new Date(dati.fascia) }) }))
   expect(m.avviaInvioEmail).toHaveBeenCalledTimes(1)

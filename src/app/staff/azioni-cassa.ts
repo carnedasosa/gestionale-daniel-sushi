@@ -31,7 +31,7 @@ export async function inviaOrdineCassa(json: string): Promise<EsitoCheckout> {
     }
     // L'ordine occupa una fascia: anche il sito deve vederla.
     revalidatePath('/staff'); revalidatePath('/'); revalidatePath('/ordina')
-    return { ok: true,token: esito.ordine.token,numero: esito.ordine.numero }
+    return { ok: true,token: esito.ordine.token,numero: esito.ordine.numeroGiorno }
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')
     // Lock o istruzione scaduti: la transazione è annullata e la chiave di invio evita doppioni.

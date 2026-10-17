@@ -13,7 +13,7 @@ export default async function PaginaStatoOrdine({ params }: { params: Promise<{ 
   const { telefono } = await leggiImpostazioni(db)
   const ora = new Date().toISOString(), concluso = ordineConcluso(ordine.stato)
   return <main className="b-contenitore b-pagina-cliente">
-    {!concluso && <><AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={ora} /><RicordaOrdine token={ordine.token} numero={ordine.numero} /></>}
+    {!concluso && <><AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={ora} /><RicordaOrdine token={ordine.token} numero={ordine.numeroGiorno} /></>}
     <StatoOrdine ordine={perClient(ordine)} telefono={telefono} ora={ora} />
   </main>
 }

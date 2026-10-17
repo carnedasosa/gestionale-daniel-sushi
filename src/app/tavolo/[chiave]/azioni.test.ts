@@ -10,7 +10,7 @@ const id = '11111111-1111-4111-8111-111111111111'
 const sessione = '22222222-2222-4222-8222-222222222222'
 const keyInvio = '33333333-3333-4333-8333-333333333333'
 it('rifiuta chiave di invio assente, null o malformata senza creare ordini', async () => {
-  m.creaOrdineTavolo.mockResolvedValue({ ok: true,ordine: { numero: 1 } })
+  m.creaOrdineTavolo.mockResolvedValue({ ok: true,ordine: { numero: 4801,numeroGiorno: 1 } })
   const json = JSON.stringify([{ piattoId: id,quantita: 1,nota: '' }])
   for (const key of [undefined,null,'x']) expect((await inviaOrdine('abcdefghijkl',json,key as string)).ok).toBe(false)
   expect(m.creaOrdineTavolo).not.toHaveBeenCalled()
@@ -36,7 +36,7 @@ it('invio: cookie mancante, sessione di altro tavolo, JSON rotto e carrello inva
 })
 it('invio valido restituisce numero e rifiuto mantiene i nomi esauriti', async () => {
   const json = JSON.stringify([{ piattoId: id, quantita: 1, nota: '', prezzoCent: 1 }])
-  m.creaOrdineTavolo.mockResolvedValueOnce({ ok: true, ordine: { numero: 42 } })
+  m.creaOrdineTavolo.mockResolvedValueOnce({ ok: true, ordine: { numero: 4842,numeroGiorno: 42 } })
   expect(await inviaOrdine('abcdefghijkl',json,keyInvio)).toEqual({ ok: true, numero: 42 })
   expect(m.creaOrdineTavolo.mock.calls[0][2][0]).not.toHaveProperty('prezzoCent')
   m.creaOrdineTavolo.mockResolvedValueOnce({ ok: false, errore: 'Esauriti', nonDisponibili: ['Salmone'] })
