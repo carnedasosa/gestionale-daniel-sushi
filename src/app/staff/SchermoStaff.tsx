@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useContext, useEffect } from 'react'
 import { formatEuro } from '@/domain/soldi'
 import { etichettaOrigine } from '@/domain/origine-ordine'
-import { nuovoOrdineAmmesso, onlineAmmesso, suonaAccettare, type Postazione } from '@/domain/postazioni'
+import { accettareAmmesso, nuovoOrdineAmmesso, onlineAmmesso, type Postazione } from '@/domain/postazioni'
 import type { StatoReparto, VoceDaPortareClient } from '@/comande/comande-repo'
 import type { OrdineClient, RiepilogoTavolo } from '@/tavoli/ordini-repo'
 import type { TavoloConSessione, ContoRecente } from '@/tavoli/repo'
@@ -62,7 +62,7 @@ const COLONNE = [
   { chiave: 'pronti',titolo: 'Pronti e in consegna',punto: 'b-punto--pronto' },
 ] as const
 // Le schede restano tutte montate (si nasconde quella non scelta): suono e memoria degli ordini letti valgono ovunque.
-// `postazione`: cassa (tutto) o sala (telefoni dei camerieri: niente interruttore online, «Nuovo ordine» né suono per gli ordini da accettare).
+// `postazione`: cassa (tutto) o sala (telefoni dei camerieri: niente interruttore online, «Nuovo ordine» né ordini da accettare).
 export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'cassa' }: { dati: DatiStaff | null; ora: string; vista?: VistaStaff; uscita?: React.ReactNode; postazione?: Extract<Postazione,'cassa' | 'sala'> }) {
   // Se una lettura dal database fallisce lo schermo resta montato con gli ultimi dati ricevuti:
   // smontarlo azzererebbe il suono e la memoria degli ordini già visti.
@@ -75,7 +75,8 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'ca
   const { nuovi,leggi } = useArrivi(`ds_arrivi_${postazione}`,ordini?.map(o => o.id),() => {})
   const { nuovi: nuoviDaPortare } = useArrivi(`ds_arrivi_portare_${postazione}`,mostrati?.daPortare?.map(v => v.id),() => suona(3))
   // Suono ripetuto ogni 10 secondi finché c'è un ordine da casa da accettare; subito quando ne arriva uno nuovo.
-  const inAttesa = suonaAccettare(postazione) ? (mostrati?.casa ?? []).filter(o => o.stato === 'in_attesa').map(o => o.id).join(',') : ''
+  const accetta = accettareAmmesso(postazione)
+  const inAttesa = accetta ? (mostrati?.casa ?? []).filter(o => o.stato === 'in_attesa').map(o => o.id).join(',') : ''
   useEffect(() => {
     if (!inAttesa) return
     suona(3)
@@ -85,7 +86,8 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'ca
   if (!mostrati || !ordini) return <><BarraStaff postazione={postazione} vista={vista} daGuardare={0} online={null} ora={ora} uscita={uscita} /><p role="status" className="b-staff__vuoto">Caricamento dello schermo…</p></>
   const { tavoli,riepiloghi,contiRecenti,casa,ordiniOnline } = mostrati
   const comande = mostrati.comande ?? {}
-  const daAccettare = casa.filter(o => o.stato === 'in_attesa')
+  // Accettare o rifiutare gli ordini da casa resta alla cassa: la sala non li vede finché non sono accettati.
+  const daAccettare = accetta ? casa.filter(o => o.stato === 'in_attesa') : []
   // Tavoli e casa nella stessa cucina: la casa per orario della fascia, i tavoli per arrivo.
   const cucina = [...ordini.map(o => ({ casa: false as const,o,quando: o.creatoIl })),...casa.filter(o => colonnaCucina(o.stato)).map(o => ({ casa: true as const,o,quando: o.fascia }))]
     .sort((a,b) => a.quando.localeCompare(b.quando))
@@ -97,12 +99,12 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'ca
     {errore && <p role="alert" className="b-avviso b-avviso--ritardo b-staff__avviso">{errore}</p>}
     <section aria-label="Ordini" hidden={vista !== 'ordini'} className="b-staff__vista">
       <DaPortare voci={mostrati.daPortare ?? []} nuove={nuoviDaPortare} azioniDi={azioniDi} />
-      <div className="b-colonne">
-        <section className="b-colonna" aria-labelledby="col-accettare">
+      <div className={`b-colonne${accetta ? '' : ' b-colonne--sala'}`}>
+        {accetta && <section className="b-colonna" aria-labelledby="col-accettare">
           <h2 id="col-accettare" className="b-colonna__titolo"><span className="b-punto b-punto--accettare" aria-hidden="true" />Da accettare <span className="b-num b-secondario">{daAccettare.length}</span></h2>
           {!daAccettare.length && <p className="b-secondario">Nessun ordine da accettare.</p>}
           {daAccettare.map(o => <CardOrdineCasa key={o.id} ordine={o} ora={ora} {...azioniDi(`casa:${o.id}`)} daAccettare comande={comande[o.id]} />)}
-        </section>
+        </section>}
         {COLONNE.map(col => { const qui = cucina.filter(x => colonnaCucina(x.o.stato) === col.chiave)
           return <section key={col.chiave} className="b-colonna" aria-labelledby={`col-${col.chiave}`}>
             <h2 id={`col-${col.chiave}`} className="b-colonna__titolo"><span className={`b-punto ${col.punto}`} aria-hidden="true" />{col.titolo} <span className="b-num b-secondario">{qui.length}</span></h2>

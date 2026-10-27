@@ -51,10 +51,10 @@
 .b-comanda__reparti { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
 .b-comanda__altri { font-size: .875rem; }
 
-/* Banco e cucina: tre colonne, solo le comande del reparto */
-.b-colonne--reparto { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 56.25em) { .b-colonne--reparto { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 37.5em) { .b-colonne--reparto { grid-template-columns: minmax(0, 1fr); } }
+/* Banco e cucina (solo le comande del reparto) e sala (senza «Da accettare»): tre colonne */
+.b-colonne--reparto, .b-colonne--sala { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 56.25em) { .b-colonne--reparto, .b-colonne--sala { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 37.5em) { .b-colonne--reparto, .b-colonne--sala { grid-template-columns: minmax(0, 1fr); } }
 
 /* Da portare al tavolo (cassa e sala) */
 .b-portare { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; padding: 14px; border-radius: var(--b-r-card); background: var(--b-foglio); box-shadow: inset 4px 0 0 var(--b-st-pronto-punto); }
