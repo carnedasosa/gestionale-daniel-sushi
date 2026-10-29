@@ -6,6 +6,7 @@ vi.mock('./azioni-menu', () => ({ cambiaDisponibilitaStaff: vi.fn() }))
 vi.mock('./azioni-comande', () => ({ avanzaComandaStaff: vi.fn(),portaComandaStaff: vi.fn() }))
 vi.mock('./azioni-postazione', () => ({ impostaPostazione: vi.fn() }))
 vi.mock('./azioni-stampa', () => ({ ristampaComande: vi.fn() }))
+vi.mock('./azioni-pagamenti', () => ({ incassa: vi.fn() }))
 vi.mock('./azioni-casa', () => ({ apriOrdiniOnline: vi.fn(), chiudiOrdiniOnline: vi.fn(), accettaOrdineStaff: vi.fn(), rifiutaOrdineStaff: vi.fn(), avanzaOrdineCasaStaff: vi.fn(), annullaOrdineCasaStaff: vi.fn() }))
 import { CardOrdine } from './SchermoStaff'
 import { CardOrdineCasa } from './OrdiniCasa'
