@@ -5,6 +5,7 @@ import { apriSessione, chiudiSessione, creaTavolo, elencoTavoli, impostaCoperti 
 import { contoSessione, creaOrdineTavolo, riepiloghiTavoli } from './ordini-repo'
 import { leggiImpostazioniCassa, salvaImpostazioniCassa } from '@/cassa/impostazioni-repo'
 
+const SPENTA = { banco: false,cucina: false,sala: false }
 let ambiente: Awaited<ReturnType<typeof creaDbDiTest>>, sessione: string, piatto: string
 beforeEach(async () => {
   ambiente = await creaDbDiTest({ seed: true })
@@ -16,8 +17,8 @@ afterEach(async () => { await ambiente.pg.close() })
 
 it('il coperto entra nel conto e nel riepilogo del tavolo con lo stesso totale', async () => {
   const { db } = ambiente
-  expect(await leggiImpostazioniCassa(db)).toEqual({ copertoCent: 0 })
-  await salvaImpostazioniCassa(db,{ copertoCent: 250 })
+  expect(await leggiImpostazioniCassa(db)).toEqual({ copertoCent: 0,stampa: { banco: false,cucina: false,sala: false } })
+  await salvaImpostazioniCassa(db,{ copertoCent: 250,stampa: SPENTA })
   const e = await creaOrdineTavolo(db,sessione,[{ piattoId: piatto,quantita: 2,nota: '' }],randomUUID()); if (!e.ok) throw new Error(e.errore)
   expect(await impostaCoperti(db,sessione,4)).toBe('ok')
   const conto = (await contoSessione(db,sessione))!
@@ -28,9 +29,9 @@ it('il coperto entra nel conto e nel riepilogo del tavolo con lo stesso totale',
 })
 it('il prezzo si fissa alla prima volta: cambiarlo in admin non tocca i tavoli già segnati', async () => {
   const { db } = ambiente
-  await salvaImpostazioniCassa(db,{ copertoCent: 200 })
+  await salvaImpostazioniCassa(db,{ copertoCent: 200,stampa: SPENTA })
   await impostaCoperti(db,sessione,2)
-  await salvaImpostazioniCassa(db,{ copertoCent: 300 })
+  await salvaImpostazioniCassa(db,{ copertoCent: 300,stampa: SPENTA })
   await impostaCoperti(db,sessione,3)
   expect(await contoSessione(db,sessione)).toMatchObject({ coperti: 3,copertoCent: 200,copertiCent: 600 })
   // Tolti i coperti, la volta dopo si prende il prezzo nuovo.

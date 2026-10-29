@@ -5,6 +5,7 @@ vi.mock('./azioni', () => ({ apriTavolo: vi.fn(), chiudiTavolo: vi.fn(), avanzaO
 vi.mock('./azioni-menu', () => ({ cambiaDisponibilitaStaff: vi.fn() }))
 vi.mock('./azioni-comande', () => ({ avanzaComandaStaff: vi.fn(),portaComandaStaff: vi.fn() }))
 vi.mock('./azioni-postazione', () => ({ impostaPostazione: vi.fn() }))
+vi.mock('./azioni-stampa', () => ({ ristampaComande: vi.fn() }))
 vi.mock('./azioni-casa', () => ({ apriOrdiniOnline: vi.fn(), chiudiOrdiniOnline: vi.fn(), accettaOrdineStaff: vi.fn(), rifiutaOrdineStaff: vi.fn(), avanzaOrdineCasaStaff: vi.fn(), annullaOrdineCasaStaff: vi.fn() }))
 import { CardOrdine } from './SchermoStaff'
 import { CardOrdineCasa } from './OrdiniCasa'
@@ -160,4 +161,12 @@ it('inizio turno: scelta della postazione preselezionata e suoni della postazion
   expect(html).toContain('Questo dispositivo è'); expect(html).toMatch(/value="cucina"[^>]*checked=""|checked=""[^>]*value="cucina"/)
   expect(html).toContain('comanda nuova della cucina'); expect(html).not.toContain('Gli ordini online di stasera')
   expect(renderToStaticMarkup(<InizioTurno><p>schermo</p></InizioTurno>)).toContain('Gli ordini online di stasera')
+})
+it('reparti su carta: la cassa vede l’allarme delle stampanti, la sala no; le card offrono la ristampa', async () => {
+  const { SchermoStaff } = await import('./SchermoStaff')
+  const dati = { tavoli: [],ordini: [tavolo],riepiloghi: [],contiRecenti: [],casa: [],ordiniOnline: online,stampa: { usata: true,allarme: { tipo: 'ponte' as const,testo: 'Stampanti scollegate: il ponte di stampa non risponde.' } } }
+  expect(renderToStaticMarkup(<SchermoStaff dati={dati} ora="2026-10-11T18:05:00Z" />)).toContain('Stampanti scollegate')
+  expect(renderToStaticMarkup(<SchermoStaff dati={dati} ora="2026-10-11T18:05:00Z" postazione="sala" />)).not.toContain('Stampanti scollegate')
+  expect(renderToStaticMarkup(<CardOrdine ordine={tavolo} ora="2026-10-11T18:05:00Z" nuovo={false} inCorso={false} leggi={() => {}} esegui={() => {}} ristampa />)).toContain('Ristampa comande')
+  expect(renderToStaticMarkup(<CardOrdine ordine={tavolo} ora="2026-10-11T18:05:00Z" nuovo={false} inCorso={false} leggi={() => {}} esegui={() => {}} />)).not.toContain('Ristampa comande')
 })

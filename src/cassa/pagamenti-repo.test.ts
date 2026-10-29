@@ -23,7 +23,7 @@ const ordina = async (righe: { piattoId: string; quantita: number }[]) => {
 
 it('alla romana in tre su un totale con coperti: le quote sommano esattamente il conto', async () => {
   const { db } = ambiente
-  await salvaImpostazioniCassa(db,{ copertoCent: 150 })
+  await salvaImpostazioniCassa(db,{ copertoCent: 150,stampa: { banco: false,cucina: false,sala: false } })
   await ordina([{ piattoId: p1,quantita: 3 },{ piattoId: p2,quantita: 1 }])
   await impostaCoperti(db,sessione,3)
   const totale = (await contoSessione(db,sessione))!.totaleCent

@@ -1,0 +1,11 @@
+{
+  "server": "https://gestionale-daniel-sushi.vercel.app",
+  "token": "metti qui STAMPA_TOKEN, oppure lascialo vuoto e usa la variabile d'ambiente",
+  "intervalloSecondi": 2,
+  "stampanti": {
+    "cassa": { "host": "192.168.1.31", "porta": 9100 },
+    "banco": { "host": "192.168.1.32", "porta": 9100 },
+    "cucina": { "host": "192.168.1.33", "porta": 9100 },
+    "fiscale": { "url": "http://192.168.1.30/cgi-bin/fpmate.cgi" }
+  }
+}

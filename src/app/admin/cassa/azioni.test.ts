@@ -12,7 +12,7 @@ it('admin prima del salvataggio, poi rivalida', async () => {
   expect(await salvaCassa(INIZIALE,fd({ coperto: '2,00' }))).toMatchObject({ salvato: true,errore: null,invii: 1 })
   expect(m.richiediRuolo).toHaveBeenCalledWith('admin')
   expect(m.richiediRuolo.mock.invocationCallOrder[0]).toBeLessThan(m.salvaImpostazioniCassa.mock.invocationCallOrder[0])
-  expect(m.salvaImpostazioniCassa).toHaveBeenCalledWith(expect.anything(),{ copertoCent: 200 })
+  expect(m.salvaImpostazioniCassa).toHaveBeenCalledWith(expect.anything(),{ copertoCent: 200,stampa: { banco: false,cucina: false,sala: false } })
   expect(m.revalidatePath).toHaveBeenCalledWith('/admin/cassa')
 })
 it('valori sbagliati ed errori del DB tornano nel modulo', async () => {

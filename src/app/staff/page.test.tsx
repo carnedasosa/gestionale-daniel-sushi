@@ -1,9 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-const m = vi.hoisted(() => ({ ruolo: vi.fn(),elenco: vi.fn(),ordini: vi.fn(),riepiloghi: vi.fn(),conti: vi.fn(),casa: vi.fn(),disponibilita: vi.fn(),email: vi.fn(),cookie: vi.fn(),attive: vi.fn(),portare: vi.fn(),riepilogo: vi.fn(),menu: vi.fn() }))
+const m = vi.hoisted(() => ({ ruolo: vi.fn(),elenco: vi.fn(),ordini: vi.fn(),riepiloghi: vi.fn(),conti: vi.fn(),casa: vi.fn(),disponibilita: vi.fn(),email: vi.fn(),cookie: vi.fn(),attive: vi.fn(),portare: vi.fn(),riepilogo: vi.fn(),menu: vi.fn(),coda: vi.fn(),cassa: vi.fn() }))
 vi.mock('next/headers',() => ({ cookies: async () => ({ get: (nome: string) => nome === 'ds_postazione' && m.cookie() ? { value: m.cookie() } : undefined }) }))
 vi.mock('@/comande/comande-repo',() => ({ comandeAttive: m.attive,daPortare: m.portare,riepilogoComande: m.riepilogo,comandaPerClient: (c: object) => c }))
 vi.mock('@/menu/repo',() => ({ leggiMenu: m.menu }))
+vi.mock('@/stampa/stampe-repo',() => ({ statoCoda: m.coda }))
+vi.mock('@/cassa/impostazioni-repo',() => ({ leggiImpostazioniCassa: m.cassa }))
 vi.mock('./azioni-postazione',() => ({ impostaPostazione: vi.fn() }))
 vi.mock('@/auth/sessione',() => ({ richiediRuolo: m.ruolo }))
 vi.mock('@/server/db',() => ({ db: {} }))
@@ -18,6 +20,7 @@ import { redirect } from 'next/navigation'
 import AreaStaff from './page'
 beforeEach(() => { vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {}); m.elenco.mockResolvedValue([]); m.ordini.mockResolvedValue([]); m.riepiloghi.mockResolvedValue([]); m.conti.mockResolvedValue([]); m.casa.mockResolvedValue([])
   m.attive.mockResolvedValue([]); m.portare.mockResolvedValue([]); m.riepilogo.mockResolvedValue(new Map())
+  m.coda.mockResolvedValue({ ponteVistoIl: null,inCoda: 0,piuVecchia: null,errori: 0,incerte: 0 }); m.cassa.mockResolvedValue({ copertoCent: 0,stampa: { banco: false,cucina: false,sala: false } })
   m.disponibilita.mockResolvedValue({ oggi: '2026-10-12',apertiIl: '2026-10-12',servizi: { asporto: { apertura: { aperto: true } },domicilio: { apertura: { aperto: false,motivo: 'zone' } } } }) })
 it('mantiene intestazione e tentativi automatici se falliscono le letture DB', async () => {
   m.elenco.mockRejectedValueOnce(new Error('DB giù'))
@@ -61,4 +64,8 @@ it('cassa: ordini, striscia «Da portare» e stato delle comande', async () => {
   m.ordini.mockResolvedValue([{ id: 'o1',creatoIl: new Date('2026-10-11T18:00:00Z') }])
   await AreaStaff()
   expect(m.portare).toHaveBeenCalled(); expect(m.riepilogo).toHaveBeenCalledWith({},['o1']); expect(m.attive).not.toHaveBeenCalled()
+})
+it('cassa: legge lo stato della coda di stampa e le impostazioni dei reparti su carta', async () => {
+  await AreaStaff()
+  expect(m.coda).toHaveBeenCalledWith({}); expect(m.cassa).toHaveBeenCalledWith({})
 })

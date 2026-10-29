@@ -17,6 +17,9 @@ import { InizioTurno } from './InizioTurno'
 import { SchermoStaff, type DatiStaff } from './SchermoStaff'
 import { SchermoReparto, type DatiReparto } from './SchermoReparto'
 import { vistaStaff } from './vista'
+import { statoCoda } from '@/stampa/stampe-repo'
+import { allarmeStampa } from '@/stampa/instradamento'
+import { leggiImpostazioniCassa } from '@/cassa/impostazioni-repo'
 import './staff.css'
 
 // Il menù serve solo alla scheda «Menù»: le altre non lo rileggono a ogni aggiornamento.
@@ -24,7 +27,8 @@ const menuPerClient = (menu: CategoriaConPiatti[] | null) => menu?.map(c => ({ i
 
 async function leggiCassa(vista: string): Promise<DatiStaff> {
   const dati = await Promise.all([elencoTavoli(db),ordiniAttivi(db),riepiloghiTavoli(db),contiRecenti(db),ordiniCasaAttivi(db),leggiDisponibilita(db,new Date(),modalitaProva(process.env)),
-    vista === 'menu' ? leggiMenu(db) : null,daPortare(db)])
+    vista === 'menu' ? leggiMenu(db) : null,daPortare(db),statoCoda(db),leggiImpostazioniCassa(db)])
+  const usata = Object.values(dati[9].stampa).some(Boolean)
   const comande = await riepilogoComande(db,[...dati[1],...dati[4]].map(o => o.id))
   const motivo = (a: StatoApertura) => a.aperto ? null : TESTO_MOTIVO[a.motivo]
   return {
@@ -37,6 +41,7 @@ async function leggiCassa(vista: string): Promise<DatiStaff> {
     ordiniOnline: { accesi: dati[5].apertiIl === dati[5].oggi,asporto: motivo(dati[5].servizi.asporto.apertura),domicilio: motivo(dati[5].servizi.domicilio.apertura) },
     daPortare: dati[7].map(v => ({ ...v,quando: new Date(v.quando).toISOString() })),
     comande: Object.fromEntries(comande),
+    stampa: { usata,allarme: allarmeStampa(dati[8],usata,new Date()) },
   }
 }
 

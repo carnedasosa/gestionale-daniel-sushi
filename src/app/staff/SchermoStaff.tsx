@@ -21,13 +21,16 @@ import type { OrdineCasaClient } from '@/casa/ordini-casa-repo'
 import { colonnaCucina } from '@/domain/stati-casa'
 import type { VistaStaff } from './vista'
 import { avanzaOrdine, annullaOrdineStaff, annullaRigaStaff } from './azioni'
+import { ristampaComande } from './azioni-stampa'
+import type { Allarme } from '@/stampa/instradamento'
 import { ChipComande, DaPortare } from './DaPortare'
 import { useArrivi } from './useArrivi'
 import { useEsegui, useUltimiDati, type Esegui } from './useEsegui'
 
 export type TavoloStaff = Omit<TavoloConSessione,'sessione'> & { sessione: (Omit<NonNullable<TavoloConSessione['sessione']>,'apertaIl'> & { apertaIl: string }) | null }
 // Letta al clic (anche sul bottone, che arriva prima): alla pressione l’etichetta «Nuovo ordine» sparirebbe e sposterebbe il bottone sotto il dito.
-export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui,comande }: { ordine: OrdineClient; ora: string; nuovo: boolean; inCorso: boolean; leggi: () => void; esegui: Esegui; comande?: StatoReparto[] }) {
+// `ristampa`: c'è almeno un reparto su carta, quindi serve «Ristampa comande».
+export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui,comande,ristampa = false }: { ordine: OrdineClient; ora: string; nuovo: boolean; inCorso: boolean; leggi: () => void; esegui: Esegui; comande?: StatoReparto[]; ristampa?: boolean }) {
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
   return <article className={`b-comanda${nuovo ? ' b-comanda--nuovo' : ''}${o.stato === 'in_preparazione' ? ' b-comanda--preparazione' : ''}`} onClick={leggi}>
     <div className="b-comanda__testa">
@@ -43,6 +46,7 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui,comande }:
       <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => { leggi(); esegui(() => avanzaOrdine(o.id,o.stato)) }}>{o.stato === 'inviato' ? 'Inizia a preparare' : 'Segna servito'}</button>
       <AltreAzioni titolo={`Altre azioni · ${o.tavoloNome} n. ${o.numeroGiorno}`}>{chiudi => <>
         {nuovo && <button type="button" className="b-btn b-btn--secondario" onClick={() => { leggi(); chiudi() }}>Segna come letto</button>}
+        {ristampa && <button type="button" className="b-btn b-btn--secondario" disabled={inCorso} onClick={() => { chiudi(); esegui(() => ristampaComande(o.id)) }}>Ristampa comande</button>}
         {/* Il conto di un tavolo chiuso è già stato incassato: niente annullamenti, il server li rifiuterebbe. */}
         {o.tavoloChiuso ? <p className="b-secondario">Tavolo chiuso: il conto non si può più modificare.</p> : <>
           {o.righe.filter(r => !r.annullata).map(r => <ConfermaAzione key={r.id} inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => { chiudi(); esegui(() => annullaRigaStaff(r.id)) }}>Annulla {r.nome}</ConfermaAzione>)}
@@ -55,6 +59,8 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui,comande }:
 export interface DatiStaff {
   tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[]; casa: OrdineCasaClient[]; ordiniOnline: OrdiniOnline; menu?: CategoriaElenco[] | null
   daPortare?: VoceDaPortareClient[]; comande?: Record<string,StatoReparto[]>
+  /** Comande su carta: se qualche reparto le usa e che cosa dire alla cassa delle stampanti. */
+  stampa?: { usata: boolean; allarme: Allarme }
 }
 const COLONNE = [
   { chiave: 'da_preparare',titolo: 'Da preparare',punto: '' },
@@ -97,6 +103,7 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'ca
       azioni={nuovoOrdineAmmesso(postazione) ? <Link href="/staff/nuovo-ordine" className="b-staff-barra__bottone">Nuovo ordine</Link> : null}
       online={onlineAmmesso(postazione) ? <OrdiniOnlineBarra stato={ordiniOnline} {...azioniDi('ordini-online')} uscita={uscita} /> : null} />
     {errore && <p role="alert" className="b-avviso b-avviso--ritardo b-staff__avviso">{errore}</p>}
+    {postazione === 'cassa' && mostrati.stampa?.allarme && <p role="alert" className="b-avviso b-avviso--ritardo b-staff__avviso">{mostrati.stampa.allarme.testo}</p>}
     <section aria-label="Ordini" hidden={vista !== 'ordini'} className="b-staff__vista">
       <DaPortare voci={mostrati.daPortare ?? []} nuove={nuoviDaPortare} azioniDi={azioniDi} />
       <div className={`b-colonne${accetta ? '' : ' b-colonne--sala'}`}>
@@ -109,8 +116,8 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'ca
           return <section key={col.chiave} className="b-colonna" aria-labelledby={`col-${col.chiave}`}>
             <h2 id={`col-${col.chiave}`} className="b-colonna__titolo"><span className={`b-punto ${col.punto}`} aria-hidden="true" />{col.titolo} <span className="b-num b-secondario">{qui.length}</span></h2>
             {!qui.length && <p className="b-secondario">Nessun ordine.</p>}
-            {qui.map(x => x.casa ? <CardOrdineCasa key={x.o.id} ordine={x.o} ora={ora} {...azioniDi(`casa:${x.o.id}`)} daAccettare={false} comande={comande[x.o.id]} />
-              : <CardOrdine key={x.o.id} ordine={x.o} ora={ora} nuovo={nuovi.includes(x.o.id)} {...azioniDi(`ordine:${x.o.id}`)} leggi={() => leggi(x.o.id)} comande={comande[x.o.id]} />)}
+            {qui.map(x => x.casa ? <CardOrdineCasa key={x.o.id} ordine={x.o} ora={ora} {...azioniDi(`casa:${x.o.id}`)} daAccettare={false} comande={comande[x.o.id]} ristampa={!!mostrati.stampa?.usata} />
+              : <CardOrdine key={x.o.id} ordine={x.o} ora={ora} nuovo={nuovi.includes(x.o.id)} {...azioniDi(`ordine:${x.o.id}`)} leggi={() => leggi(x.o.id)} comande={comande[x.o.id]} ristampa={!!mostrati.stampa?.usata} />)}
           </section> })}
       </div>
     </section>

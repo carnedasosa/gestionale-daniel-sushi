@@ -66,8 +66,9 @@ export async function chiudiSessione(db: Db, sessioneId: string,contoVistoAlle: 
     const [s] = await tx.query<{ chiusa: Date | null }>('select chiusa_il as chiusa from sessioni_tavolo where id=$1 for update',[sessioneId])
     if (!s) return invalida
     if (s.chiusa) return { ok: true }
-    const [n] = await tx.query<{ cucina: number; dopo: number }>(`select count(*) filter(where stato in ('inviato','in_preparazione'))::int as cucina,count(*) filter(where creato_il>$2)::int as dopo from ordini where sessione_id=$1 and stato<>'annullato'`,[sessioneId,contoVistoAlle])
+    const [n] = await tx.query<{ cucina: number; dopo: number }>(`select count(*) filter(where stato in ('inviato','in_preparazione') and exists(select 1 from comande c where c.ordine_id=ordini.id and c.stato in ('da_preparare','in_preparazione') and c.stampata_il is null))::int as cucina,count(*) filter(where creato_il>$2)::int as dopo from ordini where sessione_id=$1 and stato<>'annullato'`,[sessioneId,contoVistoAlle])
     if (!forza && n.dopo>0) return { ok: false,motivo: 'ordini_dopo_conto',n: n.dopo }
+    // Le comande già stampate non contano: il gestionale non sa quando il reparto su carta le ha finite.
     if (!forza && n.cucina>0) return { ok: false,motivo: 'ordini_in_cucina',n: n.cucina }
     await tx.query('update sessioni_tavolo set chiusa_il=clock_timestamp() where id=$1',[sessioneId])
     return { ok: true }
