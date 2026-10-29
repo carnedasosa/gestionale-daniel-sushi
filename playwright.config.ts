@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 import { existsSync } from 'node:fs'
-import { PORTA_APP, PORTA_DB, URL_DB } from './e2e/dati'
+import { PORTA_APP, PORTA_DB, STAMPA_TOKEN_E2E, URL_DB } from './e2e/dati'
 
 // E2E_EMAIL ed E2E_PASSWORD dell'utente di prova servono ai test (login dello staff).
 if (existsSync('.env.local')) process.loadEnvFile('.env.local')
@@ -21,6 +21,6 @@ export default defineConfig({
   webServer: [
     { command: 'npx tsx --env-file=.env.local e2e/db-locale.ts',port: PORTA_DB,timeout: 120_000,reuseExistingServer: false,stdout: 'pipe' },
     { command: `npx next build && npx next start -H 127.0.0.1 -p ${PORTA_APP}`,url: `http://127.0.0.1:${PORTA_APP}/accesso`,timeout: 600_000,reuseExistingServer: false,
-      env: { DATABASE_URL: URL_DB,APP_URL: `http://127.0.0.1:${PORTA_APP}` },stdout: 'pipe' },
+      env: { DATABASE_URL: URL_DB,APP_URL: `http://127.0.0.1:${PORTA_APP}`,STAMPA_TOKEN: STAMPA_TOKEN_E2E },stdout: 'pipe' },
   ],
 })

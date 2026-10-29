@@ -16,6 +16,8 @@ import { Incasso, type DatiIncasso } from '../../Incasso'
 import { statoPagamenti } from '@/cassa/pagamenti-repo'
 import { leggiImpostazioniFiscali } from '@/fiscale/scontrini-repo'
 import { chiaveVoce, porzioniResidue } from '@/domain/divisione-conto'
+// Il contatore − / + dei coperti e dell'incasso.
+import '@/styles/banco/menu.css'
 import '../../staff.css'
 const quando = (d: Date) => d.toLocaleString('it-IT',{ day: '2-digit',month: '2-digit',hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })
 export default async function ContoPage({ params }: { params: Promise<{ sessione: string }> }) {
@@ -51,7 +53,7 @@ export default async function ContoPage({ params }: { params: Promise<{ sessione
           <div><p className="b-secondario">Riepilogo · lo scontrino si emette dai pagamenti qui sotto</p><p className="b-num b-conto__totale" aria-label={`Totale: ${formatEuro(conto.totaleCent)}`}>{formatEuro(conto.totaleCent)}</p></div>
           {!conto.chiusaIl && <ChiusuraConto sessioneId={sessione} attuale={{ vistoAlle: conto.vistoAlle.toISOString(),ordiniIds: conto.ordiniIds,totaleCent: conto.totaleCent }} />}
         </div>
-        <Incasso key={`${pagamenti.pagatoCent}-${pagamenti.pagamenti.length}-${fiscali.automatico}`} dati={incasso} />
+        <Incasso dati={incasso} />
       </section>
     </div></div>
   </main>

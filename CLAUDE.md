@@ -33,6 +33,7 @@ La CI (`.github/workflows/ci.yml`) esegue typecheck, lint, test, e2e e serata su
 **Strati** (dal più puro al più esterno):
 - `src/domain/` — logica pura senza I/O (carrello, poke, fasce orarie, soldi in centesimi, stati di tavolo/casa, ora di Roma, limiti dei tentativi). Test unitari accanto a ogni file.
 - `src/menu/`, `src/tavoli/`, `src/casa/`, `src/auth/` — repository SQL (`*-repo.ts`, `repo.ts`) e servizi per area: menù, tavoli/ordini al tavolo, ordini da casa (impostazioni, coda email Resend, cron di anonimizzazione).
+- `src/cassa/` (coperto, pagamenti, pre-conto), `src/stampa/` (coda di stampa `stampe`, biglietti e ESC/POS puri, instradamento, API per il ponte), `src/fiscale/` (documento commerciale neutro, driver Epson `fpmate.cgi`, scontrini). Il ponte di stampa del locale è `scripts/ponte-stampa.ts` (solo trasporto, Node senza dipendenze). Un lavoro fiscale senza esito non si riaccoda mai da solo: diventa «incerto».
 - `src/app/**/azioni.ts` — Server Actions (`'use server'`): **prima istruzione sempre `await richiediRuolo('admin'|'staff')`** per le aree protette, poi validazione, repository, `revalidatePath`. Gli errori del DB si registrano con `console.error(err.message)` e diventano messaggi in italiano nello stato restituito.
 - `src/app/` — route: `(cliente)` (menù pubblico `/`, `/ordina`, `/ordine/[token]`), `tavolo/[chiave]`, `staff`, `admin`, `accesso`, `api/cron/anonimizza`.
 - `src/componenti/`, `src/ordinare/` — componenti condivisi; `src/ordinare/` contiene carrello, card e composizione poke usati sia al tavolo sia da casa.

@@ -20,6 +20,8 @@ import { vistaStaff } from './vista'
 import { statoCoda } from '@/stampa/stampe-repo'
 import { allarmeStampa } from '@/stampa/instradamento'
 import { leggiImpostazioniCassa } from '@/cassa/impostazioni-repo'
+// Il contatore − / + dei coperti nel dettaglio del tavolo.
+import '@/styles/banco/menu.css'
 import './staff.css'
 
 // Il menù serve solo alla scheda «Menù»: le altre non lo rileggono a ogni aggiornamento.
