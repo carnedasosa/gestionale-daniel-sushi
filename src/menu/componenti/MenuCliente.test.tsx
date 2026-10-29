@@ -6,7 +6,7 @@ import { MenuCliente } from './MenuCliente'
 const base: Piatto = {
   id: 'p', categoriaId: 'uramaki', numero: null, nome: 'Piatto', descrizione: null, prezzoCent: 1050,
   piccante: false, vegetariano: false, dellaCasa: false, allergeni: [], allergeniConfermati: true,
-  disponibile: true, posizione: 0,
+  disponibile: true, posizione: 0, foto: null,
 }
 
 const categorie: CategoriaConPiatti[] = [

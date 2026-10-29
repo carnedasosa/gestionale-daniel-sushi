@@ -32,12 +32,12 @@ it('ordini: l’ordine del cameriere porta il chip «Dal cameriere», quello del
   expect(staff).toContain('dal cameriere'); expect(staff).toContain('scheda Conti'); expect(staff).not.toContain('Il conto lo fai alla cassa')
 })
 it('piatto esaurito mostra allergeni e nessun bottone Aggiungi', () => {
-  const p: Piatto = { id: 'p', categoriaId: 'x', numero: 1, nome: 'Salmone', descrizione: null, prezzoCent: 600, piccante: false, vegetariano: false, dellaCasa: false, allergeni: ['pesce'], allergeniConfermati: true, disponibile: false, posizione: 0 }
+  const p: Piatto = { id: 'p', categoriaId: 'x', numero: 1, nome: 'Salmone', descrizione: null, prezzoCent: 600, piccante: false, vegetariano: false, dellaCasa: false, allergeni: ['pesce'], allergeniConfermati: true, disponibile: false, posizione: 0, foto: null }
   const html = renderToStaticMarkup(<CardPiatto piatto={p} quantita={0} modifica={() => {}} />)
   expect(html).toContain('Esaurito'); expect(html).toContain('Allergeni: Pesce'); expect(html).not.toContain('Aggiungi')
 })
 it('piatto disponibile: «+» con nome accessibile, poi «− n +»; al massimo 20', () => {
-  const p: Piatto = { id: 'p', categoriaId: 'x', numero: 1, nome: 'Salmone', descrizione: 'Tartare', prezzoCent: 600, piccante: true, vegetariano: false, dellaCasa: true, allergeni: [], allergeniConfermati: true, disponibile: true, posizione: 0 }
+  const p: Piatto = { id: 'p', categoriaId: 'x', numero: 1, nome: 'Salmone', descrizione: 'Tartare', prezzoCent: 600, piccante: true, vegetariano: false, dellaCasa: true, allergeni: [], allergeniConfermati: true, disponibile: true, posizione: 0, foto: null }
   const zero = renderToStaticMarkup(<CardPiatto piatto={p} quantita={0} modifica={() => {}} />)
   expect(zero).toContain('aria-label="Aggiungi Salmone"'); expect(zero).toContain('Della casa'); expect(zero).toContain('Piccante')
   const venti = renderToStaticMarkup(<CardPiatto piatto={p} quantita={20} modifica={() => {}} />)

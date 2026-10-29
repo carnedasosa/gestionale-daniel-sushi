@@ -1,6 +1,7 @@
 import type { Db } from '@/server/db-tipi'
 import type { CodiceAllergene } from '@/domain/allergeni'
 import type { Reparto } from '@/domain/reparti'
+import type { InfoFoto } from '@/domain/foto'
 
 export interface Piatto {
   id: string
@@ -16,6 +17,8 @@ export interface Piatto {
   allergeniConfermati: boolean
   disponibile: boolean
   posizione: number
+  /** Foto del piatto (senza i byte, che servono solo alla rotta /foto). */
+  foto: InfoFoto | null
 }
 
 export interface CategoriaConPiatti { id: string; nome: string; pezzi: string | null; posizione: number; reparto: Reparto; piatti: Piatto[] }
@@ -35,10 +38,14 @@ interface RigaPiatto {
   id: string; categoria_id: string; numero: number | null; nome: string; descrizione: string | null
   prezzo_cent: number; piccante: boolean; vegetariano: boolean; della_casa: boolean
   allergeni: CodiceAllergene[]; allergeni_confermati: boolean; disponibile: boolean; posizione: number
+  foto_versione: string | null; foto_larghezza: number | null; foto_altezza: number | null
 }
 
 const COLONNE = `id, categoria_id, numero, nome, descrizione, prezzo_cent, piccante, vegetariano, della_casa,
   allergeni, allergeni_confermati, disponibile, posizione`
+// Piatti con le dimensioni e la versione della foto (left join: senza foto sono null).
+const CON_FOTO = `${COLONNE.replace(/(\w+)/g,'p.$1')}, f.versione as foto_versione, f.larghezza as foto_larghezza, f.altezza as foto_altezza
+  from piatti p left join foto_piatti f on f.piatto_id = p.id`
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -47,6 +54,7 @@ function daRiga(r: RigaPiatto): Piatto {
     id: r.id, categoriaId: r.categoria_id, numero: r.numero, nome: r.nome, descrizione: r.descrizione,
     prezzoCent: r.prezzo_cent, piccante: r.piccante, vegetariano: r.vegetariano, dellaCasa: r.della_casa,
     allergeni: r.allergeni, allergeniConfermati: r.allergeni_confermati, disponibile: r.disponibile, posizione: r.posizione,
+    foto: r.foto_versione ? { versione: r.foto_versione, larghezza: r.foto_larghezza!, altezza: r.foto_altezza! } : null,
   }
 }
 
@@ -54,13 +62,13 @@ export async function leggiMenu(db: Db): Promise<CategoriaConPiatti[]> {
   const categorie = await db.query<Omit<CategoriaConPiatti, 'piatti'>>(
     'select id, nome, pezzi, posizione, reparto from categorie order by posizione',
   )
-  const piatti = await db.query<RigaPiatto>(`select ${COLONNE} from piatti order by posizione, numero nulls last`)
+  const piatti = await db.query<RigaPiatto>(`select ${CON_FOTO} order by p.posizione, p.numero nulls last`)
   return categorie.map((c) => ({ ...c, piatti: piatti.filter((p) => p.categoria_id === c.id).map(daRiga) }))
 }
 
 export async function leggiPiatto(db: Db, id: string): Promise<Piatto | null> {
   if (!UUID.test(id)) return null
-  const [r] = await db.query<RigaPiatto>(`select ${COLONNE} from piatti where id = $1`, [id])
+  const [r] = await db.query<RigaPiatto>(`select ${CON_FOTO} where p.id = $1`, [id])
   return r ? daRiga(r) : null
 }
 
@@ -69,10 +77,10 @@ export async function aggiornaPiatto(db: Db, id: string, d: DatiPiatto): Promise
   const [r] = await db.query<RigaPiatto>(
     `update piatti set nome = $2, descrizione = $3, prezzo_cent = $4, piccante = $5, vegetariano = $6,
        della_casa = $7, allergeni = $8::text[], allergeni_confermati = $9, aggiornato_il = now()
-     where id = $1 returning ${COLONNE}`,
+     where id = $1 returning id`,
     [id, d.nome, d.descrizione, d.prezzoCent, d.piccante, d.vegetariano, d.dellaCasa, d.allergeni, d.allergeniConfermati],
   )
-  return r ? daRiga(r) : null
+  return r ? leggiPiatto(db, id) : null
 }
 
 export async function impostaDisponibile(db: Db, id: string, disponibile: boolean): Promise<boolean> {

@@ -1,12 +1,16 @@
 import type { Piatto } from '@/menu/repo'
 import { testoAllergeni } from '@/menu/testo-allergeni'
+import Image from 'next/image'
 import { formatEuro } from '@/domain/soldi'
+import { urlFoto } from '@/domain/foto'
 /** Piatto del menù. Senza `modifica` è solo da consultare (nessun bottone). */
 export function CardPiatto({ piatto: p,quantita = 0,modifica }: { piatto: Piatto; quantita?: number; modifica?: (q: number) => void }) {
   const etichette = p.dellaCasa || p.piccante || p.vegetariano || !p.disponibile
   return <article className={p.disponibile ? 'b-piatto' : 'b-piatto b-piatto--esaurito'}>
     <span className="b-num b-piatto__numero">{p.numero ?? ''}</span>
     <div className="b-piatto__corpo">
+      {/* unoptimized: la foto è già rimpicciolita al caricamento e la serve /foto con cache lunga. */}
+      {p.foto && <Image className="b-piatto__foto" src={urlFoto(p.id,p.foto.versione)} width={p.foto.larghezza} height={p.foto.altezza} alt={`Foto: ${p.nome}`} loading="lazy" unoptimized />}
       <h3 className="b-piatto__nome">{p.nome}</h3>
       {p.descrizione && <p className="b-piatto__desc">{p.descrizione}</p>}
       {etichette && <div className="b-piatto__etichette">

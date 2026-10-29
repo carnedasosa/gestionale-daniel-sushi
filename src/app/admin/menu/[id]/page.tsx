@@ -5,6 +5,7 @@ import { db } from '@/server/db'
 import { leggiMenu, leggiPiatto } from '@/menu/repo'
 import { formatEuro } from '@/domain/soldi'
 import { ModuloPiatto } from './ModuloPiatto'
+import { FotoPiatto } from '../FotoPiatto'
 
 export default async function ModificaPiatto({ params }: { params: Promise<{ id: string }> }) {
   await richiediRuolo('admin')
@@ -17,6 +18,7 @@ export default async function ModificaPiatto({ params }: { params: Promise<{ id:
       <Link className="b-btn b-btn--discreto" href="/admin/menu" style={{ alignSelf: 'flex-start' }}>← Menù{categoria ? ` · ${categoria.nome}` : ''}</Link>
       <div className="b-admin-testa"><h1 className="b-titolo-1">{piatto.numero !== null && <span className="b-num b-secondario">{piatto.numero} </span>}{piatto.nome}</h1>
         <span className={`b-stato ${piatto.allergeniConfermati ? 'b-stato--pronto' : 'b-stato--accettare'}`}>{piatto.allergeniConfermati ? 'Allergeni confermati' : 'Allergeni da confermare'}</span></div>
+      <FotoPiatto id={piatto.id} nome={piatto.nome} foto={piatto.foto} />
       <ModuloPiatto
         id={piatto.id}
         valori={{
