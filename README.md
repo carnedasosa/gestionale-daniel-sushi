@@ -147,7 +147,7 @@ Ogni dispositivo dello staff ha una **postazione**, scelta all'inizio del turno 
 |---|---|---|---|
 | Cassa | Ordini, Tavoli, Conti, Menù, **Nuovo ordine**, ordini online | tutti gli ordini come prima, con un chip per reparto e la striscia «Da portare al tavolo» | ogni 10 s finché c'è un ordine da casa da accettare; tre bip per ogni voce nuova da portare |
 | Banco sushi / Cucina | Ordini, Menù | Da preparare · In preparazione · Pronte, solo le comande del proprio reparto | tre bip per ogni comanda nuova |
-| Sala (telefoni dei camerieri) | Ordini, Tavoli, Conti | come la cassa, senza interruttore online e senza «Nuovo ordine» | tre bip per ogni voce nuova da portare |
+| Sala (telefoni dei camerieri) | Ordini, Tavoli, Conti | come la cassa, senza «Da accettare», interruttore online e «Nuovo ordine» | tre bip per ogni voce nuova da portare |
 
 Banco e cucina non vedono gli ordini da accettare, i tavoli né i conti: il server carica solo le comande del loro reparto. Gli ordini da casa compaiono al banco e in cucina solo dopo che la cassa li ha accettati. Senza cookie e senza `?postazione=` il dispositivo è la cassa.
 

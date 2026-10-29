@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { ETICHETTA_POSTAZIONE, nuovoOrdineAmmesso, onlineAmmesso, OPZIONI_COOKIE_POSTAZIONE, POSTAZIONI, postazioneDa, postazioneValida, repartoDellaPostazione, schedePostazione, suonaAccettare } from './postazioni'
+import { ETICHETTA_POSTAZIONE, nuovoOrdineAmmesso, onlineAmmesso, OPZIONI_COOKIE_POSTAZIONE, POSTAZIONI, postazioneDa, postazioneValida, repartoDellaPostazione, schedePostazione, accettareAmmesso } from './postazioni'
 it('postazioni ammesse ed etichette', () => {
   expect(['cassa','banco','cucina','sala'].every(postazioneValida)).toBe(true)
   expect([null,undefined,'bar',1,['banco']].some(postazioneValida)).toBe(false)
@@ -18,7 +18,7 @@ it('schede, reparto e permessi per postazione', () => {
   expect(schedePostazione('cucina')).toEqual(['ordini','menu'])
   expect(schedePostazione('sala')).toEqual(['ordini','tavoli','conti'])
   expect(POSTAZIONI.map(repartoDellaPostazione)).toEqual([null,'banco','cucina',null])
-  for (const f of [suonaAccettare,onlineAmmesso,nuovoOrdineAmmesso]) expect(POSTAZIONI.map(p => f(p))).toEqual([true,false,false,false])
+  for (const f of [accettareAmmesso,onlineAmmesso,nuovoOrdineAmmesso]) expect(POSTAZIONI.map(p => f(p))).toEqual([true,false,false,false])
 })
 it('cookie solo sotto /staff, per un anno, non leggibile dal browser', () => {
   expect(OPZIONI_COOKIE_POSTAZIONE).toEqual({ path: '/staff',sameSite: 'lax',httpOnly: true,maxAge: 31536000 })

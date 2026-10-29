@@ -130,6 +130,16 @@ it('sala: niente interruttore degli ordini online né «Nuovo ordine»; la posta
   const cassa = renderToStaticMarkup(<SchermoStaff ora="2026-10-11T18:05:00Z" dati={dati} uscita={<button>Esci</button>} />)
   expect(cassa).toContain('Ordini online aperti'); expect(cassa).toContain('>Nuovo ordine<'); expect(cassa).toContain('href="/staff?vista=menu"')
 })
+it('sala: niente colonna «Da accettare» né bottoni per accettare o rifiutare, e l’ordine in attesa non conta nel badge', async () => {
+  const { SchermoStaff } = await import('./SchermoStaff')
+  const dati = { tavoli: [],ordini: [],riepiloghi: [],contiRecenti: [],casa: [casa],ordiniOnline: online }
+  const sala = renderToStaticMarkup(<SchermoStaff postazione="sala" ora="2026-10-11T18:05:00Z" dati={dati} />)
+  for (const t of ['Da accettare','>Accetta<','Accetta +15’','Accetta +30’','Rifiuta','Anna','b-badge']) expect(sala).not.toContain(t)
+  expect(sala).toContain('b-colonne b-colonne--sala'); expect(sala).toContain('Da preparare')
+  const cassa = renderToStaticMarkup(<SchermoStaff ora="2026-10-11T18:05:00Z" dati={dati} />)
+  for (const t of ['Da accettare','>Accetta<','Accetta +15’','Anna','b-badge']) expect(cassa).toContain(t)
+  expect(cassa).not.toContain('b-colonne--sala')
+})
 it('cassa: striscia «Da portare al tavolo» senza card, chip per reparto quando l’ordine ne tocca più di uno', async () => {
   const { SchermoStaff } = await import('./SchermoStaff')
   const daPortare = [{ id: 'v1',reparto: 'sala' as const,stato: 'da_preparare' as const,ordineId: 'o',numero: 4808,numeroGiorno: 8,tavoloNome: 'Tavolo 1',quando: '2026-10-11T18:00:00Z',righe: [{ ...tavolo.righe[0],id: 'b',nome: 'Coca Cola',quantita: 2,reparto: 'sala' as const }] },

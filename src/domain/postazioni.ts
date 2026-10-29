@@ -1,6 +1,6 @@
 import type { Reparto } from './reparti'
 // Postazione: che cosa fa il dispositivo dello staff. La cassa vede tutto; banco e cucina solo le
-// proprie comande; la sala (telefoni dei camerieri) è la cassa senza accettazioni sonore, senza
+// proprie comande; la sala (telefoni dei camerieri) è la cassa senza ordini da accettare, senza
 // interruttore degli ordini online e senza «Nuovo ordine».
 export const POSTAZIONI = ['cassa','banco','cucina','sala'] as const
 export type Postazione = typeof POSTAZIONI[number]
@@ -37,7 +37,7 @@ export function repartoDellaPostazione(p: Postazione): Exclude<Reparto,'sala'> |
   return p === 'banco' || p === 'cucina' ? p : null
 }
 
-/** Solo la cassa suona ogni 10 secondi per gli ordini da casa da accettare, apre gli ordini online e prende ordini al telefono. */
-export function suonaAccettare(p: Postazione): boolean { return p === 'cassa' }
+/** Solo la cassa vede e accetta gli ordini da casa (con il suono ogni 10 secondi), apre gli ordini online e prende ordini al telefono. */
+export function accettareAmmesso(p: Postazione): boolean { return p === 'cassa' }
 export function onlineAmmesso(p: Postazione): boolean { return p === 'cassa' }
 export function nuovoOrdineAmmesso(p: Postazione): boolean { return p === 'cassa' }
