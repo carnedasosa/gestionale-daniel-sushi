@@ -21,7 +21,17 @@ Data: 2026-10-29 · Branch `cassa-fiscale-stampe` · Spec: [`2026-10-29-cassa-fi
 
 ## Esito
 
-Vedi la sezione «Risultati» in fondo (comandi e numeri reali dell'ultima esecuzione).
+Ultima esecuzione completa (29/10, sera), tutto verde:
+
+| Comando | Esito |
+|---|---|
+| `npm run typecheck` | ok |
+| `npm run lint` | ok |
+| `npm test` | 118 file, **584 test superati** (erano 471 su `main`) |
+| `npm run e2e` | **5/5** sulla build di produzione (casa, cassa-fiscale nuova, cassa-ordine, reparti, tavolo) |
+| `npm run serata` | 1/1: 23 ordini al tavolo (1 dal cameriere), 7 da casa (2 dalla cassa), **0 problemi** |
+
+Nota: Next.js 16.4.0 ferma `next build` una volta sì e una no con `SecurityFatalError` (vulnerabilità critica nota, `npm audit`: correzione in 16.4.3). Le esecuzioni qui sopra sono quelle andate a buon fine dopo un nuovo tentativo; il codice di questo branch non c'entra.
 
 ## Che cosa resta da provare nel locale
 
@@ -29,3 +39,10 @@ Vedi la sezione «Risultati» in fondo (comandi e numeri reali dell'ultima esecu
 - **Stampanti delle comande**: ESC/POS su porta 9100 (Epson TM-T20/m30 e compatibili); da provare carta, taglio e accentate sulle stampanti scelte.
 - **Ponte**: acceso sul PC della cassa con `STAMPA_TOKEN` (da mettere anche su Vercel), con la rete del locale.
 - **Migrazioni** (sei, tutte additive) da applicare al DB reale prima del merge.
+
+## Note per la prova in sala
+
+- Con i reparti su carta ogni comanda stampata entra in «Da portare al tavolo» e fa suonare la cassa come oggi per bevande e piatti pronti. Con una serata piena la striscia si allunga: da decidere con Daniele se va bene o se le voci «su carta» vanno tolte da striscia e suono.
+- «Pre-conto» ed «Emetti lo scontrino» funzionano anche senza ponte: i lavori restano in coda e la cassa vede «Stampanti scollegate». Finché stampanti e ponte non ci sono, non vanno usati (oppure si nascondono quando manca `STAMPA_TOKEN`).
+- Un esito fiscale che arriva nello stesso istante in cui il lavoro scade può incrociare i lock (`prendiLavori` blocca stampe → pagamenti, l'esito pagamenti → stampe): Postgres lo risolve con `lock_timeout` e una delle due transazioni si ripete al giro dopo. Caso raro, annotato e non corretto.
+- La risposta dell'RT è letta come nel driver OCA; se il registratore di Daniele risponde in un formato diverso, il primo scontrino vero finirà «da controllare»: è il comportamento sicuro voluto.
