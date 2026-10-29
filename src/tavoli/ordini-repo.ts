@@ -197,7 +197,11 @@ export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce
 export interface Conto { tavoloNome: string; apertaIl: Date; chiusaIl: Date | null; vistoAlle: Date; voci: (IdentitaVoce & { quantita: number; importoCent: number })[]; coperti: number | null; copertoCent: number | null; copertiCent: number; totaleCent: number; ordiniIds: string[] }
 export async function contoSessione(db: Db, sessioneId: string): Promise<Conto | null> {
   if (!idValido(sessioneId)) return null
-  return db.transazione(async tx => {
+  return db.transazione(tx => leggiConto(tx,sessioneId))
+}
+/** Il conto dentro una transazione già aperta (pagamenti e scontrini lo rileggono dopo aver bloccato la sessione). */
+export async function leggiConto(tx: Db, sessioneId: string): Promise<Conto | null> {
+  if (!idValido(sessioneId)) return null
   const [s] = await tx.query<Pick<Conto,'tavoloNome'|'apertaIl'|'chiusaIl'|'coperti'|'copertoCent'>>(`select t.nome as "tavoloNome",s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl",s.coperti,s.coperto_cent as "copertoCent" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 for share of s`,[sessioneId])
   if (!s) return null
   const [{ vistoAlle }] = await tx.query<{ vistoAlle: Date }>('select clock_timestamp() as "vistoAlle"')
@@ -207,5 +211,4 @@ export async function contoSessione(db: Db, sessioneId: string): Promise<Conto |
   const ordini = await tx.query<{ id: string }>("select id from ordini where sessione_id=$1 and stato<>'annullato' order by creato_il,id",[sessioneId])
   const copertiCent = importoCoperti(s.coperti,s.copertoCent)
   return { ...s,vistoAlle,voci,copertiCent,totaleCent: voci.reduce((s,r) => s + r.importoCent,0) + copertiCent,ordiniIds: ordini.map(o => o.id) }
-  })
 }

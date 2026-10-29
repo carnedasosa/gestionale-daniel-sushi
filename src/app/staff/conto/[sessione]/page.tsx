@@ -11,6 +11,9 @@ import { Stampa } from '../../Stampa'
 import { ChiusuraConto } from '../../ChiusuraConto'
 import { VoceConto } from '../../VoceConto'
 import { Coperti } from '../../Coperti'
+import { Incasso, type DatiIncasso } from '../../Incasso'
+import { statoPagamenti } from '@/cassa/pagamenti-repo'
+import { chiaveVoce, porzioniResidue } from '@/domain/divisione-conto'
 import '../../staff.css'
 const quando = (d: Date) => d.toLocaleString('it-IT',{ day: '2-digit',month: '2-digit',hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })
 export default async function ContoPage({ params }: { params: Promise<{ sessione: string }> }) {
@@ -18,7 +21,13 @@ export default async function ContoPage({ params }: { params: Promise<{ sessione
   const { sessione } = await params
   const conto = await contoSessione(db,sessione)
   if (!conto) notFound()
-  const [tavoli,riepiloghi,recenti] = await Promise.all([elencoTavoli(db),riepiloghiTavoli(db),contiRecenti(db)])
+  const [tavoli,riepiloghi,recenti,pagamenti] = await Promise.all([elencoTavoli(db),riepiloghiTavoli(db),contiRecenti(db),statoPagamenti(db,{ sessioneId: sessione })])
+  if (!pagamenti) notFound()
+  const residue = porzioniResidue(conto.voci,pagamenti.pagato)
+  const incasso: DatiIncasso = { dest: { sessioneId: sessione },totaleCent: pagamenti.totaleCent,pagatoCent: pagamenti.pagatoCent,residuoCent: pagamenti.residuoCent,
+    pagamenti: pagamenti.pagamenti.map(p => ({ id: p.id,importoCent: p.importoCent,metodo: p.metodo,descrizione: p.descrizione,annullato: p.annullato })),
+    voci: conto.voci.map((v,i) => ({ numero: v.numero,nome: v.nome,prezzoUnitCent: v.prezzoUnitCent,poke: v.poke,quantita: v.quantita,chiave: chiaveVoce(v),residue: residue[i].residue })),
+    copertoCent: conto.copertoCent ?? 0,copertiResidui: Math.max(0,(conto.coperti ?? 0) - pagamenti.pagato.coperti) }
   const aperti = tavoli.filter(t => t.sessione).map(t => ({ id: t.sessione!.id,nome: t.nome,totaleCent: riepiloghi.find(r => r.sessioneId === t.sessione!.id)?.totaleCent ?? 0 }))
   return <main className="b-staff">
     <BarraStaff vista="conti" daGuardare={0} online={null} ora={new Date().toISOString()} />
@@ -39,6 +48,7 @@ export default async function ContoPage({ params }: { params: Promise<{ sessione
           <div><p className="b-secondario">Da battere in cassa · non è uno scontrino fiscale</p><p className="b-num b-conto__totale" aria-label={`Totale: ${formatEuro(conto.totaleCent)}`}>{formatEuro(conto.totaleCent)}</p></div>
           {!conto.chiusaIl && <ChiusuraConto sessioneId={sessione} attuale={{ vistoAlle: conto.vistoAlle.toISOString(),ordiniIds: conto.ordiniIds,totaleCent: conto.totaleCent }} />}
         </div>
+        <Incasso key={`${pagamenti.pagatoCent}-${pagamenti.pagamenti.length}`} dati={incasso} />
       </section>
     </div></div>
   </main>
