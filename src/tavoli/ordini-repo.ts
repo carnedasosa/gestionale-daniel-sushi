@@ -9,6 +9,7 @@ import { leggiAllergeniPoke, leggiPokeConfig } from './poke-repo'
 import { idValido } from './validazione'
 import { cascataComande, creaComande, segnaComandeAnnullate } from '@/comande/comande-repo'
 import { numeroGiorno } from './numero-giorno'
+import { importoCoperti } from '@/domain/coperti'
 
 export interface RigaOrdine { id: string; numero: number | null; nome: string; prezzoUnitCent: number; quantita: number; nota: string | null; poke: SceltePoke | null; annullata: boolean; reparto: Reparto }
 export interface Ordine { id: string; numero: number; numeroGiorno: number; stato: StatoOrdineTavolo; totaleCent: number; creatoIl: Date; sessioneId: string; tavoloNome: string; tavoloChiuso: boolean; origine: OrigineOrdine; righe: RigaOrdine[] }
@@ -105,9 +106,10 @@ export async function ordiniDellaSessione(db: Db, sessioneId: string): Promise<O
 }
 export async function ordiniAttivi(db: Db): Promise<Ordine[]> { return leggiOrdini(db,"o.stato in ('inviato','in_preparazione')") }
 export interface RiepilogoTavolo { sessioneId: string; numeroOrdini: number; totaleCent: number }
+// Il totale del tavolo comprende i coperti (coperti × prezzo fissato sulla sessione), come il conto.
 export async function riepiloghiTavoli(db: Db): Promise<RiepilogoTavolo[]> {
   return db.query<RiepilogoTavolo>(`select s.id as "sessioneId",count(o.id) filter(where o.stato<>'annullato')::int as "numeroOrdini",
-    coalesce(sum(case when o.stato <> 'annullato' then o.totale_cent else 0 end),0)::float8 as "totaleCent"
+    (coalesce(sum(case when o.stato <> 'annullato' then o.totale_cent else 0 end),0)+coalesce(s.coperti*s.coperto_cent,0))::float8 as "totaleCent"
     from sessioni_tavolo s left join ordini o on o.sessione_id=s.id where s.chiusa_il is null group by s.id`)
 }
 // `da`: lo stato che vedeva lo staff. Se un altro schermo ha già fatto avanzare la comanda il passo si rifiuta:
@@ -191,17 +193,19 @@ export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce
   })
 }
 // ordiniIds: ordini non annullati del conto, per riconoscere quelli arrivati dopo l'apertura della pagina.
-export interface Conto { tavoloNome: string; apertaIl: Date; chiusaIl: Date | null; vistoAlle: Date; voci: (IdentitaVoce & { quantita: number; importoCent: number })[]; totaleCent: number; ordiniIds: string[] }
+// totaleCent = voci + coperti (copertiCent); copertoCent è il prezzo fissato sulla sessione (null senza coperti).
+export interface Conto { tavoloNome: string; apertaIl: Date; chiusaIl: Date | null; vistoAlle: Date; voci: (IdentitaVoce & { quantita: number; importoCent: number })[]; coperti: number | null; copertoCent: number | null; copertiCent: number; totaleCent: number; ordiniIds: string[] }
 export async function contoSessione(db: Db, sessioneId: string): Promise<Conto | null> {
   if (!idValido(sessioneId)) return null
   return db.transazione(async tx => {
-  const [s] = await tx.query<Pick<Conto,'tavoloNome'|'apertaIl'|'chiusaIl'>>(`select t.nome as "tavoloNome",s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 for share of s`,[sessioneId])
+  const [s] = await tx.query<Pick<Conto,'tavoloNome'|'apertaIl'|'chiusaIl'|'coperti'|'copertoCent'>>(`select t.nome as "tavoloNome",s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl",s.coperti,s.coperto_cent as "copertoCent" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 for share of s`,[sessioneId])
   if (!s) return null
   const [{ vistoAlle }] = await tx.query<{ vistoAlle: Date }>('select clock_timestamp() as "vistoAlle"')
   const voci = await tx.query<Conto['voci'][number]>(`select r.nome,r.numero,r.prezzo_unit_cent as "prezzoUnitCent",r.poke,sum(r.quantita)::int as quantita,sum(r.prezzo_unit_cent::bigint*r.quantita)::float8 as "importoCent"
     from righe_ordine r join ordini o on o.id=r.ordine_id where o.sessione_id=$1 and o.stato <> 'annullato' and not r.annullata
     group by r.numero,r.nome,r.prezzo_unit_cent,r.poke order by r.numero nulls last,r.nome,r.prezzo_unit_cent,r.poke`,[sessioneId])
   const ordini = await tx.query<{ id: string }>("select id from ordini where sessione_id=$1 and stato<>'annullato' order by creato_il,id",[sessioneId])
-  return { ...s,vistoAlle,voci,totaleCent: voci.reduce((s,r) => s + r.importoCent,0),ordiniIds: ordini.map(o => o.id) }
+  const copertiCent = importoCoperti(s.coperti,s.copertoCent)
+  return { ...s,vistoAlle,voci,copertiCent,totaleCent: voci.reduce((s,r) => s + r.importoCent,0) + copertiCent,ordiniIds: ordini.map(o => o.id) }
   })
 }

@@ -10,6 +10,7 @@ const ICONE: Record<string,React.ReactNode> = {
   poke: <path d="M3 11h18a9 9 0 0 1-18 0Z" />,
   tavoli: <><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><path d="M14 14h2v2h-2zM18 18h2v2h-2z" /></>,
   domicilio: <path d="M3 11 12 4l9 7v9H3z" />,
+  cassa: <><rect x="6" y="3" width="12" height="7" rx="1" /><rect x="3" y="10" width="18" height="8" rx="2" /><path d="M7 18v3h10v-3" /></>,
   altro: <><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></>,
 }
 const Icona = ({ nome }: { nome: string }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{ICONE[nome]}</svg>
@@ -26,6 +27,7 @@ export function NavAdmin({ daConfermare,uscita }: { daConfermare: number; uscita
     { href: '/admin/poke',testo: 'Poke',breve: 'Poke',icona: 'poke',badge: 0 },
     { href: '/admin/tavoli',testo: 'Tavoli e QR',breve: 'Tavoli',icona: 'tavoli',badge: 0 },
     { href: '/admin/domicilio',testo: 'Domicilio e asporto',breve: 'Domicilio',icona: 'domicilio',badge: 0 },
+    { href: '/admin/cassa',testo: 'Cassa e stampe',breve: 'Cassa',icona: 'cassa',badge: 0 },
   ]
   const attiva = (href: string) => percorso === href || percorso.startsWith(`${href}/`)
   const badge = (n: number) => n > 0 && <span className="b-badge">{n}<span className="b-nascosto"> piatti con allergeni da confermare</span></span>

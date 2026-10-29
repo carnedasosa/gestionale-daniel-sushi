@@ -3,11 +3,12 @@ import { generaCodice } from '@/domain/codice-tavolo'
 import { generaChiaveTavolo } from '@/domain/chiave-tavolo'
 import { idValido, nomeValido, slugValido, chiaveValida } from './validazione'
 import type { ErroriCodice } from '@/domain/limiti-tentativi'
+import { copertiValidi } from '@/domain/coperti'
 
 export interface Tavolo { id: string; nome: string; slug: string; chiave: string; posizione: number; attivo: boolean }
-export interface SessioneAperta { id: string; tavoloId: string; codice: string; apertaIl: Date }
+export interface SessioneAperta { id: string; tavoloId: string; codice: string; apertaIl: Date; coperti: number | null }
 export interface TavoloConSessione extends Tavolo { sessione: (SessioneAperta & { tentativi: number }) | null }
-const SESSIONE = 'id, tavolo_id as "tavoloId", codice, aperta_il as "apertaIl"'
+const SESSIONE = 'id, tavolo_id as "tavoloId", codice, aperta_il as "apertaIl", coperti'
 
 export async function elencoTavoli(db: Db): Promise<TavoloConSessione[]> {
   const tavoli = await db.query<Tavolo>('select * from tavoli order by posizione,nome')
@@ -72,6 +73,21 @@ export async function chiudiSessione(db: Db, sessioneId: string,contoVistoAlle: 
     return { ok: true }
   })
 }
+/**
+ * Coperti del tavolo (null per toglierli). Il prezzo del coperto si fissa la prima volta che si segnano:
+ * cambiarlo in admin a serata in corso non tocca i tavoli già aperti. A tavolo chiuso il conto non si tocca più.
+ */
+export async function impostaCoperti(db: Db, sessioneId: string, coperti: number | null): Promise<'ok' | 'conto_chiuso' | 'non_disponibile'> {
+  if (!idValido(sessioneId) || (coperti !== null && !copertiValidi(coperti))) return 'non_disponibile'
+  return db.transazione(async tx => {
+    const [s] = await tx.query<{ chiusa: boolean }>('select chiusa_il is not null as chiusa from sessioni_tavolo where id=$1 for update',[sessioneId])
+    if (!s) return 'non_disponibile'
+    if (s.chiusa) return 'conto_chiuso'
+    await tx.query(`update sessioni_tavolo set coperti=$2,
+      coperto_cent=case when $2::int is null then null else coalesce(coperto_cent,(select coperto_cent from impostazioni_cassa where id=1)) end where id=$1`,[sessioneId,coperti])
+    return 'ok'
+  })
+}
 export interface ContoRecente { id: string; tavoloNome: string; chiusaIl: Date }
 export async function contiRecenti(db: Db): Promise<ContoRecente[]> {
   return db.query<ContoRecente>(`select s.id,t.nome as "tavoloNome",s.chiusa_il as "chiusaIl" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.chiusa_il>=now()-interval '6 hours' order by s.chiusa_il desc`)
@@ -79,7 +95,7 @@ export async function contiRecenti(db: Db): Promise<ContoRecente[]> {
 export interface SessioneConTavolo extends SessioneAperta { tavoloChiave: string; tavoloNome: string; chiusaIl: Date | null }
 export async function sessionePerId(db: Db, sessioneId: string): Promise<SessioneConTavolo | null> {
   if (!idValido(sessioneId)) return null
-  return (await db.query<SessioneConTavolo>(`select s.id,s.tavolo_id as "tavoloId",s.codice,s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl",t.chiave as "tavoloChiave",t.nome as "tavoloNome" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1`,[sessioneId]))[0] ?? null
+  return (await db.query<SessioneConTavolo>(`select s.id,s.tavolo_id as "tavoloId",s.codice,s.aperta_il as "apertaIl",s.coperti,s.chiusa_il as "chiusaIl",t.chiave as "tavoloChiave",t.nome as "tavoloNome" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1`,[sessioneId]))[0] ?? null
 }
 export async function sessioneApertaPerId(db: Db, id: string): Promise<SessioneConTavolo | null> {
   const s = await sessionePerId(db,id)

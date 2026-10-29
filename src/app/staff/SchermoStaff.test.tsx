@@ -50,7 +50,7 @@ it('schede: in «tavoli» si vedono i tavoli, la cucina resta montata ma nascost
 })
 it('tavoli: aperto con codice e riassunto, libero con «Apri tavolo», dettaglio con conto e chiusura', async () => {
   const { SchermoStaff } = await import('./SchermoStaff')
-  const sessione = { id: 's',tavoloId: 't1',codice: '4827',apertaIl: '2026-10-11T18:05:00.000Z',tentativi: 0 }
+  const sessione = { id: 's',tavoloId: 't1',codice: '4827',apertaIl: '2026-10-11T18:05:00.000Z',coperti: null,tentativi: 0 }
   const tavoli = [{ id: 't1',nome: 'Tavolo 1',slug: 'tavolo-1',chiave: 'k1',posizione: 1,attivo: true,sessione },{ id: 't2',nome: 'Tavolo 2',slug: 'tavolo-2',chiave: 'k2',posizione: 2,attivo: true,sessione: null }]
   const html = renderToStaticMarkup(<SchermoStaff ora="2026-10-11T18:10:00Z" vista="tavoli" dati={{ tavoli,ordini: [{ ...tavolo,sessioneId: 's' }],riepiloghi: [{ sessioneId: 's',numeroOrdini: 1,totaleCent: 900 }],contiRecenti: [],casa: [],ordiniOnline: online }} />)
   expect(html).toContain('aria-label="Codice 4827"'); expect(html).toContain('1 in cucina'); expect(html).toContain('1 ordini · '); expect(html).toContain('Apri tavolo'); expect(html).toContain('href="/staff/conto/s"'); expect(html).toContain('Chiudi tavolo')
@@ -68,7 +68,7 @@ it('conti: tavoli aperti con totale e chiusi di recente, ognuno porta al suo con
 })
 it('dettaglio del tavolo: la conferma di chiusura nomina il tavolo; tocco sul tavolo collegato al dettaglio, titolo che riceve il fuoco', async () => {
   const { VistaTavoli } = await import('./VistaTavoli')
-  const sessione = { id: 's2',tavoloId: 't2',codice: '1593',apertaIl: '2026-10-11T18:05:00.000Z',tentativi: 0 }
+  const sessione = { id: 's2',tavoloId: 't2',codice: '1593',apertaIl: '2026-10-11T18:05:00.000Z',coperti: null,tentativi: 0 }
   const tavoli = [{ id: 't2',nome: 'Tavolo 2',slug: 'tavolo-2',chiave: 'k2',posizione: 2,attivo: true,sessione }]
   const html = renderToStaticMarkup(<VistaTavoli tavoli={tavoli} riepiloghi={[]} ordini={[]} azioniDi={() => ({ inCorso: false,esegui: () => {} })} />)
   expect(html).toContain('Chiudere Tavolo 2? I clienti non potranno più ordinare.')
@@ -86,7 +86,7 @@ it('piantina: l’azione in corso su un tavolo disabilita solo il suo bottone, g
 })
 it('dettaglio del tavolo: se il tavolo scelto non è più aperto non si passa da soli a un altro', async () => {
   const { tavoloDelDettaglio } = await import('./VistaTavoli')
-  const aperto = (id: string) => ({ id,nome: id,slug: id,chiave: id,posizione: 1,attivo: true,sessione: { id: `s-${id}`,tavoloId: id,codice: '1111',apertaIl: '2026-10-11T18:05:00.000Z',tentativi: 0 } })
+  const aperto = (id: string) => ({ id,nome: id,slug: id,chiave: id,posizione: 1,attivo: true,sessione: { id: `s-${id}`,tavoloId: id,codice: '1111',apertaIl: '2026-10-11T18:05:00.000Z',coperti: null,tentativi: 0 } })
   const libero = { ...aperto('t3'),sessione: null }
   expect(tavoloDelDettaglio([aperto('t1'),aperto('t2')],null)?.id).toBe('t1')
   expect(tavoloDelDettaglio([aperto('t1'),aperto('t2')],'t2')?.id).toBe('t2')

@@ -10,6 +10,7 @@ import { ElencoConti } from '../../ElencoConti'
 import { Stampa } from '../../Stampa'
 import { ChiusuraConto } from '../../ChiusuraConto'
 import { VoceConto } from '../../VoceConto'
+import { Coperti } from '../../Coperti'
 import '../../staff.css'
 const quando = (d: Date) => d.toLocaleString('it-IT',{ day: '2-digit',month: '2-digit',hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })
 export default async function ContoPage({ params }: { params: Promise<{ sessione: string }> }) {
@@ -31,7 +32,9 @@ export default async function ContoPage({ params }: { params: Promise<{ sessione
         {conto.chiusaIl ? <p role="status" className="b-avviso b-avviso--pronto">Tavolo chiuso alle {conto.chiusaIl.toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</p> : <AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={conto.vistoAlle.toISOString()} />}
         <div className="b-tabella-scorre"><table className="b-tabella b-conto__tabella"><caption className="b-nascosto">Voci del conto</caption>
           <thead><tr><th>N.</th><th>Piatto</th><th className="b-destra">Q.tà</th><th className="b-destra">Importo</th></tr></thead>
-          <tbody>{conto.voci.map(v => <VoceConto key={JSON.stringify([v.numero,v.nome,v.prezzoUnitCent,v.poke])} sessioneId={sessione} voce={v} modificabile={!conto.chiusaIl} />)}</tbody></table></div>
+          <tbody>{conto.voci.map(v => <VoceConto key={JSON.stringify([v.numero,v.nome,v.prezzoUnitCent,v.poke])} sessioneId={sessione} voce={v} modificabile={!conto.chiusaIl} />)}
+            {conto.copertiCent > 0 && <tr><td className="b-num b-secondario">—</td><td><span className="b-conto__piatto">Coperto</span> <span className="b-secondario b-num">{formatEuro(conto.copertoCent!)}</span></td><td className="b-num b-destra">{conto.coperti}</td><td className="b-num b-destra">{formatEuro(conto.copertiCent)}</td></tr>}</tbody></table></div>
+        {conto.chiusaIl ? conto.coperti !== null && <p className="b-secondario">Coperti: <span className="b-num">{conto.coperti}</span></p> : <div className="b-conto__coperti"><Coperti sessioneId={sessione} coperti={conto.coperti} /></div>}
         <div className="b-conto__piede">
           <div><p className="b-secondario">Da battere in cassa · non è uno scontrino fiscale</p><p className="b-num b-conto__totale" aria-label={`Totale: ${formatEuro(conto.totaleCent)}`}>{formatEuro(conto.totaleCent)}</p></div>
           {!conto.chiusaIl && <ChiusuraConto sessioneId={sessione} attuale={{ vistoAlle: conto.vistoAlle.toISOString(),ordiniIds: conto.ordiniIds,totaleCent: conto.totaleCent }} />}

@@ -2,10 +2,11 @@
 import { revalidatePath } from 'next/cache'
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
-import { apriSessione, chiudiSessione, sbloccaSessione } from '@/tavoli/repo'
+import { apriSessione, chiudiSessione, impostaCoperti, sbloccaSessione } from '@/tavoli/repo'
 import { avanzaStato, annullaOrdine, annullaRiga, annullaVoceConto, type IdentitaVoce } from '@/tavoli/ordini-repo'
 import { prossimoStato, type StatoOrdineTavolo } from '@/domain/stati-tavolo'
 import { idValido } from '@/tavoli/validazione'
+import { copertiValidi } from '@/domain/coperti'
 export interface EsitoStaff { ok: boolean; errore?: string; codice?: string; avviso?: { motivo: 'ordini_in_cucina' | 'ordini_dopo_conto'; n: number } }
 const NON_DISPONIBILE = 'Operazione non disponibile: aggiorna lo schermo.'
 // Gli annullamenti rispondono con un EsitoAnnullo ('ok' | 'conto_chiuso' | 'ordine_concluso' | 'non_disponibile'), le altre operazioni con un valore o null.
@@ -68,4 +69,10 @@ export async function annullaRigaStaff(rigaId: string): Promise<EsitoStaff> {
   const { userId } = await richiediRuolo('staff')
   if (!idValido(rigaId)) return { ok: false, errore: 'Riga non valida.' }
   return operazione(() => annullaRiga(db,rigaId,userId))
+}
+/** Coperti del tavolo (null per toglierli): da dettaglio del tavolo e conto, finché il tavolo è aperto. */
+export async function cambiaCoperti(sessioneId: string,coperti: number | null): Promise<EsitoStaff> {
+  await richiediRuolo('staff')
+  if (!idValido(sessioneId) || (coperti !== null && !copertiValidi(coperti))) return { ok: false,errore: 'Coperti non validi: da 1 a 99.' }
+  return operazione(() => impostaCoperti(db,sessioneId,coperti))
 }

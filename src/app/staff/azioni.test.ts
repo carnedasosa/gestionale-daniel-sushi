@@ -1,11 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const m = vi.hoisted(() => ({ richiediRuolo: vi.fn(), apriSessione: vi.fn(), chiudiSessione: vi.fn(), sbloccaSessione: vi.fn(), avanzaStato: vi.fn(), annullaOrdine: vi.fn(), annullaRiga: vi.fn(), annullaVoceConto: vi.fn(), revalidatePath: vi.fn() }))
+const m = vi.hoisted(() => ({ richiediRuolo: vi.fn(), apriSessione: vi.fn(), chiudiSessione: vi.fn(), sbloccaSessione: vi.fn(), impostaCoperti: vi.fn(), avanzaStato: vi.fn(), annullaOrdine: vi.fn(), annullaRiga: vi.fn(), annullaVoceConto: vi.fn(), revalidatePath: vi.fn() }))
 vi.mock('@/auth/sessione', () => ({ richiediRuolo: m.richiediRuolo }))
 vi.mock('@/server/db', () => ({ db: {} }))
-vi.mock('@/tavoli/repo', () => ({ apriSessione: m.apriSessione, chiudiSessione: m.chiudiSessione, sbloccaSessione: m.sbloccaSessione }))
+vi.mock('@/tavoli/repo', () => ({ apriSessione: m.apriSessione, chiudiSessione: m.chiudiSessione, sbloccaSessione: m.sbloccaSessione, impostaCoperti: m.impostaCoperti }))
 vi.mock('@/tavoli/ordini-repo', () => ({ avanzaStato: m.avanzaStato, annullaOrdine: m.annullaOrdine, annullaRiga: m.annullaRiga, annullaVoceConto: m.annullaVoceConto }))
 vi.mock('next/cache', () => ({ revalidatePath: m.revalidatePath }))
-import { apriTavolo, chiudiTavolo, sbloccaTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, annullaVoceStaff } from './azioni'
+import { apriTavolo, cambiaCoperti, chiudiTavolo, sbloccaTavolo, avanzaOrdine, annullaOrdineStaff, annullaRigaStaff, annullaVoceStaff } from './azioni'
 const id = '11111111-1111-4111-8111-111111111111'
 const avanzaDaInviato = (ordineId: string) => avanzaOrdine(ordineId,'inviato')
 const coppie = [[apriTavolo,m.apriSessione],[chiudiTavolo,m.chiudiSessione],[sbloccaTavolo,m.sbloccaSessione],[avanzaDaInviato,m.avanzaStato],[annullaOrdineStaff,m.annullaOrdine],[annullaRigaStaff,m.annullaRiga]] as const
@@ -67,4 +67,18 @@ it('una riga di un ordine da casa già completato si rifiuta con un messaggio ch
   expect(await annullaRigaStaff(id)).toEqual({ ok: false,errore: 'L’ordine è già completato: non si può più modificare.' })
   expect(m.richiediRuolo.mock.invocationCallOrder[0]).toBeLessThan(m.annullaRiga.mock.invocationCallOrder[0])
   expect(m.revalidatePath).not.toHaveBeenCalled()
+})
+it('coperti: staff prima del repo, solo da 1 a 99 o null, conto chiuso spiegato', async () => {
+  m.impostaCoperti.mockResolvedValueOnce('ok')
+  expect(await cambiaCoperti(id,4)).toEqual({ ok: true })
+  expect(m.richiediRuolo.mock.invocationCallOrder[0]).toBeLessThan(m.impostaCoperti.mock.invocationCallOrder[0])
+  expect(m.impostaCoperti).toHaveBeenLastCalledWith(expect.anything(),id,4)
+  m.impostaCoperti.mockResolvedValueOnce('ok')
+  expect(await cambiaCoperti(id,null)).toEqual({ ok: true })
+  m.impostaCoperti.mockClear()
+  for (const n of [0,100,2.5,'3' as unknown as number]) expect(await cambiaCoperti(id,n)).toMatchObject({ ok: false })
+  expect(await cambiaCoperti('x',2)).toMatchObject({ ok: false })
+  expect(m.impostaCoperti).not.toHaveBeenCalled()
+  m.impostaCoperti.mockResolvedValueOnce('conto_chiuso')
+  expect(await cambiaCoperti(id,2)).toMatchObject({ ok: false,errore: expect.stringContaining('già chiuso') })
 })
