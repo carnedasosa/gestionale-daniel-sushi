@@ -124,6 +124,10 @@
   .b-qr-card:nth-child(4n) { break-after: page; }
 }
 
+/* Reparti fiscali */
+.b-reparti-fiscali { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 10px 16px; }
+.b-campo--reparto input { max-width: 6em; }
+
 /* Foto del piatto */
 .b-foto-piatto { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 .b-foto-piatto__anteprima { width: 100%; max-width: 320px; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; }

@@ -94,7 +94,10 @@ export async function ristampaOrdine(db: Db, ordineId: string): Promise<number> 
 export async function prendiLavori(db: Db, quanti = 10): Promise<Lavoro[]> {
   return db.transazione(async tx => {
     await tx.query(`update ponte_stampa set visto_il=clock_timestamp() where id=1 and (visto_il is null or visto_il < clock_timestamp() - interval '10 seconds')`)
-    await tx.query(`update stampe set stato=case when stampante='fiscale' then $1 else $2 end where stato='in_stampa' and presa_il < clock_timestamp() - make_interval(secs => $3)`,
+    // Lo scontrino scaduto diventa incerto anche sul pagamento: la cassa lo vede e decide guardando il registratore.
+    await tx.query(`with scaduti as (update stampe set stato=case when stampante='fiscale' then $1 else $2 end
+        where stato='in_stampa' and presa_il < clock_timestamp() - make_interval(secs => $3) returning pagamento_id,stampante)
+      update pagamenti set scontrino='incerto',scontrino_errore='Il registratore non ha risposto in tempo.' where id in (select pagamento_id from scaduti where stampante='fiscale')`,
       [esitoScadenza('fiscale'),esitoScadenza('cassa'),SCADENZA_LAVORO_SECONDI])
     const presi = await tx.query<Lavoro>(`update stampe set stato='in_stampa',presa_il=clock_timestamp(),tentativi=tentativi+1
       where id in (select id from stampe where stato='in_coda' order by creata_il,id for update skip locked limit $1)

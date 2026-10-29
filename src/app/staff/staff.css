@@ -126,6 +126,7 @@
 .b-incasso__elenco { list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .b-incasso__voce { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
 .b-incasso__voce > span:first-child { flex: 1 1 200px; }
+.b-incasso__incerto { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .b-incasso__voce--tolto { color: var(--b-grafite); text-decoration: line-through; }
 .b-incasso > .b-btn { align-self: flex-start; }
 .b-incasso__pannello { display: flex; flex-direction: column; gap: 14px; }

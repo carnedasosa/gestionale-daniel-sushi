@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 const m = vi.hoisted(() => ({ prendiLavori: vi.fn(),registraEsito: vi.fn() }))
 vi.mock('@/server/db',() => ({ db: {} }))
-vi.mock('@/stampa/stampe-repo',() => ({ prendiLavori: m.prendiLavori,registraEsito: m.registraEsito }))
+vi.mock('@/stampa/stampe-repo',() => ({ prendiLavori: m.prendiLavori }))
+vi.mock('@/fiscale/scontrini-repo',() => ({ registraEsitoPonte: m.registraEsito }))
 import { GET } from './coda/route'
 import { POST } from './esito/route'
 import { testo } from '@/stampa/documento'
@@ -35,8 +36,8 @@ it('coda: lavori come byte ESC/POS in base64 con anteprima, mai in cache', async
 it('esito: forma controllata, poi al repository', async () => {
   m.registraEsito.mockResolvedValue(true)
   expect(await (await POST(con(`Bearer ${TOKEN}`,{ id: 'l1',ok: true }))).json()).toEqual({ registrato: true })
-  expect(m.registraEsito).toHaveBeenLastCalledWith({},'l1',{ ok: true })
-  await POST(con(`Bearer ${TOKEN}`,{ id: 'l1',ok: false,errore: 'carta finita' }))
-  expect(m.registraEsito).toHaveBeenLastCalledWith({},'l1',{ ok: false,errore: 'carta finita' })
+  expect(m.registraEsito).toHaveBeenLastCalledWith({},{ id: 'l1',ok: true })
+  await POST(con(`Bearer ${TOKEN}`,{ id: 'l1',ok: false,errore: 'carta finita',incerto: true }))
+  expect(m.registraEsito).toHaveBeenLastCalledWith({},{ id: 'l1',ok: false,errore: 'carta finita',incerto: true })
   for (const corpo of ['non json',{ ok: true },{ id: 'l1' },{ id: 'l1',ok: false },{ id: 'l1',ok: true,risposta: 3 }]) expect((await POST(con(`Bearer ${TOKEN}`,corpo))).status).toBe(400)
 })

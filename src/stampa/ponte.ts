@@ -2,6 +2,8 @@ import { autorizzatoCron } from '@/casa/cron'
 import { escpos, testoSemplice } from './escpos'
 import type { DocumentoStampa } from './documento'
 import type { Stampante, TipoLavoro } from './instradamento'
+import { xmlEpson } from '@/fiscale/epson'
+import { totaleRighe, type DocumentoCommerciale } from '@/fiscale/documento'
 // Che cosa riceve il ponte di stampa: byte già pronti per la stampante, così il ponte fa solo trasporto.
 
 /** `Authorization: Bearer <STAMPA_TOKEN>`; il token deve avere almeno 32 caratteri, senza token non passa nessuno. */
@@ -17,6 +19,11 @@ export interface LavoroPerPonte {
   anteprima: string
 }
 export function perIlPonte(l: { id: string; stampante: Stampante; tipo: TipoLavoro; documento: unknown }): LavoroPerPonte {
+  if (l.stampante === 'fiscale') {
+    const d = l.documento as DocumentoCommerciale
+    const anteprima = [...d.righe.map(r => `${r.quantita} x ${r.descrizione} ${(r.prezzoUnitCent / 100).toFixed(2)} (rep. ${r.reparto})`),`TOTALE ${(totaleRighe(d.righe) / 100).toFixed(2)} ${d.pagamento.metodo}`].join('\n')
+    return { id: l.id,stampante: l.stampante,tipo: l.tipo,formato: 'fpmate',dati: xmlEpson(d),anteprima }
+  }
   const doc = l.documento as DocumentoStampa
   return { id: l.id,stampante: l.stampante,tipo: l.tipo,formato: 'escpos',dati: Buffer.from(escpos(doc)).toString('base64'),anteprima: testoSemplice(doc) }
 }

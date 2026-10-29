@@ -11,13 +11,16 @@ export type RichiestaPagamento =
   | { modo: 'piatti'; porzioni: PorzioneScelta[]; coperti: number }
 /** Dettaglio salvato con i pagamenti «per piatti»: porzioni (con nome e prezzo, per lo scontrino) e coperti. */
 export interface DettaglioPiatti { porzioni: (PorzioneScelta & { nome: string; numero: number | null; prezzoUnitCent: number })[]; coperti: number; copertoCent: number }
-export interface Pagamento { id: string; importoCent: number; metodo: MetodoPagamento; modo: ModoPagamento; descrizione: string; dettaglio: DettaglioPiatti | null; creatoIl: Date; annullato: boolean }
+export type StatoScontrino = 'non_richiesto' | 'in_coda' | 'emesso' | 'errore' | 'incerto' | 'prova'
+export interface Pagamento { id: string; importoCent: number; metodo: MetodoPagamento; modo: ModoPagamento; descrizione: string; dettaglio: DettaglioPiatti | null; creatoIl: Date; annullato: boolean
+  scontrino: StatoScontrino; scontrinoNumero: string | null; scontrinoErrore: string | null }
 /** Di chi è il pagamento: un tavolo (sessione) o un ordine da casa. */
 export type Destinazione = { sessioneId: string } | { ordineId: string }
 export interface StatoPagamenti { totaleCent: number; pagatoCent: number; residuoCent: number; pagamenti: Pagamento[]; pagato: GiaPagato }
 export type EsitoPagamento = { ok: true; pagamento: Pagamento } | { ok: false; errore: string }
 
-const COLONNE = `id,importo_cent as "importoCent",metodo,modo,descrizione,dettaglio,creato_il as "creatoIl",annullato_il is not null as annullato`
+const COLONNE = `id,importo_cent as "importoCent",metodo,modo,descrizione,dettaglio,creato_il as "creatoIl",annullato_il is not null as annullato,
+  scontrino,scontrino_numero as "scontrinoNumero",scontrino_errore as "scontrinoErrore"`
 const NON_VALIDO = { ok: false as const,errore: 'Pagamento non valido.' }
 
 export function richiestaValida(r: unknown): r is RichiestaPagamento {
@@ -93,9 +96,15 @@ export async function registraPagamento(db: Db, d: Destinazione, r: RichiestaPag
   })
 }
 
-/** Toglie un pagamento registrato per sbaglio: resta nello storico come annullato. */
-export async function annullaPagamento(db: Db, id: string, utenteId: string): Promise<'ok' | 'non_disponibile'> {
+/**
+ * Toglie un pagamento registrato per sbaglio: resta nello storico come annullato. Non se il suo scontrino è uscito,
+ * in coda o incerto: lo scontrino emesso si annulla sul registratore, non qui.
+ */
+export async function annullaPagamento(db: Db, id: string, utenteId: string): Promise<'ok' | 'non_disponibile' | 'scontrino'> {
   if (!idValido(id) || !idValido(utenteId)) return 'non_disponibile'
-  const righe = await db.query('update pagamenti set annullato_il=clock_timestamp(),annullato_da=$2 where id=$1 and annullato_il is null returning id',[id,utenteId])
-  return righe.length ? 'ok' : 'non_disponibile'
+  const [p] = await db.query<{ id: string }>(`update pagamenti set annullato_il=clock_timestamp(),annullato_da=$2
+    where id=$1 and annullato_il is null and scontrino in ('non_richiesto','errore','prova') returning id`,[id,utenteId])
+  if (p) return 'ok'
+  const [x] = await db.query<{ attivo: boolean }>('select annullato_il is null as attivo from pagamenti where id=$1',[id])
+  return x?.attivo ? 'scontrino' : 'non_disponibile'
 }

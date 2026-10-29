@@ -5,14 +5,16 @@ import { Pannello } from '@/componenti/Pannello'
 import { ConfermaAzione } from '@/componenti/ConfermaAzione'
 import { formatEuro, parseEuro } from '@/domain/soldi'
 import { allaRomana, ETICHETTA_METODO, MAX_PERSONE, METODI_PAGAMENTO, type MetodoPagamento, type VoceDivisibile } from '@/domain/divisione-conto'
-import type { Destinazione, ModoPagamento, RichiestaPagamento } from '@/cassa/pagamenti-repo'
-import { annullaIncasso, incassa } from './azioni-pagamenti'
+import type { Destinazione, ModoPagamento, RichiestaPagamento, StatoScontrino } from '@/cassa/pagamenti-repo'
+import { annullaIncasso, emettiScontrino, incassa, risolviScontrino } from './azioni-pagamenti'
 
-export interface PagamentoClient { id: string; importoCent: number; metodo: MetodoPagamento; descrizione: string; annullato: boolean }
+export interface PagamentoClient { id: string; importoCent: number; metodo: MetodoPagamento; descrizione: string; annullato: boolean; scontrino: StatoScontrino; scontrinoNumero: string | null; scontrinoErrore: string | null }
 export interface DatiIncasso {
   dest: Destinazione; totaleCent: number; pagatoCent: number; residuoCent: number; pagamenti: PagamentoClient[]
   /** Solo per i tavoli: voci con le porzioni ancora da pagare e i coperti residui. */
   voci: (VoceDivisibile & { chiave: string; residue: number })[]; copertoCent: number; copertiResidui: number
+  /** Valore iniziale di «Emetti lo scontrino» (impostazione della cassa). */
+  scontrinoAutomatico: boolean
 }
 const SCHEDE: { modo: ModoPagamento; testo: string; soloTavolo: boolean }[] = [
   { modo: 'tutto',testo: 'Tutto',soloTavolo: false },{ modo: 'romana',testo: 'Alla romana',soloTavolo: true },
@@ -35,6 +37,7 @@ export function Incasso({ dati: d }: { dati: DatiIncasso }) {
   const [scelte,setScelte] = useState<Record<string,number>>({})
   const [coperti,setCoperti] = useState(0)
   const [importo,setImporto] = useState('')
+  const [scontrino,setScontrino] = useState(d.scontrinoAutomatico)
   const [esito,setEsito] = useState<{ errore: string | null; fatto: string | null }>({ errore: null,fatto: null })
   const [inCorso,startTransition] = useTransition()
   const router = useRouter()
@@ -52,7 +55,7 @@ export function Incasso({ dati: d }: { dati: DatiIncasso }) {
   const paga = (metodo: MetodoPagamento) => startTransition(async () => {
     setEsito({ errore: null,fatto: null })
     try {
-      const e = await incassa(d.dest,richiesta(),metodo)
+      const e = await incassa(d.dest,richiesta(),metodo,scontrino)
       if (!e.ok) { setEsito({ errore: e.errore ?? 'Incasso non registrato, riprova.',fatto: null }); router.refresh(); return }
       setEsito({ errore: null,fatto: `Incassati ${formatEuro(quotaCent!)} (${ETICHETTA_METODO[metodo].toLowerCase()}).` })
       if (modo === 'romana' && persone > 1) setPersone(persone - 1)
@@ -61,10 +64,11 @@ export function Incasso({ dati: d }: { dati: DatiIncasso }) {
       router.refresh()
     } catch { setEsito({ errore: 'Incasso non registrato, riprova.',fatto: null }) }
   })
-  const togli = (id: string) => startTransition(async () => {
-    try { const e = await annullaIncasso(id); setEsito({ errore: e.ok ? null : e.errore ?? 'Operazione non riuscita.',fatto: null }); router.refresh() }
+  const azione = (fn: () => Promise<{ ok: boolean; errore?: string }>) => startTransition(async () => {
+    try { const e = await fn(); setEsito({ errore: e.ok ? null : e.errore ?? 'Operazione non riuscita.',fatto: null }); router.refresh() }
     catch { setEsito({ errore: 'Operazione non riuscita, riprova.',fatto: null }) }
   })
+  const togli = (id: string) => azione(() => annullaIncasso(id))
 
   return <section className="b-incasso" aria-labelledby="titolo-incasso">
     <div className="b-incasso__testa">
@@ -74,7 +78,8 @@ export function Incasso({ dati: d }: { dati: DatiIncasso }) {
     {d.pagamenti.length > 0 && <ul className="b-incasso__elenco">{d.pagamenti.map(p => <li key={p.id} className={p.annullato ? 'b-incasso__voce b-incasso__voce--tolto' : 'b-incasso__voce'}>
       <span>{p.descrizione} · {ETICHETTA_METODO[p.metodo]}{p.annullato && ' · tolto'}</span>
       <span className="b-num">{formatEuro(p.importoCent)}</span>
-      {!p.annullato && <ConfermaAzione stile="discreto" inCorso={inCorso} domanda={`Togliere l’incasso di ${formatEuro(p.importoCent)} (${p.descrizione})? Resta nello storico come tolto.`} conferma={() => togli(p.id)}>Togli</ConfermaAzione>}
+      {!p.annullato && <Scontrino p={p} inCorso={inCorso} azione={azione} />}
+      {!p.annullato && ['non_richiesto','errore','prova'].includes(p.scontrino) && <ConfermaAzione stile="discreto" inCorso={inCorso} domanda={`Togliere l’incasso di ${formatEuro(p.importoCent)} (${p.descrizione})? Resta nello storico come tolto.`} conferma={() => togli(p.id)}>Togli</ConfermaAzione>}
     </li>)}</ul>}
     {esito.fatto && !aperto && <p role="status" className="b-secondario">{esito.fatto}</p>}
     {esito.errore && !aperto && <p role="alert" className="b-errore">{esito.errore}</p>}
@@ -94,6 +99,7 @@ export function Incasso({ dati: d }: { dati: DatiIncasso }) {
           {d.copertiResidui > 0 && d.copertoCent > 0 && <li className="b-incasso__riga"><span>Coperto <span className="b-num b-secondario">{formatEuro(d.copertoCent)}</span></span><Passo valore={coperti} min={0} max={d.copertiResidui} cambia={setCoperti} etichetta="Coperti" /></li>}
         </ul>}
         {modo === 'importo' && <label className="b-campo">Importo (€)<input inputMode="decimal" value={importo} onChange={e => setImporto(e.target.value)} /></label>}
+        <label className="b-scelta"><input type="checkbox" checked={scontrino} onChange={e => setScontrino(e.target.checked)} />Emetti lo scontrino</label>
         <p className="b-incasso__quota">Da incassare <span className="b-num">{valida ? formatEuro(quotaCent!) : '—'}</span></p>
         {quotaCent !== null && quotaCent > residuo && <p role="alert" className="b-errore">L’importo supera quanto resta da pagare.</p>}
         {esito.fatto && <p role="status" className="b-secondario">{esito.fatto}</p>}
@@ -102,4 +108,20 @@ export function Incasso({ dati: d }: { dati: DatiIncasso }) {
       </div>
     </Pannello>
   </section>
+}
+
+/** Stato dello scontrino di un pagamento, con le azioni che servono: emettere, rimandare, dire se un incerto è uscito. */
+function Scontrino({ p,inCorso,azione }: { p: PagamentoClient; inCorso: boolean; azione: (fn: () => Promise<{ ok: boolean; errore?: string }>) => void }) {
+  if (p.scontrino === 'emesso') return <span className="b-etichetta b-etichetta--pronto">Scontrino{p.scontrinoNumero ? ` n. ${p.scontrinoNumero}` : ' emesso'}</span>
+  if (p.scontrino === 'prova') return <span className="b-etichetta">Scontrino di prova</span>
+  if (p.scontrino === 'in_coda') return <span className="b-etichetta b-etichetta--preparazione">Scontrino in stampa</span>
+  if (p.scontrino === 'incerto') return <span className="b-incasso__incerto">
+    <span className="b-etichetta b-etichetta--ritardo" title={p.scontrinoErrore ?? undefined}>Scontrino da controllare sul registratore</span>
+    <button type="button" className="b-btn b-btn--secondario" disabled={inCorso} onClick={() => azione(() => risolviScontrino(p.id,true))}>È uscito</button>
+    <button type="button" className="b-btn b-btn--secondario" disabled={inCorso} onClick={() => azione(() => risolviScontrino(p.id,false))}>Non è uscito</button>
+  </span>
+  return <>
+    {p.scontrino === 'errore' && <span className="b-etichetta b-etichetta--ritardo" title={p.scontrinoErrore ?? undefined}>Scontrino non uscito</span>}
+    <button type="button" className="b-btn b-btn--secondario" disabled={inCorso} onClick={() => azione(() => emettiScontrino(p.id))}>{p.scontrino === 'errore' ? 'Rimanda scontrino' : 'Scontrino'}</button>
+  </>
 }
