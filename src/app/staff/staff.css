@@ -116,6 +116,8 @@
 .b-conto__piede { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 2px solid var(--b-inchiostro); }
 .b-conto__totale { font-size: 2.75rem; line-height: 1; }
 .b-conto__coperti { max-width: 340px; }
+.b-preconto { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.b-preconto .b-avviso { max-width: 360px; }
 .b-conto__chiusura { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
 
 /* Pagamenti del conto */
@@ -143,7 +145,7 @@
 @media (max-width: 30em) { .b-inizio__riquadro { padding: 24px 18px; } }
 
 @media print {
-  .b-staff-barra, .b-elenco-conti, .b-conto .b-btn, .b-conto dialog, .b-conto__coperti, .b-incasso, .b-staff__avviso { display: none !important; }
+  .b-staff-barra, .b-elenco-conti, .b-conto .b-btn, .b-conto dialog, .b-conto__coperti, .b-incasso, .b-preconto, .b-staff__avviso { display: none !important; }
   .b-conto { padding: 0; }
   .b-conto tr { break-inside: avoid; }
 }

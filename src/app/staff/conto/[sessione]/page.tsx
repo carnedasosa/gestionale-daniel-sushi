@@ -8,6 +8,7 @@ import { AggiornamentoAutomatico } from '@/componenti/AggiornamentoAutomatico'
 import { BarraStaff } from '../../BarraStaff'
 import { ElencoConti } from '../../ElencoConti'
 import { Stampa } from '../../Stampa'
+import { Preconto } from '../../Preconto'
 import { ChiusuraConto } from '../../ChiusuraConto'
 import { VoceConto } from '../../VoceConto'
 import { Coperti } from '../../Coperti'
@@ -36,7 +37,7 @@ export default async function ContoPage({ params }: { params: Promise<{ sessione
       <section className="b-conto" aria-labelledby="titolo-conto">
         <div className="b-conto__testa">
           <div><p className="b-num b-secondario b-piccolo">aperto il {quando(conto.apertaIl)}{conto.chiusaIl && ` · chiuso il ${quando(conto.chiusaIl)}`}</p><h1 id="titolo-conto" className="b-titolo-1">Conto · {conto.tavoloNome}</h1></div>
-          <Stampa />
+          <div className="b-azioni"><Preconto sessioneId={sessione} coperti={conto.coperti} stampatoIl={conto.precontoIl?.toISOString() ?? null} ordiniDopo={conto.ordiniDopoPreconto} /><Stampa /></div>
         </div>
         {conto.chiusaIl ? <p role="status" className="b-avviso b-avviso--pronto">Tavolo chiuso alle {conto.chiusaIl.toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</p> : <AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={conto.vistoAlle.toISOString()} />}
         <div className="b-tabella-scorre"><table className="b-tabella b-conto__tabella"><caption className="b-nascosto">Voci del conto</caption>

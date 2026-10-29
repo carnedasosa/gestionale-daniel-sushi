@@ -202,7 +202,8 @@ export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce
 }
 // ordiniIds: ordini non annullati del conto, per riconoscere quelli arrivati dopo l'apertura della pagina.
 // totaleCent = voci + coperti (copertiCent); copertoCent è il prezzo fissato sulla sessione (null senza coperti).
-export interface Conto { tavoloNome: string; apertaIl: Date; chiusaIl: Date | null; vistoAlle: Date; voci: (IdentitaVoce & { quantita: number; importoCent: number })[]; coperti: number | null; copertoCent: number | null; copertiCent: number; totaleCent: number; ordiniIds: string[] }
+// precontoIl: ultimo pre-conto stampato; ordiniDopoPreconto: ordini arrivati dopo (il pre-conto in mano al cliente è vecchio).
+export interface Conto { tavoloNome: string; apertaIl: Date; chiusaIl: Date | null; vistoAlle: Date; voci: (IdentitaVoce & { quantita: number; importoCent: number })[]; coperti: number | null; copertoCent: number | null; copertiCent: number; totaleCent: number; ordiniIds: string[]; precontoIl: Date | null; ordiniDopoPreconto: number }
 export async function contoSessione(db: Db, sessioneId: string): Promise<Conto | null> {
   if (!idValido(sessioneId)) return null
   return db.transazione(tx => leggiConto(tx,sessioneId))
@@ -210,13 +211,14 @@ export async function contoSessione(db: Db, sessioneId: string): Promise<Conto |
 /** Il conto dentro una transazione già aperta (pagamenti e scontrini lo rileggono dopo aver bloccato la sessione). */
 export async function leggiConto(tx: Db, sessioneId: string): Promise<Conto | null> {
   if (!idValido(sessioneId)) return null
-  const [s] = await tx.query<Pick<Conto,'tavoloNome'|'apertaIl'|'chiusaIl'|'coperti'|'copertoCent'>>(`select t.nome as "tavoloNome",s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl",s.coperti,s.coperto_cent as "copertoCent" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 for share of s`,[sessioneId])
+  const [s] = await tx.query<Pick<Conto,'tavoloNome'|'apertaIl'|'chiusaIl'|'coperti'|'copertoCent'|'precontoIl'>>(`select t.nome as "tavoloNome",s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl",s.coperti,s.coperto_cent as "copertoCent",s.preconto_il as "precontoIl" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 for share of s`,[sessioneId])
   if (!s) return null
   const [{ vistoAlle }] = await tx.query<{ vistoAlle: Date }>('select clock_timestamp() as "vistoAlle"')
   const voci = await tx.query<Conto['voci'][number]>(`select r.nome,r.numero,r.prezzo_unit_cent as "prezzoUnitCent",r.poke,sum(r.quantita)::int as quantita,sum(r.prezzo_unit_cent::bigint*r.quantita)::float8 as "importoCent"
     from righe_ordine r join ordini o on o.id=r.ordine_id where o.sessione_id=$1 and o.stato <> 'annullato' and not r.annullata
     group by r.numero,r.nome,r.prezzo_unit_cent,r.poke order by r.numero nulls last,r.nome,r.prezzo_unit_cent,r.poke`,[sessioneId])
-  const ordini = await tx.query<{ id: string }>("select id from ordini where sessione_id=$1 and stato<>'annullato' order by creato_il,id",[sessioneId])
+  const ordini = await tx.query<{ id: string; creatoIl: Date }>(`select id,creato_il as "creatoIl" from ordini where sessione_id=$1 and stato<>'annullato' order by creato_il,id`,[sessioneId])
   const copertiCent = importoCoperti(s.coperti,s.copertoCent)
-  return { ...s,vistoAlle,voci,copertiCent,totaleCent: voci.reduce((s,r) => s + r.importoCent,0) + copertiCent,ordiniIds: ordini.map(o => o.id) }
+  const ordiniDopoPreconto = s.precontoIl ? ordini.filter(o => new Date(o.creatoIl) > new Date(s.precontoIl!)).length : 0
+  return { ...s,vistoAlle,voci,copertiCent,totaleCent: voci.reduce((s,r) => s + r.importoCent,0) + copertiCent,ordiniIds: ordini.map(o => o.id),ordiniDopoPreconto }
 }
