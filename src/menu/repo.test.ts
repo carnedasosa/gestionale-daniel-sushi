@@ -22,8 +22,9 @@ const dati: DatiPiatto = {
 describe('leggiMenu', () => {
   it('categorie in ordine con i loro piatti in ordine', async () => {
     const menu = await leggiMenu(db)
-    expect(menu).toHaveLength(14)
+    expect(menu).toHaveLength(15)
     expect(menu[0].id).toBe('tartare')
+    expect(menu.at(-1)).toMatchObject({ id: 'vini', tipo: 'vini', piatti: [] })
     expect(menu[0].piatti.map((p) => p.numero)).toEqual([1, 2, 3, 4])
     expect(menu.reduce((n, c) => n + c.piatti.length, 0)).toBe(139)
   })

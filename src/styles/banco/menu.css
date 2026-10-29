@@ -14,6 +14,11 @@
 .b-piatto__numero { padding-top: 3px; font-size: .8125rem; color: var(--b-grafite); }
 .b-piatto__corpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .b-piatto__foto { display: block; width: 100%; max-width: 360px; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; margin-bottom: 6px; background: var(--b-spento); }
+.b-piatto__vino { font-size: .9375rem; font-weight: 600; color: var(--b-grafite); }
+.b-piatto__formato { font-family: var(--b-font-testo), system-ui, sans-serif; font-size: .875rem; color: var(--b-grafite); }
+.b-vini-gruppo { display: flex; flex-direction: column; gap: 8px; }
+.b-vini-gruppo + .b-vini-gruppo { margin-top: 12px; }
+.b-vini-gruppo__titolo { font-size: .8125rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--b-grafite); }
 .b-piatto__nome { font-size: 1.0625rem; font-weight: 700; }
 .b-piatto__desc { font-size: .9375rem; line-height: 1.45; color: var(--b-grafite); max-width: 60ch; }
 .b-piatto__etichette { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }

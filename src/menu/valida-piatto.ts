@@ -1,8 +1,9 @@
 import { eAllergene, normalizzaAllergeni } from '@/domain/allergeni'
 import { parseEuro } from '@/domain/soldi'
 import type { DatiPiatto } from './repo'
+import { validaVino, type InputVino } from '@/domain/vini'
 
-export interface InputPiatto {
+interface InputBase {
   nome: string
   descrizione: string
   prezzo: string
@@ -12,10 +13,12 @@ export interface InputPiatto {
   allergeni: string[]
   allergeniConfermati: boolean
 }
+/** Il modulo della carta dei vini aggiunge i campi del vino (`conVino`); gli altri piatti non li toccano. */
+export type InputPiatto = InputBase & Partial<InputVino> & { conVino?: boolean }
 
 type Esito = { ok: true; dati: DatiPiatto } | { ok: false; errori: Partial<Record<keyof InputPiatto, string>> }
 
-export function validaPiatto(input: InputPiatto): Esito {
+export function validaPiatto(input: InputPiatto, annoCorrente = new Date().getFullYear()): Esito {
   const errori: Partial<Record<keyof InputPiatto, string>> = {}
   const nome = input.nome.trim()
   const descrizione = input.descrizione.trim()
@@ -26,6 +29,8 @@ export function validaPiatto(input: InputPiatto): Esito {
   if (descrizione.length > 500) errori.descrizione = 'Massimo 500 caratteri'
   if (prezzoCent === null) errori.prezzo = 'Scrivi il prezzo in euro, ad esempio 10,50'
   if (!input.allergeni.every(eAllergene)) errori.allergeni = 'Allergene non valido'
+  const vino = input.conVino ? validaVino({ vinoTipologia: input.vinoTipologia ?? '',vinoFormato: input.vinoFormato ?? '',vinoCantina: input.vinoCantina ?? '',vinoDenominazione: input.vinoDenominazione ?? '',vinoAnnata: input.vinoAnnata ?? '' },annoCorrente) : null
+  if (vino && !vino.ok) Object.assign(errori,vino.errori)
 
   if (Object.keys(errori).length > 0) return { ok: false, errori }
   return {
@@ -39,6 +44,7 @@ export function validaPiatto(input: InputPiatto): Esito {
       dellaCasa: input.dellaCasa,
       allergeni: normalizzaAllergeni(input.allergeni),
       allergeniConfermati: input.allergeniConfermati,
+      ...(vino?.ok ? { vino: vino.vino } : {}),
     },
   }
 }
@@ -55,5 +61,11 @@ export function inputDaForm(fd: FormData): InputPiatto {
     dellaCasa: spunta('dellaCasa'),
     allergeni: fd.getAll('allergeni').map(String),
     allergeniConfermati: spunta('allergeniConfermati'),
+    conVino: spunta('conVino'),
+    vinoTipologia: testo('vinoTipologia'),
+    vinoFormato: testo('vinoFormato'),
+    vinoCantina: testo('vinoCantina'),
+    vinoDenominazione: testo('vinoDenominazione'),
+    vinoAnnata: testo('vinoAnnata'),
   }
 }

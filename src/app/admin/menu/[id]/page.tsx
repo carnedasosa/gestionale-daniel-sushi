@@ -21,6 +21,7 @@ export default async function ModificaPiatto({ params }: { params: Promise<{ id:
       <FotoPiatto id={piatto.id} nome={piatto.nome} foto={piatto.foto} />
       <ModuloPiatto
         id={piatto.id}
+        vino={categoria?.tipo === 'vini'}
         valori={{
           nome: piatto.nome,
           descrizione: piatto.descrizione ?? '',
@@ -30,6 +31,11 @@ export default async function ModificaPiatto({ params }: { params: Promise<{ id:
           dellaCasa: piatto.dellaCasa,
           allergeni: piatto.allergeni,
           allergeniConfermati: piatto.allergeniConfermati,
+          vinoTipologia: piatto.vino?.tipologia ?? '',
+          vinoFormato: piatto.vino?.formato ?? 'bottiglia',
+          vinoCantina: piatto.vino?.cantina ?? '',
+          vinoDenominazione: piatto.vino?.denominazione ?? '',
+          vinoAnnata: piatto.vino?.annata ? String(piatto.vino.annata) : '',
         }}
       />
     </>

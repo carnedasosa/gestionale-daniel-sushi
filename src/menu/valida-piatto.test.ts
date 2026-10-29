@@ -50,6 +50,7 @@ describe('inputDaForm', () => {
     expect(inputDaForm(fd)).toEqual({
       nome: 'Tonno', descrizione: '', prezzo: '3', piccante: true, vegetariano: false, dellaCasa: false,
       allergeni: ['pesce', 'soia'], allergeniConfermati: false,
+      conVino: false, vinoTipologia: '', vinoFormato: '', vinoCantina: '', vinoDenominazione: '', vinoAnnata: '',
     })
   })
 })
