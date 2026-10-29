@@ -54,20 +54,28 @@ Scartati: stampa dal browser con `window.print()` (una sola stampante per dispos
 
 **Sicurezza**: le API della coda rispondono solo con `Authorization: Bearer <STAMPA_TOKEN>` (variabile d'ambiente sul server, confronto a tempo costante); se la variabile manca rispondono 503. I lavori contengono solo ciò che va su carta.
 
-**Allarme alla cassa**: ogni richiesta del ponte aggiorna `impostazioni_cassa.ponte_visto_il`. Lo schermo della cassa mostra «Stampanti scollegate» se il ponte non si fa vivo da più di 30 s **o** se un lavoro aspetta da più di 30 s, e dà «Ristampa» per ordine.
+**Allarme alla cassa**: le richieste del ponte aggiornano `ponte_stampa.visto_il` (al più ogni 10 s). Lo schermo della cassa mostra «Stampanti scollegate» se il ponte non si fa vivo da più di 30 s **o** se un lavoro aspetta da più di 30 s, e dà «Ristampa» per ordine.
 
 ### 4.2 Comande stampate per reparto
 
 - Per ogni reparto un'impostazione **«stampa le comande»** (banco, cucina; sala = bevande, facoltativa, sulla stampante della cassa). Le comande si accodano quando l'ordine **entra in preparazione**: al tavolo all'invio, da casa all'accettazione (gli ordini della cassa nascono accettati).
 - Il biglietto: reparto in grande, tavolo o «Asporto/Domicilio + nome + orario», numero del giorno, ora, righe `quantità × numero nome` in grande, note e scelte della poke, «Altri reparti: cucina 2».
 - **Annulli**: se si annulla una riga o un ordine la cui comanda è già in coda/stampata, al reparto esce un biglietto **ANNULLATO** con le righe tolte.
-- Con le comande su carta, banco e cucina non toccano schermi: gli stati di preparazione si chiudono dalla cassa/sala con i bottoni esistenti («Segna servito», «Segna pronto»), e i tablet restano opzionali (le due cose convivono). È una conseguenza della scelta «niente tablet»: il gestionale non sa più quando un piatto è pronto.
+- **Stati con le comande su carta** (banco e cucina non toccano schermi, quindi nessuno segna «pronta»). Regola:
+  - quando il ponte conferma la stampa, la comanda passa a **`in_preparazione`** e prende `stampata_il` (vero: il reparto ha il biglietto in mano; il cliente vede «In preparazione», non un «Servito» falso);
+  - la striscia **«Da portare al tavolo»** di cassa e sala mostra anche le comande stampate dei tavoli; **«Portate»** le porta a `pronta` con `portata_il`, e l'ordine diventa «Servito» come oggi;
+  - **chiusura del tavolo**: una comanda già stampata non conta come «ancora in cucina» (il gestionale non può saperlo); restano l'avviso per gli ordini arrivati dopo il conto e quello per le comande non ancora stampate;
+  - da casa la cassa usa i bottoni che ha già («Segna pronto», «Partito», «Ritirato»).
+  I tablet restano possibili reparto per reparto: con «stampa le comande» spento tutto funziona come oggi (default del DB di prova, così e2e e serata non cambiano).
+- **Agganci**: al tavolo in `creaOrdineTavolo` dopo `creaComande`; da casa in `accettaOrdine` **dopo** lo spostamento della fascia (+15/+30, così il biglietto mostra l'orario giusto) e alla creazione per `origine='cassa'`. Annulli: dove le comande perdono righe (`ricalcolaOrdine`, `annullaOrdine`, ordini da casa annullati), un biglietto per coppia ordine/reparto; se il lavoro della comanda è ancora in coda si toglie la riga dal lavoro (o il lavoro intero) invece di stampare due biglietti.
+- Instradamento e formato sono **puri** (`src/stampa/`): lavoro → stampante, documento neutro → byte ESC/POS, testati; il ponte fa solo trasporto.
+- Il segnale di vita del ponte sta in una tabella a sé (`ponte_stampa`), aggiornata al più ogni 10 s.
 
 ### 4.3 Coperti e pre-conto
 
 - `sessioni_tavolo.coperti` (1–99, facoltativo) e `sessioni_tavolo.coperto_cent` (prezzo del coperto **fissato** quando si imposta il numero: cambiare il prezzo in admin non tocca i tavoli aperti). Si chiedono all'apertura del tavolo (campo facoltativo) e si correggono dal conto.
 - `impostazioni_cassa.coperto_cent` (default **0**: coperto non addebitato, solo contato) e `reparto_fiscale_coperto`.
-- Il conto mostra la riga «Coperto × N»; il totale la include.
+- Il conto mostra la riga «Coperto × N»; il totale la include. Il coperto entra in **tutti** i totali di sessione: `contoSessione`, `riepiloghiTavoli` (tile «Totale finora»), il riferimento di `ChiusuraConto`, il pre-conto e il residuo dei pagamenti (un test confronta conto e riepilogo con coperto > 0).
 - **Pre-conto**: bottone nel conto che accoda alla stampante della cassa un biglietto «PRECONTO — non fiscale» con voci, coperti, totale e, se impostata, la quota a persona; segna `sessioni_tavolo.preconto_il`. Il conto avvisa se dopo il pre-conto sono arrivati altri ordini. Resta «Stampa» dal browser come riserva.
 
 ### 4.4 Divisione del conto e pagamenti
@@ -118,7 +126,7 @@ Scartati: stampa dal browser con `window.print()` (una sola stampante per dispos
 
 ## 6. Cosa serve dal locale (domande per Daniele)
 
-1. **Marca e modello del registratore telematico** e indirizzo IP in rete; quali reparti fiscali ha programmati (10%, 22%). Se non è Epson serve il protocollo di quella marca.
+1. **Marca e modello del registratore telematico** e indirizzo IP in rete; quali reparti fiscali ha programmati (10%, 22%) e con quale indice è programmato il pagamento elettronico (carta/bancomat). Se non è Epson serve il protocollo di quella marca.
 2. **Stampanti delle comande**: modello (meglio termiche 80 mm con rete), una al banco e una in cucina, e la stampante del pre-conto alla cassa (può essere la stessa dell'RT? di solito no: l'RT stampa solo documenti fiscali).
 3. Un **PC o Raspberry sempre acceso** nel locale per il ponte (la cassa già c'è).
 4. Il **coperto**: quanto e se si addebita.
@@ -134,12 +142,14 @@ Nuove migrazioni (tutte additive, i dati esistenti restano validi): coperti e im
 
 1. Coperti e impostazioni della cassa.
 2. Divisione del conto e pagamenti.
-3. Coda di stampa, biglietti ESC/POS, API e ponte.
-4. Comande stampate per reparto e annulli.
-5. Pre-conto.
-6. Scontrino: reparti fiscali, documento commerciale, driver Epson.
-7. Foto dei piatti.
-8. Menù dei vini e «Nuovo piatto».
+3. Foto dei piatti.
+4. Menù dei vini e «Nuovo piatto».
+5. Coda di stampa, biglietti ESC/POS, API e ponte.
+6. Comande stampate per reparto e annulli.
+7. Pre-conto.
+8. Scontrino: reparti fiscali, documento commerciale (neutro rispetto alla marca), driver Epson sottile.
 9. README, verbale delle prove.
+
+La parte che dipende dall'hardware (ponte, driver Epson) va per ultima: finché Daniele non dice marca e modello di RT e stampanti è un'ipotesi ragionata, mentre documento commerciale, divisione e instradamento sono neutri e testati.
 
 Ogni passo con i suoi test (dominio puro, repository su PGlite, azioni con `richiediRuolo` per primo); in fondo typecheck, lint, `npm test`, `npm run e2e`.
