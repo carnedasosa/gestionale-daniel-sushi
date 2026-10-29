@@ -105,14 +105,17 @@ Le nuove registrazioni sono disattivate in Supabase: solo gli utenti creati a ma
 | `/ordine/[token]` | stato dell'ordine da casa, aggiornato da solo |
 | `/privacy` | informativa privacy (testo provvisorio) |
 | `/accesso` | accesso per admin e staff |
-| `/admin/menu` | gestione del menù (admin) |
+| `/admin/menu` | gestione del menù, foto, nuovi piatti e vini (admin) |
+| `/admin/cassa` | coperto, comande su carta e registratore telematico (admin) |
 | `/admin/poke` | prezzi, regole e allergeni degli ingredienti della poke (admin) |
 | `/admin/domicilio` | impostazioni, zone, orari e chiusure degli ordini da casa (admin) |
 | `/api/cron/anonimizza` | anonimizzazione giornaliera (solo con `CRON_SECRET`) |
+| `/api/stampa/coda`, `/api/stampa/esito` | coda di stampa per il ponte del locale (solo con `STAMPA_TOKEN`) |
+| `/foto/[piatto]/[versione]` | foto dei piatti (pubbliche, cache lunga) |
 | `/admin/tavoli` | gestione tavoli (admin) |
 | `/admin/tavoli/stampa` | QR dei tavoli attivi (admin) |
 | `/staff` | cucina e apertura/chiusura tavoli |
-| `/staff/conto/[sessione]` | riepilogo per la cassa |
+| `/staff/conto/[sessione]` | conto, coperti, pre-conto, pagamenti e scontrini |
 | `/staff/nuovo-ordine` | ordine preso a voce dalla cassa (telefono o WhatsApp) |
 | `/staff/tavolo/[sessione]/ordina` | comanda del cameriere per un tavolo aperto |
 | `/tavolo/[chiave]` | accesso con codice e ordini al tavolo |
@@ -133,7 +136,7 @@ Apri un tavolo e comunica il codice di quattro cifre al cliente. Non ci sono cod
 
 Il numero d'ordine («Tavolo 3 · n. 12», «Asporto 19:30 · n. 9») riparte da 1 ogni giornata ed è unico fra tavoli, asporto e domicilio. La giornata comincia alle 5 di Roma: una serata che passa la mezzanotte continua la stessa numerazione. Cucina, cassa, pagina del cliente ed email mostrano lo stesso numero. Si calcola in lettura dal contatore globale `ordini.numero`, che resta nel database e nei log, quindi un ordine nuovo non sposta i numeri già letti. Raramente può mancare un numero, quando un invio fallisce dopo averlo preso.
 
-Il conto è stampabile dal browser ed è solo un riepilogo da battere in cassa, **non uno scontrino fiscale**. Chiudendo il tavolo i clienti non possono più inviare ordini. Se restano comande in cucina o sono arrivate dopo il conto viene chiesta una conferma esplicita. La chiusura apre il conto; la cucina conserva le comande con «Tavolo chiuso» e «Conti recenti» conserva i link per sei ore. Dal conto puoi annullare una voce anche servita.
+Il conto mostra voci, coperti e totale; lo scontrino si emette dai pagamenti (vedi **Cassa, pagamenti e scontrino**). Il conto resta stampabile dal browser come riserva. Chiudendo il tavolo i clienti non possono più inviare ordini. Se restano comande in cucina (non ancora stampate, con le comande su carta) o sono arrivate dopo il conto viene chiesta una conferma esplicita. La chiusura apre il conto; la cucina conserva le comande con «Tavolo chiuso» e «Conti recenti» conserva i link per sei ore. Dal conto puoi annullare una voce anche servita.
 
 ### Comanda del cameriere
 
@@ -166,6 +169,31 @@ Ogni ordine ha una **comanda per reparto** presente nelle righe (tabella `comand
 Accettazione, rifiuto, partenza, consegna/ritiro e annullamenti restano alla cassa. Le bevande non passano da un reparto: per i tavoli compaiono nella striscia **Da portare al tavolo** di cassa e sala e diventano pronte col bottone **Portate**; negli ordini da casa non hanno comanda (le mette nel sacchetto la cassa, e un ordine di sole bibite si porta avanti coi bottoni della cassa). Nella stessa striscia compaiono le comande di banco e cucina già pronte, finché la sala non tocca **Portate** (o il tavolo si chiude). Annullando righe o voci del conto, la comanda rimasta senza righe si annulla e lo stato dell'ordine si ricalcola. I bottoni della cassa sulle card intere («Inizia a preparare», «Segna servito», «Segna pronto») restano come **emergenza**: portano avanti tutte le comande dell'ordine insieme. Il lock è sempre sull'ordine prima delle comande (sessione → ordine → comande).
 
 La migrazione `20261018120000_comande_reparto.sql` crea le comande anche per gli ordini esistenti: va applicata al database reale prima del deploy che la usa.
+
+## Cassa, pagamenti e scontrino
+
+Spec: [`docs/superpowers/specs/2026-10-29-cassa-fiscale-e-stampe-design.md`](docs/superpowers/specs/2026-10-29-cassa-fiscale-e-stampe-design.md). Impostazioni in **admin → Cassa e stampe**.
+
+- **Coperti.** Si segnano con − e + dal dettaglio del tavolo o dal conto, quando la sala li sa. Con un prezzo del coperto (default 0 €: solo contati) il conto aggiunge «Coperto × N»; il prezzo si fissa sulla sessione la prima volta, quindi cambiarlo in admin non tocca i tavoli aperti. Il coperto entra in tutti i totali del tavolo.
+- **Pre-conto.** Dal conto, «Pre-conto» stampa alla cassa un biglietto non fiscale con voci, coperti, totale, già pagato e, a scelta, la quota a testa. Il conto ricorda l'ora e avvisa se dopo sono arrivati altri ordini.
+- **Pagamenti e divisione del conto.** «Incassa» apre il pannello: **tutto**, **alla romana** (una quota del residuo per le persone che devono ancora pagare: le quote sommano sempre esattamente il totale), **per piatti** (porzioni e coperti, anche una sola delle tre porzioni di una voce; quelle pagate non si ripagano), **importo** libero; poi contanti o carta. Il server ricalcola ogni importo e rifiuta ciò che supera il residuo. Un incasso sbagliato si toglie (resta nello storico), non se il suo scontrino è uscito. Si incassa anche a tavolo chiuso. Per asporto e domicilio: «Incassa e scontrino» nelle altre azioni della card, prima del ritiro o della partenza.
+- **Scontrino.** Lo emette il **registratore telematico** del locale: il gestionale gli manda le righe col **reparto fiscale** (l'aliquota IVA è programmata nell'RT) e il pagamento. Conto intero e pagamenti per piatti hanno le righe vere; le quote (romana, importo) una riga per reparto in proporzione. Lo scontrino passa dalla coda di stampa e dal ponte; se il registratore non risponde diventa **«da controllare»**: non riparte da solo (si rischierebbe un doppio scontrino), la cassa guarda l'RT e tocca «È uscito» o «Non è uscito». Oggi il driver parla con gli RT **Epson** (FP-81 II RT, FP-90 III RT) via `fpmate.cgi`: va provato sul registratore di Daniele prima dell'uso. Il collegamento POS–RT obbligatorio dal 2026 si fa sul portale dell'Agenzia delle Entrate, non nel gestionale.
+
+### Comande su carta e ponte di stampa
+
+In admin si sceglie quali reparti ricevono le comande dalla **stampante** invece che dallo schermo (banco, cucina, e facoltativamente le bevande alla cassa). Ogni biglietto è una riga della tabella `stampe`, scritta nella stessa transazione dell'ordine: al tavolo all'invio, da casa all'accettazione (con l'orario spostato), dalla cassa subito. Annullando righe, voci o ordini il biglietto ancora in coda si corregge; quello già stampato riceve un biglietto **ANNULLATO**. Una comanda stampata passa in preparazione e compare in «Da portare al tavolo» con l'etichetta «su carta»: «Portate» la chiude. Dalle altre azioni di una card: **Ristampa comande**. Se il ponte tace da più di 30 secondi o una stampa resta ferma, la cassa vede l'allarme.
+
+Il **ponte di stampa** gira sul PC della cassa (o un Raspberry) sempre acceso, con Node 22 e il progetto scaricato:
+
+```bash
+npx tsx scripts/ponte-stampa.ts ponte-stampa.json
+```
+
+Il file di configurazione (esempio in `scripts/ponte-stampa.esempio.json`) dice l'indirizzo del gestionale e delle stampanti: termiche ESC/POS in rete sulla porta 9100 (`cassa`, `banco`, `cucina`) e l'URL `fpmate.cgi` del registratore (`fiscale`). Il token è `STAMPA_TOKEN` (almeno 32 caratteri), uguale sul ponte e nelle variabili d'ambiente di Vercel; senza, le API `/api/stampa/coda` e `/api/stampa/esito` rispondono 503. Con `"prova": "cartella"` il ponte scrive ogni lavoro su file invece di stamparlo (gli scontrini risultano «di prova»).
+
+## Menù: foto e carta dei vini
+
+Dalla scheda di un piatto in admin si carica la **foto**: il browser la rimpicciolisce (lato lungo 800 px), il server accetta solo JPEG, PNG o WebP fino a 400 KB e la serve da `/foto/[piatto]/[versione]` con cache di un anno. **Nuovo piatto** e **Nuovo vino** creano voci in qualsiasi categoria (numero facoltativo e unico). La **Carta dei vini** è una categoria di tipo vini (reparto sala): ogni vino ha tipologia, formato (bottiglia, mezza, calice), cantina, denominazione e annata; un vino anche al calice sono due voci con due prezzi. Nel menù i vini si raggruppano per tipologia; la carta vuota non compare. Attenzione: un piatto con allergeni non confermati chiude gli ordini da casa, quindi nei vini nuovi (che partono con «solfiti») va spuntata la conferma.
 
 ## Ordini al tavolo
 

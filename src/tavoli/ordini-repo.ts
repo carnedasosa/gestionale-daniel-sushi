@@ -9,6 +9,8 @@ import { leggiAllergeniPoke, leggiPokeConfig } from './poke-repo'
 import { idValido } from './validazione'
 import { cascataComande, creaComande, segnaComandeAnnullate } from '@/comande/comande-repo'
 import { numeroGiorno } from './numero-giorno'
+import { importoCoperti } from '@/domain/coperti'
+import { accodaComande, annunciaAnnullo } from '@/stampa/stampe-repo'
 
 export interface RigaOrdine { id: string; numero: number | null; nome: string; prezzoUnitCent: number; quantita: number; nota: string | null; poke: SceltePoke | null; annullata: boolean; reparto: Reparto }
 export interface Ordine { id: string; numero: number; numeroGiorno: number; stato: StatoOrdineTavolo; totaleCent: number; creatoIl: Date; sessioneId: string; tavoloNome: string; tavoloChiuso: boolean; origine: OrigineOrdine; righe: RigaOrdine[] }
@@ -90,6 +92,8 @@ export async function creaOrdineTavolo(db: Db, sessioneId: string, input: RigaCa
     const [ordine] = await tx.query<{ id: string }>('insert into ordini(sessione_id,totale_cent,chiave_invio,origine,creato_il) values ($1,$2,$3,$4,clock_timestamp()) returning id',[sessioneId,prezzi.totaleCent,chiaveInvio,origine])
     await salvaRighe(tx,ordine.id,prezzi.righe)
     await creaComande(tx,ordine.id)
+    // Reparti su carta: la comanda esce dalla stampante insieme all'ordine (stessa transazione).
+    await accodaComande(tx,ordine.id)
     return { ok: true, ordine: (await leggiOrdini(tx,'o.id=$1',[ordine.id]))[0] }
   }) } catch (err) {
     // Dopo il rollback possiamo rileggere anche il conflitto tra sessioni diverse.
@@ -105,9 +109,10 @@ export async function ordiniDellaSessione(db: Db, sessioneId: string): Promise<O
 }
 export async function ordiniAttivi(db: Db): Promise<Ordine[]> { return leggiOrdini(db,"o.stato in ('inviato','in_preparazione')") }
 export interface RiepilogoTavolo { sessioneId: string; numeroOrdini: number; totaleCent: number }
+// Il totale del tavolo comprende i coperti (coperti × prezzo fissato sulla sessione), come il conto.
 export async function riepiloghiTavoli(db: Db): Promise<RiepilogoTavolo[]> {
   return db.query<RiepilogoTavolo>(`select s.id as "sessioneId",count(o.id) filter(where o.stato<>'annullato')::int as "numeroOrdini",
-    coalesce(sum(case when o.stato <> 'annullato' then o.totale_cent else 0 end),0)::float8 as "totaleCent"
+    (coalesce(sum(case when o.stato <> 'annullato' then o.totale_cent else 0 end),0)+coalesce(s.coperti*s.coperto_cent,0))::float8 as "totaleCent"
     from sessioni_tavolo s left join ordini o on o.sessione_id=s.id where s.chiusa_il is null group by s.id`)
 }
 // `da`: lo stato che vedeva lo staff. Se un altro schermo ha già fatto avanzare la comanda il passo si rifiuta:
@@ -147,6 +152,7 @@ export async function annullaOrdine(db: Db, ordineId: string, utenteId: string):
     const [o] = await tx.query<{ totaleCent: number }>("update ordini set stato='annullato',aggiornato_il=now() where id=$1 and stato in ('inviato','in_preparazione') returning totale_cent as \"totaleCent\"",[ordineId])
     if (!o) return 'non_disponibile'
     await cascataComande(tx,ordineId,'annullato')
+    await annunciaAnnullo(tx,ordineId,'tutte')
     await registraAnnulli(tx,utenteId,[{ tipo: 'ordine',ordineId,rigaId: null,importoCent: o.totaleCent }])
     return 'ok'
   })
@@ -166,6 +172,7 @@ export async function annullaRiga(db: Db, rigaId: string, utenteId: string): Pro
     const [r] = await tx.query<{ importoCent: number }>('update righe_ordine set annullata=true where id=$1 and not annullata returning prezzo_unit_cent*quantita as "importoCent"',[rigaId])
     if (!r) return 'non_disponibile'
     await ricalcolaOrdine(tx,o.id)
+    await annunciaAnnullo(tx,o.id,[rigaId])
     await registraAnnulli(tx,utenteId,[{ tipo: 'riga',ordineId: o.id,rigaId,importoCent: r.importoCent }])
     return 'ok'
   })
@@ -185,23 +192,33 @@ export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce
     if (s.chiusa) return 'conto_chiuso'
     const ordini = await tx.query<{ id: string }>("select id from ordini where sessione_id=$1 and stato<>'annullato' order by id for update",[sessioneId])
     const righe = await tx.query<{ id: string; ordineId: string; importoCent: number }>(`update righe_ordine set annullata=true where ordine_id=any($1::uuid[]) and not annullata and nome=$2 and numero is not distinct from $3::int and prezzo_unit_cent=$4 and poke is not distinct from $5::text::jsonb returning id,ordine_id as "ordineId",prezzo_unit_cent*quantita as "importoCent"`,[ordini.map(o => o.id),v.nome,v.numero,v.prezzoUnitCent,v.poke===null ? null : JSON.stringify(v.poke)])
-    for (const id of new Set(righe.map(r => r.ordineId))) await ricalcolaOrdine(tx,id)
+    for (const id of new Set(righe.map(r => r.ordineId))) {
+      await ricalcolaOrdine(tx,id)
+      await annunciaAnnullo(tx,id,righe.filter(r => r.ordineId === id).map(r => r.id))
+    }
     await registraAnnulli(tx,utenteId,righe.map(r => ({ tipo: 'voce_conto',ordineId: r.ordineId,rigaId: r.id,importoCent: r.importoCent })))
     return righe.length>0 ? 'ok' : 'non_disponibile'
   })
 }
 // ordiniIds: ordini non annullati del conto, per riconoscere quelli arrivati dopo l'apertura della pagina.
-export interface Conto { tavoloNome: string; apertaIl: Date; chiusaIl: Date | null; vistoAlle: Date; voci: (IdentitaVoce & { quantita: number; importoCent: number })[]; totaleCent: number; ordiniIds: string[] }
+// totaleCent = voci + coperti (copertiCent); copertoCent è il prezzo fissato sulla sessione (null senza coperti).
+// precontoIl: ultimo pre-conto stampato; ordiniDopoPreconto: ordini arrivati dopo (il pre-conto in mano al cliente è vecchio).
+export interface Conto { tavoloNome: string; apertaIl: Date; chiusaIl: Date | null; vistoAlle: Date; voci: (IdentitaVoce & { quantita: number; importoCent: number })[]; coperti: number | null; copertoCent: number | null; copertiCent: number; totaleCent: number; ordiniIds: string[]; precontoIl: Date | null; ordiniDopoPreconto: number }
 export async function contoSessione(db: Db, sessioneId: string): Promise<Conto | null> {
   if (!idValido(sessioneId)) return null
-  return db.transazione(async tx => {
-  const [s] = await tx.query<Pick<Conto,'tavoloNome'|'apertaIl'|'chiusaIl'>>(`select t.nome as "tavoloNome",s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 for share of s`,[sessioneId])
+  return db.transazione(tx => leggiConto(tx,sessioneId))
+}
+/** Il conto dentro una transazione già aperta (pagamenti e scontrini lo rileggono dopo aver bloccato la sessione). */
+export async function leggiConto(tx: Db, sessioneId: string): Promise<Conto | null> {
+  if (!idValido(sessioneId)) return null
+  const [s] = await tx.query<Pick<Conto,'tavoloNome'|'apertaIl'|'chiusaIl'|'coperti'|'copertoCent'|'precontoIl'>>(`select t.nome as "tavoloNome",s.aperta_il as "apertaIl",s.chiusa_il as "chiusaIl",s.coperti,s.coperto_cent as "copertoCent",s.preconto_il as "precontoIl" from sessioni_tavolo s join tavoli t on t.id=s.tavolo_id where s.id=$1 for share of s`,[sessioneId])
   if (!s) return null
   const [{ vistoAlle }] = await tx.query<{ vistoAlle: Date }>('select clock_timestamp() as "vistoAlle"')
   const voci = await tx.query<Conto['voci'][number]>(`select r.nome,r.numero,r.prezzo_unit_cent as "prezzoUnitCent",r.poke,sum(r.quantita)::int as quantita,sum(r.prezzo_unit_cent::bigint*r.quantita)::float8 as "importoCent"
     from righe_ordine r join ordini o on o.id=r.ordine_id where o.sessione_id=$1 and o.stato <> 'annullato' and not r.annullata
     group by r.numero,r.nome,r.prezzo_unit_cent,r.poke order by r.numero nulls last,r.nome,r.prezzo_unit_cent,r.poke`,[sessioneId])
-  const ordini = await tx.query<{ id: string }>("select id from ordini where sessione_id=$1 and stato<>'annullato' order by creato_il,id",[sessioneId])
-  return { ...s,vistoAlle,voci,totaleCent: voci.reduce((s,r) => s + r.importoCent,0),ordiniIds: ordini.map(o => o.id) }
-  })
+  const ordini = await tx.query<{ id: string; creatoIl: Date }>(`select id,creato_il as "creatoIl" from ordini where sessione_id=$1 and stato<>'annullato' order by creato_il,id`,[sessioneId])
+  const copertiCent = importoCoperti(s.coperti,s.copertoCent)
+  const ordiniDopoPreconto = s.precontoIl ? ordini.filter(o => new Date(o.creatoIl) > new Date(s.precontoIl!)).length : 0
+  return { ...s,vistoAlle,voci,copertiCent,totaleCent: voci.reduce((s,r) => s + r.importoCent,0) + copertiCent,ordiniIds: ordini.map(o => o.id),ordiniDopoPreconto }
 }

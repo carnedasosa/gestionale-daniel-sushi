@@ -12,6 +12,8 @@ import { Pannello } from '@/componenti/Pannello'
 import type { StatoReparto } from '@/comande/comande-repo'
 import { ChipComande } from './DaPortare'
 import { annullaRigaStaff } from './azioni'
+import { ristampaComande } from './azioni-stampa'
+import { incassa } from './azioni-pagamenti'
 import { accettaOrdineStaff, annullaOrdineCasaStaff, apriOrdiniOnline, avanzaOrdineCasaStaff, chiudiOrdiniOnline, rifiutaOrdineStaff } from './azioni-casa'
 import type { Esegui } from './useEsegui'
 export interface OrdiniOnline { accesi: boolean; asporto: string | null; domicilio: string | null }
@@ -54,7 +56,7 @@ function RifiutaOrdine({ ordine,inCorso,esegui }: { ordine: OrdineCasaClient; in
 }
 const VERBO: Record<string,string> = { 'In preparazione': 'Inizia a preparare',Pronto: 'Segna pronto',Partito: 'Segna partito',Consegnato: 'Segna consegnato',Ritirato: 'Segna ritirato' }
 /** Ordine da casa: `daAccettare` mostra accetta/rifiuta, altrimenti il prossimo passo della cucina. */
-export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare,comande }: { ordine: OrdineCasaClient; ora: string; inCorso: boolean; esegui: Esegui; daAccettare: boolean; comande?: StatoReparto[] }) {
+export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare,comande,ristampa = false }: { ordine: OrdineCasaClient; ora: string; inCorso: boolean; esegui: Esegui; daAccettare: boolean; comande?: StatoReparto[]; ristampa?: boolean }) {
   const lunga = daAccettare && attesaLunga(o.creatoIl,new Date(ora))
   const avanza = azioneAvanzaCasa(o.tipo,o.stato)
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
@@ -80,6 +82,10 @@ export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare,comand
     </div> : <div className="b-comanda__azioni">
       {avanza && <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => esegui(() => avanzaOrdineCasaStaff(o.id,o.stato))}>{VERBO[avanza] ?? avanza}</button>}
       <AltreAzioni titolo={`Altre azioni · ${titolo}`}>{chiudi => <>
+        {ristampa && <button type="button" className="b-btn b-btn--secondario" disabled={inCorso} onClick={() => { chiudi(); esegui(() => ristampaComande(o.id)) }}>Ristampa comande</button>}
+        {/* Prima del ritiro o della partenza: lo scontrino va nel sacchetto. Il server rifiuta un secondo incasso. */}
+        <ConfermaAzione stile="secondario" inCorso={inCorso} domanda={`Incassare ${formatEuro(o.totaleCent)} (${o.pagamento === 'carta' ? 'carta' : 'contanti'}) ed emettere lo scontrino dell’ordine n. ${o.numeroGiorno}?`}
+          conferma={() => { chiudi(); esegui(() => incassa({ ordineId: o.id },{ modo: 'tutto' },o.pagamento,true)) }}>Incassa e scontrino</ConfermaAzione>
         {o.righe.filter(r => !r.annullata).map(r => <ConfermaAzione key={r.id} inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => { chiudi(); esegui(() => annullaRigaStaff(r.id)) }}>Annulla {r.nome}</ConfermaAzione>)}
         <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numeroGiorno}? Il cliente riceverà un’email.`} conferma={() => { chiudi(); esegui(() => annullaOrdineCasaStaff(o.id)) }}>Annulla tutto l’ordine</ConfermaAzione>
       </>}</AltreAzioni>

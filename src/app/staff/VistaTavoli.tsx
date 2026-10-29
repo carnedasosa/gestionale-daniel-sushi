@@ -7,6 +7,7 @@ import { riassuntoTavolo } from '@/domain/stati-tavolo'
 import type { OrdineClient, RiepilogoTavolo } from '@/tavoli/ordini-repo'
 import type { TavoloStaff } from './SchermoStaff'
 import { ChiudiTavolo } from './ChiudiTavolo'
+import { Coperti } from './Coperti'
 import { apriTavolo, sbloccaTavolo } from './azioni'
 import type { AzioniDi } from './useEsegui'
 const ora = (iso: string) => new Date(iso).toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })
@@ -57,6 +58,7 @@ export function VistaTavoli({ tavoli,riepiloghi,ordini,azioniDi }: { tavoli: Tav
     {selezionato && s && d && <aside id="dettaglio-tavolo" className="b-dettaglio-tavolo" aria-label={`Dettaglio di ${selezionato.nome}`}>
       <div className="b-dettaglio-tavolo__testa"><h2 ref={titolo} tabIndex={-1} className="b-titolo-2">{selezionato.nome}</h2><span className="b-num b-secondario">dalle {ora(s.apertaIl)}</span></div>
       <div className="b-dettaglio-tavolo__codice"><span className="b-piccolo">Codice da dare ai clienti</span><span className="b-num">{s.codice}</span></div>
+      <Coperti key={s.id} sessioneId={s.id} coperti={s.coperti} />
       <div className="b-scontrino">
         <div className="b-scontrino__riga"><span>Ordini mandati</span><span className="b-num">{d.ordini}</span></div>
         <div className="b-scontrino__riga"><span>In cucina adesso</span><span className="b-num">{d.inCucina}</span></div>

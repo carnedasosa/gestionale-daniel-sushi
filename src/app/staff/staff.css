@@ -93,6 +93,8 @@
 .b-dettaglio-tavolo__testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 10px; }
 .b-dettaglio-tavolo__codice { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px; border-radius: 16px; background: var(--b-inchiostro); color: var(--b-su-inchiostro); }
 .b-dettaglio-tavolo__codice .b-num { font-size: clamp(2rem, 14vw, 3.5rem); letter-spacing: .14em; line-height: 1.1; }
+.b-coperti { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.b-coperti .b-errore { flex-basis: 100%; }
 .b-dettaglio-tavolo__azioni { display: flex; flex-direction: column; gap: 10px; }
 .b-chiudi-tavolo, .b-chiudi-tavolo > .b-btn { width: 100%; }
 
@@ -113,7 +115,25 @@
 .b-conto .b-tabella-scorre { background: transparent; }
 .b-conto__piede { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 2px solid var(--b-inchiostro); }
 .b-conto__totale { font-size: 2.75rem; line-height: 1; }
+.b-conto__coperti { max-width: 340px; }
+.b-preconto { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.b-preconto .b-avviso { max-width: 360px; }
 .b-conto__chiusura { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+
+/* Pagamenti del conto */
+.b-incasso { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1.5px solid var(--b-filetto); }
+.b-incasso__testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 16px; }
+.b-incasso__elenco { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.b-incasso__voce { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.b-incasso__voce > span:first-child { flex: 1 1 200px; }
+.b-incasso__incerto { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.b-incasso__voce--tolto { color: var(--b-grafite); text-decoration: line-through; }
+.b-incasso > .b-btn { align-self: flex-start; }
+.b-incasso__pannello { display: flex; flex-direction: column; gap: 14px; }
+.b-incasso__piatti { list-style: none; display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
+.b-incasso__riga { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.b-incasso__riga > span:first-child { flex: 1 1 180px; }
+.b-incasso__quota { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: 1.25rem; }
 
 /* Inizio turno */
 .b-inizio { flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 32px 16px; background: var(--b-barra); }
@@ -126,7 +146,7 @@
 @media (max-width: 30em) { .b-inizio__riquadro { padding: 24px 18px; } }
 
 @media print {
-  .b-staff-barra, .b-elenco-conti, .b-conto .b-btn, .b-conto dialog, .b-staff__avviso { display: none !important; }
+  .b-staff-barra, .b-elenco-conti, .b-conto .b-btn, .b-conto dialog, .b-conto__coperti, .b-incasso, .b-preconto, .b-staff__avviso { display: none !important; }
   .b-conto { padding: 0; }
   .b-conto tr { break-inside: avoid; }
 }

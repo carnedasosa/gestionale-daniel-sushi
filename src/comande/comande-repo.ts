@@ -47,14 +47,14 @@ export async function segnaComandeAnnullate(tx: Db, ordineId: string): Promise<v
 }
 
 const ORDINE_IN_CUCINA = `('inviato','in_preparazione','accettato')`
-type ComandaBloccata = { id: string; ordineId: string; reparto: Reparto; stato: StatoComanda; portata: boolean; tipo: TipoOrdine; statoOrdine: string }
+type ComandaBloccata = { id: string; ordineId: string; reparto: Reparto; stato: StatoComanda; portata: boolean; stampata: boolean; tipo: TipoOrdine; statoOrdine: string }
 // Ordine prima, comanda dopo.
 async function bloccaComanda(tx: Db, id: string): Promise<ComandaBloccata | null> {
   const [c] = await tx.query<{ ordineId: string }>('select ordine_id as "ordineId" from comande where id=$1',[id])
   if (!c) return null
   const [o] = await tx.query<{ tipo: TipoOrdine; stato: string }>('select tipo,stato from ordini where id=$1 for update',[c.ordineId])
   if (!o) return null
-  const [b] = await tx.query<Omit<ComandaBloccata,'tipo' | 'statoOrdine'>>('select id,ordine_id as "ordineId",reparto,stato,portata_il is not null as portata from comande where id=$1 for update',[id])
+  const [b] = await tx.query<Omit<ComandaBloccata,'tipo' | 'statoOrdine'>>('select id,ordine_id as "ordineId",reparto,stato,portata_il is not null as portata,stampata_il is not null as stampata from comande where id=$1 for update',[id])
   return b ? { ...b,tipo: o.tipo,statoOrdine: o.stato } : null
 }
 async function passoComanda(tx: Db, c: ComandaBloccata): Promise<boolean> {
@@ -80,7 +80,10 @@ export async function avanzaComanda(db: Db, id: string, da: StatoComanda): Promi
   })
 }
 
-/** «Portate» della sala: bevande servite (la comanda diventa pronta) oppure piatti pronti di banco/cucina portati al tavolo. */
+/**
+ * «Portate» della sala: bevande servite (la comanda diventa pronta), piatti pronti di banco/cucina portati al tavolo,
+ * oppure una comanda su carta portata al tavolo (diventa pronta e portata insieme: dalla carta non arriva altro segnale).
+ */
 export async function portaComanda(db: Db, id: string): Promise<true | null> {
   if (!idValido(id)) return null
   return db.transazione(async tx => {
@@ -89,6 +92,11 @@ export async function portaComanda(db: Db, id: string): Promise<true | null> {
     if (c.reparto === 'sala') {
       if (!['da_preparare','in_preparazione'].includes(c.stato) || !['inviato','in_preparazione'].includes(c.statoOrdine)) return null
       return await passoComanda(tx,c) ? true : null
+    }
+    if (c.stampata && c.stato === 'in_preparazione' && ['inviato','in_preparazione'].includes(c.statoOrdine)) {
+      await tx.query(`update comande set stato='pronta',pronta_il=clock_timestamp(),portata_il=clock_timestamp() where id=$1`,[c.id])
+      await aggiornaStatoOrdine(tx,c.ordineId)
+      return true
     }
     if (c.stato !== 'pronta' || c.portata) return null
     await tx.query('update comande set portata_il=clock_timestamp() where id=$1',[c.id])
@@ -123,13 +131,14 @@ export async function comandeAttive(db: Db, reparto: Reparto): Promise<ComandaAt
 
 export interface VoceDaPortare { id: string; reparto: Reparto; stato: StatoComanda; ordineId: string; numero: number; numeroGiorno: number; tavoloNome: string; quando: Date; righe: RigaOrdine[] }
 export type VoceDaPortareClient = Omit<VoceDaPortare,'quando'> & { quando: string }
-/** Striscia «Da portare al tavolo»: bevande da servire e piatti pronti di banco e cucina non ancora portati, solo tavoli aperti. */
+/** Striscia «Da portare al tavolo»: bevande da servire, piatti pronti di banco e cucina non ancora portati e comande su carta, solo tavoli aperti. */
 export async function daPortare(db: Db): Promise<VoceDaPortare[]> {
   const voci = await db.query<Omit<VoceDaPortare,'righe'>>(`select c.id,c.reparto,c.stato,o.id as "ordineId",o.numero,${numeroGiorno('o')},t.nome as "tavoloNome",coalesce(c.pronta_il,c.creata_il) as quando
     from comande c join ordini o on o.id=c.ordine_id join sessioni_tavolo s on s.id=o.sessione_id join tavoli t on t.id=s.tavolo_id
     where o.tipo='tavolo' and s.chiusa_il is null and (
       (c.reparto='sala' and c.stato in ('da_preparare','in_preparazione') and o.stato in ('inviato','in_preparazione'))
-      or (c.reparto<>'sala' and c.stato='pronta' and c.portata_il is null and o.stato<>'annullato'))
+      or (c.reparto<>'sala' and c.stato='pronta' and c.portata_il is null and o.stato<>'annullato')
+      or (c.reparto<>'sala' and c.stato='in_preparazione' and c.stampata_il is not null and o.stato in ('inviato','in_preparazione')))
     order by quando,o.numero,c.reparto`)
   if (!voci.length) return []
   const righe = await leggiRigheOrdini(db,[...new Set(voci.map(v => v.ordineId))])

@@ -1,9 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
-import { aggiornaPiatto, aggiornaRepartoCategoria } from '@/menu/repo'
+import { aggiornaPiatto, aggiornaRepartoCategoria, creaPiatto } from '@/menu/repo'
 import { repartoValido } from '@/domain/reparti'
 import { cambiaDisponibilitaPiatto, type EsitoDisponibilita } from '@/menu/cambia-disponibilita'
 import { inputDaForm, validaPiatto, type InputPiatto } from '@/menu/valida-piatto'
@@ -62,4 +63,28 @@ export async function cambiaRepartoCategoria(id: string, reparto: string): Promi
   revalidatePath('/staff')
   revalidatePath('/')
   return trovata ? { ok: true } : { ok: false, errore: 'Categoria non trovata.' }
+}
+
+/** Piatto nuovo (anche una voce della carta dei vini): categoria e numero dal modulo, poi si apre la sua scheda. */
+export async function creaNuovoPiatto(stato: StatoModulo, fd: FormData): Promise<StatoModulo> {
+  await richiediRuolo('admin')
+  const input = inputDaForm(fd)
+  const invii = stato.invii + 1
+  const categoriaId = String(fd.get('categoriaId') ?? ''), numeroTesto = String(fd.get('numero') ?? '').trim()
+  const numero = numeroTesto ? Number(numeroTesto) : null
+  if (!/^[a-z0-9-]{1,60}$/.test(categoriaId)) return { salvato: false, errori: {}, erroreGenerale: 'Scegli la categoria.', valori: input, invii }
+  if (numero !== null && (!/^\d{1,4}$/.test(numeroTesto) || numero < 1)) return { salvato: false, errori: {}, erroreGenerale: 'Il numero va da 1 a 9999, oppure lascialo vuoto.', valori: input, invii }
+  const esito = validaPiatto(input)
+  if (!esito.ok) return { salvato: false, errori: esito.errori, erroreGenerale: null, valori: input, invii }
+  let creato: Awaited<ReturnType<typeof creaPiatto>>
+  try {
+    creato = await creaPiatto(db, categoriaId, numero, esito.dati)
+  } catch (err) {
+    console.error('creaNuovoPiatto non riuscito:', err instanceof Error ? err.message : 'errore sconosciuto')
+    return { salvato: false, errori: {}, erroreGenerale: 'Salvataggio non riuscito: controlla la connessione e riprova.', valori: input, invii }
+  }
+  if (!creato.ok) return { salvato: false, errori: {}, erroreGenerale: creato.errore === 'numero' ? `Il numero ${numero} è già di un altro piatto.` : 'Categoria non trovata.', valori: input, invii }
+  revalidatePath('/admin/menu')
+  revalidatePath('/')
+  redirect(`/admin/menu/${creato.id}`)
 }

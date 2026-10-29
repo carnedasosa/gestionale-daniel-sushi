@@ -13,7 +13,7 @@
 @media (max-width: 50em) {
   .b-nav-admin { display: none; }
   .b-admin__contenuto { padding-bottom: calc(var(--b-nav-altezza, 76px + env(safe-area-inset-bottom)) + 24px); }
-  .b-nav-admin-basso { position: fixed; z-index: 3; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 8px 8px max(14px, env(safe-area-inset-bottom)); background: var(--b-foglio); border-top: 1.5px solid var(--b-filetto); }
+  .b-nav-admin-basso { position: fixed; z-index: 3; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; padding: 8px 8px max(14px, env(safe-area-inset-bottom)); background: var(--b-foglio); border-top: 1.5px solid var(--b-filetto); }
   .b-nav-admin-basso__voce { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 54px; border: 0; border-radius: 12px; background: transparent; color: var(--b-grafite); font: 600 .75rem/1.2 var(--b-font-testo), system-ui, sans-serif; text-decoration: none; cursor: pointer; text-align: center; overflow-wrap: anywhere; }
   .b-nav-admin-basso__voce svg { width: 22px; height: 22px; }
   .b-nav-admin-basso__voce[aria-current="page"] { background: var(--b-inchiostro); color: var(--b-su-inchiostro); font-weight: 700; }
@@ -123,3 +123,13 @@
   .b-qr-card { height: 134mm; padding: 8mm; border-radius: 0; }
   .b-qr-card:nth-child(4n) { break-after: page; }
 }
+
+/* Reparti fiscali */
+.b-reparti-fiscali { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 10px 16px; }
+.b-campo--reparto input { max-width: 6em; }
+
+/* Foto del piatto */
+.b-foto-piatto { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.b-foto-piatto__anteprima { width: 100%; max-width: 320px; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; }
+.b-foto-piatto__scegli { cursor: pointer; }
+.b-foto-piatto__scegli:has(input:focus-visible) { outline: 3px solid var(--b-fuoco); outline-offset: 2px; }

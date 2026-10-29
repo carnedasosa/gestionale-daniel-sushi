@@ -6,7 +6,7 @@ import { ModuloCassa } from './ModuloCassa'
 import type { DisponibilitaCassa } from './NuovoOrdineCassa'
 import type { useCarrelloSalvato } from '@/ordinare/useCarrelloSalvato'
 import type { Piatto } from '@/menu/repo'
-const piatto: Piatto = { id: 'p1',categoriaId: 'tartare',numero: 1,nome: 'Salmone',descrizione: null,prezzoCent: 600,piccante: false,vegetariano: false,dellaCasa: false,allergeni: [],allergeniConfermati: true,disponibile: true,posizione: 0 }
+const piatto: Piatto = { id: 'p1',categoriaId: 'tartare',numero: 1,nome: 'Salmone',descrizione: null,prezzoCent: 600,piccante: false,vegetariano: false,dellaCasa: false,allergeni: [],allergeniConfermati: true,disponibile: true,posizione: 0,foto: null,vino: null }
 const righe = [{ piattoId: 'p1',quantita: 3,nota: '' }]
 const carrello = { carrello: { righe,chiaveInvio: 'k' },ref: { current: { righe,chiaveInvio: 'k' } },caricato: true,bloccato: { current: false },imposta: vi.fn(),modificaRighe: vi.fn(),modificaPiatto: vi.fn(),aggiungiPoke: vi.fn(),svuota: vi.fn(),blocca: () => true,sblocca: vi.fn() } as unknown as ReturnType<typeof useCarrelloSalvato>
 const F1 = '2026-10-12T16:30:00.000Z', F2 = '2026-10-12T16:45:00.000Z'

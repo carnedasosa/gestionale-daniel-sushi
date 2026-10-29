@@ -25,6 +25,7 @@ export default async function AdminMenu({ searchParams }: { searchParams: Promis
     <>
       <div className="b-admin-testa">
         <div className="b-admin-testa__testi"><h1 className="b-titolo-1">Menù</h1><p className="b-secondario">{tutti.length} piatti in {menu.length} categorie</p></div>
+        <div className="b-azioni"><Link className="b-btn b-btn--secondario" href="/admin/menu/nuovo?categoria=vini">Nuovo vino</Link><Link className="b-btn b-btn--principale" href="/admin/menu/nuovo">Nuovo piatto</Link></div>
       </div>
       {daConfermare > 0 && (
         <div className="b-avviso b-avviso--accettare" role="status">

@@ -8,8 +8,16 @@ import { AggiornamentoAutomatico } from '@/componenti/AggiornamentoAutomatico'
 import { BarraStaff } from '../../BarraStaff'
 import { ElencoConti } from '../../ElencoConti'
 import { Stampa } from '../../Stampa'
+import { Preconto } from '../../Preconto'
 import { ChiusuraConto } from '../../ChiusuraConto'
 import { VoceConto } from '../../VoceConto'
+import { Coperti } from '../../Coperti'
+import { Incasso, type DatiIncasso } from '../../Incasso'
+import { statoPagamenti } from '@/cassa/pagamenti-repo'
+import { leggiImpostazioniFiscali } from '@/fiscale/scontrini-repo'
+import { chiaveVoce, porzioniResidue } from '@/domain/divisione-conto'
+// Il contatore − / + dei coperti e dell'incasso.
+import '@/styles/banco/menu.css'
 import '../../staff.css'
 const quando = (d: Date) => d.toLocaleString('it-IT',{ day: '2-digit',month: '2-digit',hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })
 export default async function ContoPage({ params }: { params: Promise<{ sessione: string }> }) {
@@ -17,7 +25,14 @@ export default async function ContoPage({ params }: { params: Promise<{ sessione
   const { sessione } = await params
   const conto = await contoSessione(db,sessione)
   if (!conto) notFound()
-  const [tavoli,riepiloghi,recenti] = await Promise.all([elencoTavoli(db),riepiloghiTavoli(db),contiRecenti(db)])
+  const [tavoli,riepiloghi,recenti,pagamenti,fiscali] = await Promise.all([elencoTavoli(db),riepiloghiTavoli(db),contiRecenti(db),statoPagamenti(db,{ sessioneId: sessione }),leggiImpostazioniFiscali(db)])
+  if (!pagamenti) notFound()
+  const residue = porzioniResidue(conto.voci,pagamenti.pagato)
+  const incasso: DatiIncasso = { dest: { sessioneId: sessione },totaleCent: pagamenti.totaleCent,pagatoCent: pagamenti.pagatoCent,residuoCent: pagamenti.residuoCent,
+    pagamenti: pagamenti.pagamenti.map(p => ({ id: p.id,importoCent: p.importoCent,metodo: p.metodo,descrizione: p.descrizione,annullato: p.annullato,scontrino: p.scontrino,scontrinoNumero: p.scontrinoNumero,scontrinoErrore: p.scontrinoErrore })),
+    scontrinoAutomatico: fiscali.automatico,
+    voci: conto.voci.map((v,i) => ({ numero: v.numero,nome: v.nome,prezzoUnitCent: v.prezzoUnitCent,poke: v.poke,quantita: v.quantita,chiave: chiaveVoce(v),residue: residue[i].residue })),
+    copertoCent: conto.copertoCent ?? 0,copertiResidui: Math.max(0,(conto.coperti ?? 0) - pagamenti.pagato.coperti) }
   const aperti = tavoli.filter(t => t.sessione).map(t => ({ id: t.sessione!.id,nome: t.nome,totaleCent: riepiloghi.find(r => r.sessioneId === t.sessione!.id)?.totaleCent ?? 0 }))
   return <main className="b-staff">
     <BarraStaff vista="conti" daGuardare={0} online={null} ora={new Date().toISOString()} />
@@ -26,16 +41,19 @@ export default async function ContoPage({ params }: { params: Promise<{ sessione
       <section className="b-conto" aria-labelledby="titolo-conto">
         <div className="b-conto__testa">
           <div><p className="b-num b-secondario b-piccolo">aperto il {quando(conto.apertaIl)}{conto.chiusaIl && ` · chiuso il ${quando(conto.chiusaIl)}`}</p><h1 id="titolo-conto" className="b-titolo-1">Conto · {conto.tavoloNome}</h1></div>
-          <Stampa />
+          <div className="b-azioni"><Preconto sessioneId={sessione} coperti={conto.coperti} stampatoIl={conto.precontoIl?.toISOString() ?? null} ordiniDopo={conto.ordiniDopoPreconto} /><Stampa /></div>
         </div>
         {conto.chiusaIl ? <p role="status" className="b-avviso b-avviso--pronto">Tavolo chiuso alle {conto.chiusaIl.toLocaleTimeString('it-IT',{ hour: '2-digit',minute: '2-digit',timeZone: 'Europe/Rome' })}</p> : <AggiornamentoAutomatico ogniSecondi={10} ultimoAggiornamento={conto.vistoAlle.toISOString()} />}
         <div className="b-tabella-scorre"><table className="b-tabella b-conto__tabella"><caption className="b-nascosto">Voci del conto</caption>
           <thead><tr><th>N.</th><th>Piatto</th><th className="b-destra">Q.tà</th><th className="b-destra">Importo</th></tr></thead>
-          <tbody>{conto.voci.map(v => <VoceConto key={JSON.stringify([v.numero,v.nome,v.prezzoUnitCent,v.poke])} sessioneId={sessione} voce={v} modificabile={!conto.chiusaIl} />)}</tbody></table></div>
+          <tbody>{conto.voci.map(v => <VoceConto key={JSON.stringify([v.numero,v.nome,v.prezzoUnitCent,v.poke])} sessioneId={sessione} voce={v} modificabile={!conto.chiusaIl} />)}
+            {conto.copertiCent > 0 && <tr><td className="b-num b-secondario">—</td><td><span className="b-conto__piatto">Coperto</span> <span className="b-secondario b-num">{formatEuro(conto.copertoCent!)}</span></td><td className="b-num b-destra">{conto.coperti}</td><td className="b-num b-destra">{formatEuro(conto.copertiCent)}</td></tr>}</tbody></table></div>
+        {conto.chiusaIl ? conto.coperti !== null && <p className="b-secondario">Coperti: <span className="b-num">{conto.coperti}</span></p> : <div className="b-conto__coperti"><Coperti sessioneId={sessione} coperti={conto.coperti} /></div>}
         <div className="b-conto__piede">
-          <div><p className="b-secondario">Da battere in cassa · non è uno scontrino fiscale</p><p className="b-num b-conto__totale" aria-label={`Totale: ${formatEuro(conto.totaleCent)}`}>{formatEuro(conto.totaleCent)}</p></div>
+          <div><p className="b-secondario">Riepilogo · lo scontrino si emette dai pagamenti qui sotto</p><p className="b-num b-conto__totale" aria-label={`Totale: ${formatEuro(conto.totaleCent)}`}>{formatEuro(conto.totaleCent)}</p></div>
           {!conto.chiusaIl && <ChiusuraConto sessioneId={sessione} attuale={{ vistoAlle: conto.vistoAlle.toISOString(),ordiniIds: conto.ordiniIds,totaleCent: conto.totaleCent }} />}
         </div>
+        <Incasso dati={incasso} />
       </section>
     </div></div>
   </main>

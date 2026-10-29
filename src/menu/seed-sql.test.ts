@@ -12,10 +12,11 @@ describe('generaSeedSql', () => {
     await pg.exec(generaSeedSql(menu))
     const [{ n }] = await db.query<{ n: number }>('select count(*)::int as n from piatti')
     expect(n).toBe(139)
+    // 14 dal menù del sito più la carta dei vini, creata vuota dalla migrazione.
     const [{ c }] = await db.query<{ c: number }>('select count(*)::int as c from categorie')
-    expect(c).toBe(14)
+    expect(c).toBe(15)
     const reparti = await db.query<{ id: string; reparto: string }>("select id, reparto from categorie where reparto <> 'banco' order by id")
-    expect(reparti).toEqual([{ id: 'beverage', reparto: 'sala' }, { id: 'dessert', reparto: 'cucina' }, { id: 'primi', reparto: 'cucina' }, { id: 'starter', reparto: 'cucina' }])
+    expect(reparti).toEqual([{ id: 'beverage', reparto: 'sala' }, { id: 'dessert', reparto: 'cucina' }, { id: 'primi', reparto: 'cucina' }, { id: 'starter', reparto: 'cucina' }, { id: 'vini', reparto: 'sala' }])
   })
   it('gestisce gli apostrofi (Daniel\'s poke)', async () => {
     const { pg, db } = await creaDbDiTest()

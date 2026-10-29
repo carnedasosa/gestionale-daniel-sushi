@@ -12,6 +12,7 @@ import { idValido } from '@/tavoli/validazione'
 import { cascataComande, creaComande } from '@/comande/comande-repo'
 import { numeroGiorno } from '@/tavoli/numero-giorno'
 import { leggiDisponibilita } from './disponibilita'
+import { accodaComande, annunciaAnnullo } from '@/stampa/stampe-repo'
 
 export interface OrdineCasa {
   id: string; numero: number; numeroGiorno: number; tipo: Servizio; stato: StatoCasa; token: string; totaleCent: number; consegnaCent: number; fascia: Date; creatoIl: Date; aggiornatoIl: Date
@@ -101,6 +102,8 @@ export async function creaOrdineCasa(db: Db, input: InputOrdineCasa): Promise<Es
       cassa ? null : input.rete,cassa ? 'accettato' : 'in_attesa',cassa ? 'cassa' : 'cliente'])
     await salvaRighe(tx,ordine.id,prezzi.righe)
     await creaComande(tx,ordine.id)
+    // Dalla cassa nasce accettato: ai reparti su carta la comanda esce subito. Dal sito esce all'accettazione.
+    if (cassa) await accodaComande(tx,ordine.id)
     if (!cassa) await tx.query(`insert into email_ordini (ordine_id,tipo) values ($1,'ricevuto')`,[ordine.id])
     return { ok: true,ordine: (await ordineCasaPerId(tx,ordine.id))! }
   }) } catch (err) {
@@ -123,6 +126,9 @@ async function cambiaStato(db: Db, id: string, da: StatoCasa[], verso: (o: { tip
     await tx.query(`update ordini set stato=$2,aggiornato_il=clock_timestamp()${extra.set ? `,${extra.set}` : ''} where id=$1`,[id,nuovo,...(extra.parametri ?? [])])
     // Bottoni a cascata della cassa, rifiuti e annullamenti trascinano le comande.
     await cascataComande(tx,id,nuovo)
+    // Dopo lo spostamento della fascia (+15/+30): il biglietto mostra l'orario giusto.
+    if (nuovo === 'accettato') await accodaComande(tx,id)
+    if (nuovo === 'annullato') await annunciaAnnullo(tx,id,'tutte')
     // Le email partono solo per gli ordini del cliente: quelli della cassa non hanno indirizzo né consenso.
     if (extra.email) await tx.query(`insert into email_ordini (ordine_id,tipo) select id,$2 from ordini where id=$1 and origine='cliente' on conflict (ordine_id,tipo) do nothing`,[id,extra.email])
     return ordineCasaPerId(tx,id)
