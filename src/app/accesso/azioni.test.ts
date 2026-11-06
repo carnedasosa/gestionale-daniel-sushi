@@ -76,7 +76,7 @@ it('database giù: non si tenta il login (il limite non si aggira) e l’errore 
   expect(console.error).toHaveBeenCalledWith('connessione rifiutata')
 })
 
-it('esci torna ad /accesso', async () => {
+it('esci chiude la sessione su tutti i dispositivi e torna ad /accesso', async () => {
   await expect(esci()).rejects.toThrow('NEXT_REDIRECT /accesso')
-  expect(m.signOut).toHaveBeenCalledTimes(1)
+  expect(m.signOut).toHaveBeenCalledWith({ scope: 'global' })
 })

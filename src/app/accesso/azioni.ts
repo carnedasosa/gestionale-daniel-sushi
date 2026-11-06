@@ -48,8 +48,9 @@ export async function entra(_stato: StatoAccesso, formData: FormData): Promise<S
   redirect(destinazione)
 }
 
+// Globale: un cookie rubato non sopravvive a «Esci». Escono tutti i dispositivi dello stesso utente.
 export async function esci(): Promise<void> {
   const supabase = await createClient()
-  await supabase.auth.signOut({ scope: 'local' })
+  await supabase.auth.signOut({ scope: 'global' })
   redirect('/accesso')
 }
