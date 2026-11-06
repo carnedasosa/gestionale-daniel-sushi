@@ -27,7 +27,7 @@ it('alla stampante della cassa: voci, coperti, totale, pagato, quota a testa e Â
   await salvaImpostazioniCassa(db,{ copertoCent: 200,stampa: { banco: false,cucina: false,sala: false } })
   await ordina(3)
   await impostaCoperti(db,sessione,3)
-  await registraPagamento(db,{ sessioneId: sessione },{ modo: 'importo',importoCent: 1000 },'carta',UTENTE)
+  await registraPagamento(db,{ sessioneId: sessione },{ modo: 'importo',importoCent: 1000 },'carta',UTENTE,randomUUID())
   expect(await accodaPreconto(db,sessione,3,new Date('2026-10-29T21:15:00Z'))).toBe('ok')
   const [p] = await preconti()
   expect(p.stampante).toBe('cassa')

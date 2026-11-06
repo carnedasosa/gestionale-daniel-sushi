@@ -83,9 +83,9 @@ export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare,comand
       {avanza && <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => esegui(() => avanzaOrdineCasaStaff(o.id,o.stato))}>{VERBO[avanza] ?? avanza}</button>}
       <AltreAzioni titolo={`Altre azioni · ${titolo}`}>{chiudi => <>
         {ristampa && <button type="button" className="b-btn b-btn--secondario" disabled={inCorso} onClick={() => { chiudi(); esegui(() => ristampaComande(o.id)) }}>Ristampa comande</button>}
-        {/* Prima del ritiro o della partenza: lo scontrino va nel sacchetto. Il server rifiuta un secondo incasso. */}
+        {/* Prima del ritiro o della partenza: lo scontrino va nel sacchetto. Il residuo è già zero al secondo tentativo: il server rifiuta, anche con una chiave nuova. */}
         <ConfermaAzione stile="secondario" inCorso={inCorso} domanda={`Incassare ${formatEuro(o.totaleCent)} (${o.pagamento === 'carta' ? 'carta' : 'contanti'}) ed emettere lo scontrino dell’ordine n. ${o.numeroGiorno}?`}
-          conferma={() => { chiudi(); esegui(() => incassa({ ordineId: o.id },{ modo: 'tutto' },o.pagamento,true)) }}>Incassa e scontrino</ConfermaAzione>
+          conferma={() => { chiudi(); esegui(() => incassa({ ordineId: o.id },{ modo: 'tutto' },o.pagamento,crypto.randomUUID(),true)) }}>Incassa e scontrino</ConfermaAzione>
         {o.righe.filter(r => !r.annullata).map(r => <ConfermaAzione key={r.id} inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => { chiudi(); esegui(() => annullaRigaStaff(r.id)) }}>Annulla {r.nome}</ConfermaAzione>)}
         <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numeroGiorno}? Il cliente riceverà un’email.`} conferma={() => { chiudi(); esegui(() => annullaOrdineCasaStaff(o.id)) }}>Annulla tutto l’ordine</ConfermaAzione>
       </>}</AltreAzioni>

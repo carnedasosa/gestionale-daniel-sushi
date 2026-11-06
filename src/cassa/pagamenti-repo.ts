@@ -17,7 +17,8 @@ export interface Pagamento { id: string; importoCent: number; metodo: MetodoPaga
 /** Di chi è il pagamento: un tavolo (sessione) o un ordine da casa. */
 export type Destinazione = { sessioneId: string } | { ordineId: string }
 export interface StatoPagamenti { totaleCent: number; pagatoCent: number; residuoCent: number; pagamenti: Pagamento[]; pagato: GiaPagato }
-export type EsitoPagamento = { ok: true; pagamento: Pagamento } | { ok: false; errore: string }
+/** `chiaveUsata`: la chiave di invio appartiene a un altro incasso, per riprovare ne serve una nuova. */
+export type EsitoPagamento = { ok: true; pagamento: Pagamento; giaRegistrato?: true } | { ok: false; errore: string; chiaveUsata?: true }
 
 const COLONNE = `id,importo_cent as "importoCent",metodo,modo,descrizione,dettaglio,creato_il as "creatoIl",annullato_il is not null as annullato,
   scontrino,scontrino_numero as "scontrinoNumero",scontrino_errore as "scontrinoErrore"`
@@ -69,13 +70,26 @@ export async function statoPagamenti(db: Db, d: Destinazione): Promise<StatoPaga
 /**
  * Registra un incasso. Il server ricalcola l'importo dal conto (mai quello visto dal telefono) e rifiuta
  * ciò che supera il residuo. Il tavolo può essere anche già chiuso: si incassa spesso dopo «Chiudi tavolo».
+ * `chiaveInvio` rende la richiesta idempotente (doppio tocco, nuovo tentativo dopo un errore di rete): la stessa chiave
+ * restituisce l'incasso già scritto, prima di guardare il residuo, che nel frattempo può essere già a zero. Se quell'incasso
+ * è stato tolto o è diverso da ciò che si chiede ora, non è un successo: lo si dice, senza scrivere niente.
  */
-export async function registraPagamento(db: Db, d: Destinazione, r: RichiestaPagamento, metodo: MetodoPagamento, utenteId: string): Promise<EsitoPagamento> {
-  if (!destinazioneValida(d) || !richiestaValida(r) || !metodoValido(metodo) || !idValido(utenteId)) return NON_VALIDO
+export async function registraPagamento(db: Db, d: Destinazione, r: RichiestaPagamento, metodo: MetodoPagamento, utenteId: string, chiaveInvio: string): Promise<EsitoPagamento> {
+  if (!destinazioneValida(d) || !richiestaValida(r) || !metodoValido(metodo) || !idValido(utenteId) || !idValido(chiaveInvio)) return NON_VALIDO
   if ('ordineId' in d && (r.modo === 'romana' || r.modo === 'piatti')) return NON_VALIDO
+  const [colonna,id] = 'sessioneId' in d ? ['sessione_id',d.sessioneId] : ['ordine_id',d.ordineId]
+  const giaRegistrato = async (tx: Db): Promise<EsitoPagamento | null> => {
+    const [p] = await tx.query<Pagamento>(`select ${COLONNE} from pagamenti where chiave_invio=$1 and ${colonna}=$2`,[chiaveInvio,id])
+    if (!p) return null
+    const uguale = !p.annullato && p.metodo === metodo && p.modo === r.modo && (r.modo !== 'importo' || p.importoCent === r.importoCent)
+    return uguale ? { ok: true,pagamento: p,giaRegistrato: true } : { ok: false,errore: 'Risulta già un incasso diverso o tolto: controlla i pagamenti e riprova.',chiaveUsata: true }
+  }
   return db.transazione(async tx => {
     const t = await totaleDi(tx,d,true)
     if (!t) return { ok: false,errore: 'Conto non trovato: aggiorna la pagina.' }
+    // Dopo il lock sul conto: una richiesta uguale in volo qui è già finita.
+    const prima = await giaRegistrato(tx)
+    if (prima) return prima
     const s = stato(t.totaleCent,await pagamentiValidi(tx,d))
     if (s.residuoCent <= 0) return { ok: false,errore: 'Il conto è già saldato.' }
     let importoCent: number, descrizione: string, dettaglio: DettaglioPiatti | null = null
@@ -89,10 +103,12 @@ export async function registraPagamento(db: Db, d: Destinazione, r: RichiestaPag
       dettaglio = { porzioni: q.porzioni,coperti: q.coperti,copertoCent: t.conto!.copertoCent ?? 0 }
     }
     if (importoCent > s.residuoCent) return { ok: false,errore: 'L’importo supera quanto resta da pagare.' }
-    const [colonna,id] = 'sessioneId' in d ? ['sessione_id',d.sessioneId] : ['ordine_id',d.ordineId]
-    const [p] = await tx.query<Pagamento>(`insert into pagamenti (${colonna},importo_cent,metodo,modo,descrizione,dettaglio,utente_id) values ($1,$2,$3,$4,$5,$6::text::jsonb,$7) returning ${COLONNE}`,
-      [id,importoCent,metodo,r.modo,descrizione,dettaglio ? JSON.stringify(dettaglio) : null,utenteId])
-    return { ok: true,pagamento: p }
+    const [p] = await tx.query<Pagamento>(`insert into pagamenti (${colonna},importo_cent,metodo,modo,descrizione,dettaglio,utente_id,chiave_invio) values ($1,$2,$3,$4,$5,$6::text::jsonb,$7,$8)
+      on conflict (chiave_invio) where chiave_invio is not null do nothing returning ${COLONNE}`,
+      [id,importoCent,metodo,r.modo,descrizione,dettaglio ? JSON.stringify(dettaglio) : null,utenteId,chiaveInvio])
+    if (p) return { ok: true,pagamento: p }
+    // La chiave c'è già: se non è di questo conto, la richiesta non è valida.
+    return await giaRegistrato(tx) ?? NON_VALIDO
   })
 }
 

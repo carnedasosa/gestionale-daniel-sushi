@@ -6,28 +6,47 @@ vi.mock('@/cassa/pagamenti-repo', async (originale) => ({ ...(await originale<ty
 vi.mock('next/cache', () => ({ revalidatePath: m.revalidatePath }))
 vi.mock('@/fiscale/scontrini-repo', () => ({ richiediScontrino: m.richiediScontrino,risolviIncerto: m.risolviIncerto }))
 import { annullaIncasso, emettiScontrino, incassa, risolviScontrino } from './azioni-pagamenti'
-const id = '11111111-1111-4111-8111-111111111111', utente = '22222222-2222-4222-8222-222222222222'
+const id = '11111111-1111-4111-8111-111111111111', utente = '22222222-2222-4222-8222-222222222222', chiave = '33333333-3333-4333-8333-333333333333'
 beforeEach(() => { vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {}); m.richiediRuolo.mockResolvedValue({ userId: utente,ruolo: 'staff' }) })
 
 it('incassa: staff prima del repo, passa utente e metodo, rivalida', async () => {
   m.registraPagamento.mockResolvedValue({ ok: true,pagamento: {} })
-  expect(await incassa({ sessioneId: id },{ modo: 'romana',persone: 3 },'carta')).toEqual({ ok: true })
+  expect(await incassa({ sessioneId: id },{ modo: 'romana',persone: 3 },'carta',chiave)).toEqual({ ok: true })
   expect(m.richiediRuolo).toHaveBeenCalledWith('staff')
   expect(m.richiediRuolo.mock.invocationCallOrder[0]).toBeLessThan(m.registraPagamento.mock.invocationCallOrder[0])
-  expect(m.registraPagamento).toHaveBeenCalledWith(expect.anything(),{ sessioneId: id },{ modo: 'romana',persone: 3 },'carta',utente)
+  expect(m.registraPagamento).toHaveBeenCalledWith(expect.anything(),{ sessioneId: id },{ modo: 'romana',persone: 3 },'carta',utente,chiave)
   expect(m.revalidatePath).toHaveBeenCalledWith('/staff')
 })
 it('incassa: rifiuta destinazioni, richieste e metodi non validi senza toccare il DB', async () => {
   for (const [d,r,metodo] of [[{ sessioneId: 'x' },{ modo: 'tutto' },'carta'],[{ sessioneId: id,ordineId: id },{ modo: 'tutto' },'carta'],[null,{ modo: 'tutto' },'carta'],
     [{ sessioneId: id },{ modo: 'romana',persone: 0 },'carta'],[{ sessioneId: id },{ modo: 'tutto' },'bitcoin']] as const)
-    expect(await incassa(d as never,r,metodo as never)).toEqual({ ok: false,errore: 'Pagamento non valido.' })
+    expect(await incassa(d as never,r,metodo as never,chiave)).toEqual({ ok: false,errore: 'Pagamento non valido.' })
   expect(m.registraPagamento).not.toHaveBeenCalled()
+})
+it('incassa: senza una chiave di invio valida non tocca il DB', async () => {
+  for (const c of ['x','',null]) expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',c as string)).toEqual({ ok: false,errore: 'Pagamento non valido.' })
+  expect(m.registraPagamento).not.toHaveBeenCalled()
+})
+it('secondo invio con la stessa chiave: lo dice, e lo scontrino non si chiede due volte', async () => {
+  m.registraPagamento.mockResolvedValue({ ok: true,giaRegistrato: true,pagamento: { id,scontrino: 'in_coda' } })
+  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',chiave,true)).toEqual({ ok: true,giaRegistrato: true })
+  expect(m.richiediScontrino).not.toHaveBeenCalled()
+  // Il primo invio si era fermato prima dello scontrino: qui si chiede.
+  m.registraPagamento.mockResolvedValue({ ok: true,giaRegistrato: true,pagamento: { id,scontrino: 'non_richiesto' } })
+  m.richiediScontrino.mockResolvedValueOnce({ ok: true })
+  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',chiave,true)).toEqual({ ok: true,giaRegistrato: true })
+  expect(m.richiediScontrino).toHaveBeenCalledTimes(1)
+})
+it('chiave già usata da un altro incasso: errore, e il telefono sa che deve cambiarla', async () => {
+  m.registraPagamento.mockResolvedValueOnce({ ok: false,errore: 'Risulta già un incasso diverso.',chiaveUsata: true })
+  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',chiave,true)).toEqual({ ok: false,errore: 'Risulta già un incasso diverso.',chiaveUsata: true })
+  expect(m.richiediScontrino).not.toHaveBeenCalled()
 })
 it('incassa: errori del repo e del DB in italiano', async () => {
   m.registraPagamento.mockResolvedValueOnce({ ok: false,errore: 'Il conto è già saldato.' })
-  expect(await incassa({ ordineId: id },{ modo: 'tutto' },'contanti')).toEqual({ ok: false,errore: 'Il conto è già saldato.' })
+  expect(await incassa({ ordineId: id },{ modo: 'tutto' },'contanti',chiave)).toEqual({ ok: false,errore: 'Il conto è già saldato.' })
   m.registraPagamento.mockRejectedValueOnce(new Error('giù'))
-  expect(await incassa({ ordineId: id },{ modo: 'tutto' },'contanti')).toEqual({ ok: false,errore: 'Incasso non registrato, riprova.' })
+  expect(await incassa({ ordineId: id },{ modo: 'tutto' },'contanti',chiave)).toEqual({ ok: false,errore: 'Incasso non registrato, riprova.' })
   expect(m.revalidatePath).not.toHaveBeenCalled()
 })
 it('annulla incasso: staff prima, id valido, già tolto spiegato', async () => {
@@ -46,15 +65,15 @@ it('annulla incasso: staff prima, id valido, già tolto spiegato', async () => {
 it('incassa con lo scontrino: prima l’incasso, poi lo scontrino; se lo scontrino non parte l’incasso resta', async () => {
   m.registraPagamento.mockResolvedValue({ ok: true,pagamento: { id } })
   m.richiediScontrino.mockResolvedValueOnce({ ok: true })
-  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',true)).toEqual({ ok: true })
+  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',chiave,true)).toEqual({ ok: true })
   expect(m.registraPagamento.mock.invocationCallOrder[0]).toBeLessThan(m.richiediScontrino.mock.invocationCallOrder[0])
   expect(m.richiediScontrino).toHaveBeenCalledWith(expect.anything(),id)
   m.richiediScontrino.mockResolvedValueOnce({ ok: false,errore: 'Scontrino senza righe.' })
-  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',true)).toEqual({ ok: false,errore: 'Incasso registrato, ma lo scontrino non è partito: Scontrino senza righe.' })
+  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',chiave,true)).toEqual({ ok: false,errore: 'Incasso registrato, ma lo scontrino non è partito: Scontrino senza righe.' })
   m.richiediScontrino.mockClear()
-  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta')).toEqual({ ok: true })
+  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',chiave)).toEqual({ ok: true })
   expect(m.richiediScontrino).not.toHaveBeenCalled()
-  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta','si' as unknown as boolean)).toMatchObject({ ok: false })
+  expect(await incassa({ sessioneId: id },{ modo: 'tutto' },'carta',chiave,'si' as unknown as boolean)).toMatchObject({ ok: false })
 })
 it('scontrino da rimandare e incerti da risolvere: staff prima, id e scelta validi', async () => {
   m.richiediScontrino.mockResolvedValueOnce({ ok: true })

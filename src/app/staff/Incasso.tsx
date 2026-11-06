@@ -7,6 +7,7 @@ import { formatEuro, parseEuro } from '@/domain/soldi'
 import { allaRomana, ETICHETTA_METODO, MAX_PERSONE, METODI_PAGAMENTO, type MetodoPagamento, type VoceDivisibile } from '@/domain/divisione-conto'
 import type { Destinazione, ModoPagamento, RichiestaPagamento, StatoScontrino } from '@/cassa/pagamenti-repo'
 import { annullaIncasso, emettiScontrino, incassa, risolviScontrino } from './azioni-pagamenti'
+import { creaInvioIncasso } from './invio-incasso'
 
 export interface PagamentoClient { id: string; importoCent: number; metodo: MetodoPagamento; descrizione: string; annullato: boolean; scontrino: StatoScontrino; scontrinoNumero: string | null; scontrinoErrore: string | null }
 export interface DatiIncasso {
@@ -16,6 +17,7 @@ export interface DatiIncasso {
   /** Valore iniziale di «Emetti lo scontrino» (impostazione della cassa). */
   scontrinoAutomatico: boolean
 }
+const ERRORE_INCERTO = 'Non siamo sicuri che l’incasso sia stato registrato: controlla i pagamenti. Se riprovi non verrà duplicato.'
 const SCHEDE: { modo: ModoPagamento; testo: string; soloTavolo: boolean }[] = [
   { modo: 'tutto',testo: 'Tutto',soloTavolo: false },{ modo: 'romana',testo: 'Alla romana',soloTavolo: true },
   { modo: 'piatti',testo: 'Per piatti',soloTavolo: true },{ modo: 'importo',testo: 'Importo',soloTavolo: false },
@@ -40,6 +42,8 @@ export function Incasso({ dati: d }: { dati: DatiIncasso }) {
   const [scontrino,setScontrino] = useState(d.scontrinoAutomatico)
   const [esito,setEsito] = useState<{ errore: string | null; fatto: string | null }>({ errore: null,fatto: null })
   const [inCorso,startTransition] = useTransition()
+  // `inCorso` diventa vero solo al render dopo: il doppio tocco si ferma qui.
+  const [invio] = useState(() => creaInvioIncasso())
   const router = useRouter()
   const tavolo = 'sessioneId' in d.dest
   const residuo = Math.max(0,d.residuoCent)
@@ -52,18 +56,23 @@ export function Incasso({ dati: d }: { dati: DatiIncasso }) {
   const richiesta = (): RichiestaPagamento => modo === 'romana' ? { modo,persone } : modo === 'importo' ? { modo,importoCent: quotaCent! }
     : modo === 'piatti' ? { modo,porzioni: Object.entries(scelte).filter(([,q]) => q > 0).map(([chiave,quantita]) => ({ chiave,quantita })),coperti } : { modo: 'tutto' }
 
-  const paga = (metodo: MetodoPagamento) => startTransition(async () => {
-    setEsito({ errore: null,fatto: null })
-    try {
-      const e = await incassa(d.dest,richiesta(),metodo,scontrino)
-      if (!e.ok) { setEsito({ errore: e.errore ?? 'Incasso non registrato, riprova.',fatto: null }); router.refresh(); return }
-      setEsito({ errore: null,fatto: `Incassati ${formatEuro(quotaCent!)} (${ETICHETTA_METODO[metodo].toLowerCase()}).` })
-      if (modo === 'romana' && persone > 1) setPersone(persone - 1)
-      else if (modo !== 'romana') setAperto(false)
-      setScelte({}); setCoperti(0); setImporto('')
-      router.refresh()
-    } catch { setEsito({ errore: 'Incasso non registrato, riprova.',fatto: null }) }
-  })
+  const paga = (metodo: MetodoPagamento) => {
+    const chiaveInvio = invio.parti()
+    if (!chiaveInvio) return
+    startTransition(async () => {
+      setEsito({ errore: null,fatto: null })
+      try {
+        const e = await incassa(d.dest,richiesta(),metodo,chiaveInvio,scontrino)
+        invio.finito(e.ok || !!e.chiaveUsata)
+        if (!e.ok) { setEsito({ errore: e.errore ?? 'Incasso non registrato, riprova.',fatto: null }); router.refresh(); return }
+        setEsito({ errore: null,fatto: e.giaRegistrato ? 'Questo incasso era già registrato: non è stato ripetuto.' : `Incassati ${formatEuro(quotaCent!)} (${ETICHETTA_METODO[metodo].toLowerCase()}).` })
+        if (modo === 'romana' && persone > 1) setPersone(persone - 1)
+        else if (modo !== 'romana') setAperto(false)
+        setScelte({}); setCoperti(0); setImporto('')
+        router.refresh()
+      } catch { invio.finito(false); setEsito({ errore: ERRORE_INCERTO,fatto: null }); router.refresh() }
+    })
+  }
   const azione = (fn: () => Promise<{ ok: boolean; errore?: string }>) => startTransition(async () => {
     try { const e = await fn(); setEsito({ errore: e.ok ? null : e.errore ?? 'Operazione non riuscita.',fatto: null }); router.refresh() }
     catch { setEsito({ errore: 'Operazione non riuscita, riprova.',fatto: null }) }

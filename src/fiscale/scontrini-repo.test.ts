@@ -25,7 +25,7 @@ beforeEach(async () => {
 })
 afterEach(async () => { await ambiente.pg.close() })
 const ordina = async (righe: [string,number][]) => { const e = await creaOrdineTavolo(ambiente.db,sessione,righe.map(([piattoId,quantita]) => ({ piattoId,quantita,nota: '' })),randomUUID()); if (!e.ok) throw new Error(e.errore) }
-const paga = async (r: RichiestaPagamento, metodo: MetodoPagamento = 'contanti') => { const e = await registraPagamento(ambiente.db,{ sessioneId: sessione },r,metodo,UTENTE); if (!e.ok) throw new Error(e.errore); return e.pagamento.id }
+const paga = async (r: RichiestaPagamento, metodo: MetodoPagamento = 'contanti') => { const e = await registraPagamento(ambiente.db,{ sessioneId: sessione },r,metodo,UTENTE,randomUUID()); if (!e.ok) throw new Error(e.errore); return e.pagamento.id }
 const documenti = async (db: Db) => (await db.query<{ documento: DocumentoCommerciale }>(`select documento from stampe where tipo='scontrino' order by creata_il`)).map(r => r.documento)
 /** Il ponte prende lo scontrino e il registratore risponde come Epson. */
 const ponteRisponde = async (db: Db, risposta: Parameters<typeof registraEsitoPonte>[1] extends infer E ? (id: string) => E : never) => {
@@ -94,7 +94,7 @@ describe('righe dello scontrino', () => {
     const { piatto } = await preparaCasa(db)
     await salvaImpostazioniFiscali(db,{ repartoCoperto: 1,repartoConsegna: 4,indiceCarta: 1,automatico: false },{})
     const o = await ordineAsporto(db,piatto)
-    const e = await registraPagamento(db,{ ordineId: o.id },{ modo: 'tutto' },'carta',UTENTE); if (!e.ok) throw new Error(e.errore)
+    const e = await registraPagamento(db,{ ordineId: o.id },{ modo: 'tutto' },'carta',UTENTE,randomUUID()); if (!e.ok) throw new Error(e.errore)
     expect(await richiediScontrino(db,e.pagamento.id)).toEqual({ ok: true })
     expect((await documenti(db))[0].righe).toEqual([{ descrizione: '1 Salmone',quantita: 2,prezzoUnitCent: 600,reparto: 1 }])
     expect((await leggiImpostazioniFiscali(db)).repartoConsegna).toBe(4)
