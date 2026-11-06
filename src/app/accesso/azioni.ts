@@ -49,8 +49,14 @@ export async function entra(_stato: StatoAccesso, formData: FormData): Promise<S
 }
 
 // Globale: un cookie rubato non sopravvive a «Esci». Escono tutti i dispositivi dello stesso utente.
+// Se Supabase non risponde la libreria toglie comunque la sessione da questo dispositivo, ma le altre restano aperte:
+// chi esce deve saperlo, e per riprovare deve rientrare, perché qui il token non c'è più.
 export async function esci(): Promise<void> {
   const supabase = await createClient()
-  await supabase.auth.signOut({ scope: 'global' })
+  const { error } = await supabase.auth.signOut({ scope: 'global' })
+  if (error) {
+    console.error(error.message)
+    redirect('/accesso?errore=uscita')
+  }
   redirect('/accesso')
 }

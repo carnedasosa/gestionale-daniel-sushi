@@ -77,6 +77,14 @@ it('database giù: non si tenta il login (il limite non si aggira) e l’errore 
 })
 
 it('esci chiude la sessione su tutti i dispositivi e torna ad /accesso', async () => {
-  await expect(esci()).rejects.toThrow('NEXT_REDIRECT /accesso')
+  m.signOut.mockResolvedValue({ error: null })
+  await expect(esci()).rejects.toThrow(/^NEXT_REDIRECT \/accesso$/)
   expect(m.signOut).toHaveBeenCalledWith({ scope: 'global' })
+  expect(console.error).not.toHaveBeenCalled()
+})
+
+it('esci: se la revoca non riesce lo dice, invece di far credere che le altre sessioni siano chiuse', async () => {
+  m.signOut.mockResolvedValue({ error: { message: 'Supabase non risponde',status: 503 } })
+  await expect(esci()).rejects.toThrow('NEXT_REDIRECT /accesso?errore=uscita')
+  expect(console.error).toHaveBeenCalledWith('Supabase non risponde')
 })
