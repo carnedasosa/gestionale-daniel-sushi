@@ -153,6 +153,31 @@ describe('esiti del registratore', () => {
     expect((await scontrinoDi(db,id)).scontrino).toBe('incerto')
     expect((await db.query<{ stato: string }>(`select stato from stampe`))[0].stato).toBe('incerta')
   })
+  it('lavoro fiscale scaduto: blocca il pagamento prima di toccare la coda, come fa l’esito del registratore', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,1]])
+    await richiediScontrino(db,await paga({ modo: 'tutto' }))
+    await prendiLavori(db)
+    await db.query(`update stampe set presa_il=now()-interval '2 minutes'`)
+    // PGlite serializza le transazioni e non può provare l'incrocio: qui si controlla l'ordine delle istruzioni.
+    const sql: string[] = []
+    const spia = (d: Db): Db => ({ query: (testo,parametri) => { sql.push(testo); return d.query(testo,parametri) },transazione: fn => d.transazione(tx => fn(spia(tx))) })
+    await prendiLavori(spia(db))
+    const pagamenti = sql.findIndex(q => /from pagamenti .*for update/.test(q)), stampe = sql.findIndex(q => q.includes('update stampe'))
+    expect(pagamenti).toBeGreaterThanOrEqual(0)
+    expect(pagamenti).toBeLessThan(stampe)
+  })
+  it('l’esito arriva mentre il lavoro sta scadendo: vince chi blocca prima, il pagamento resta coerente', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,1]])
+    const id = await paga({ modo: 'tutto' })
+    await richiediScontrino(db,id)
+    const [l] = await prendiLavori(db)
+    await db.query(`update stampe set presa_il=now()-interval '2 minutes'`)
+    await Promise.all([prendiLavori(db),registraEsitoPonte(db,{ id: l.id,ok: true,risposta: RISPOSTA_OK(7) })])
+    expect((await db.query<{ stato: string }>('select stato from stampe'))[0].stato).toMatch(/stampata|incerta/)
+    expect((await scontrinoDi(db,id)).scontrino).toMatch(/emesso|incerto/)
+  })
   it('ponte in prova: scontrino «di prova», il pagamento resta modificabile', async () => {
     const { db } = ambiente
     await ordina([[salmone,1]])

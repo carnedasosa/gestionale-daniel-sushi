@@ -11,7 +11,7 @@ import { bigliettoAnnullo, bigliettoComanda, type DatiComanda } from './bigliett
 import { esitoScadenza, SCADENZA_LAVORO_SECONDI, stampanteDelReparto, TENTATIVI_MASSIMI, type StatoCoda, type Stampante, type TipoLavoro } from './instradamento'
 import type { DocumentoStampa } from './documento'
 
-// Ordine dei lock, come nel resto del gestionale: sessione → ordine → comande → stampe.
+// Ordine dei lock, come nel resto del gestionale: sessione → ordine → comande → pagamenti → stampe.
 
 export interface Lavoro { id: string; stampante: Stampante; tipo: TipoLavoro; documento: unknown; creataIl: Date; pagamentoId: string | null }
 interface Testata { tipo: TipoOrdine; origine: OrigineOrdine; numeroGiorno: number; tavoloNome: string | null; clienteNome: string | null; fascia: Date | null; creatoIl: Date }
@@ -88,17 +88,31 @@ export async function ristampaOrdine(db: Db, ordineId: string): Promise<number> 
 }
 
 /**
- * Il ponte chiede lavoro: segnale di vita (al più ogni 10 s), poi i lavori scaduti tornano in coda (i fiscali diventano
- * «incerti») e se ne prendono fino a `quanti`, i più vecchi prima. `skip locked`: due ponti accesi non stampano due volte.
+ * Lavori rimasti «in stampa» oltre il limite: tornano in coda, i fiscali diventano «incerti» anche sul pagamento (la cassa
+ * lo vede e decide guardando il registratore). Lock nell'ordine pagamenti → stampe, lo stesso di registraEsitoFiscale e
+ * richiediScontrino: se fosse incrociato, a perdere potrebbe essere l'esito del registratore, che il ponte non rimanda.
+ * Gli id si fissano prima dei lock e si ricontrollano dopo: nel frattempo l'esito può essere arrivato.
+ */
+async function scadiLavori(tx: Db): Promise<void> {
+  const SCADUTO = `stato='in_stampa' and presa_il < clock_timestamp() - make_interval(secs => $1)`
+  const scaduti = await tx.query<{ id: string; pagamentoId: string | null }>(`select id,pagamento_id as "pagamentoId" from stampe where ${SCADUTO}`,[SCADENZA_LAVORO_SECONDI])
+  if (!scaduti.length) return
+  const pagamenti = scaduti.flatMap(l => l.pagamentoId ? [l.pagamentoId] : [])
+  if (pagamenti.length) await tx.query('select id from pagamenti where id=any($1::uuid[]) order by id for update',[pagamenti])
+  await tx.query(`with scaduti as (update stampe set stato=case when stampante='fiscale' then $2 else $3 end
+      where id=any($4::uuid[]) and ${SCADUTO} returning pagamento_id,stampante)
+    update pagamenti set scontrino='incerto',scontrino_errore='Il registratore non ha risposto in tempo.' where id in (select pagamento_id from scaduti where stampante='fiscale')`,
+    [SCADENZA_LAVORO_SECONDI,esitoScadenza('fiscale'),esitoScadenza('cassa'),scaduti.map(l => l.id)])
+}
+
+/**
+ * Il ponte chiede lavoro: segnale di vita (al più ogni 10 s), poi i lavori scaduti (vedi scadiLavori) e se ne prendono
+ * fino a `quanti`, i più vecchi prima. `skip locked`: due ponti accesi non stampano due volte.
  */
 export async function prendiLavori(db: Db, quanti = 10): Promise<Lavoro[]> {
   return db.transazione(async tx => {
     await tx.query(`update ponte_stampa set visto_il=clock_timestamp() where id=1 and (visto_il is null or visto_il < clock_timestamp() - interval '10 seconds')`)
-    // Lo scontrino scaduto diventa incerto anche sul pagamento: la cassa lo vede e decide guardando il registratore.
-    await tx.query(`with scaduti as (update stampe set stato=case when stampante='fiscale' then $1 else $2 end
-        where stato='in_stampa' and presa_il < clock_timestamp() - make_interval(secs => $3) returning pagamento_id,stampante)
-      update pagamenti set scontrino='incerto',scontrino_errore='Il registratore non ha risposto in tempo.' where id in (select pagamento_id from scaduti where stampante='fiscale')`,
-      [esitoScadenza('fiscale'),esitoScadenza('cassa'),SCADENZA_LAVORO_SECONDI])
+    await scadiLavori(tx)
     const presi = await tx.query<Lavoro>(`update stampe set stato='in_stampa',presa_il=clock_timestamp(),tentativi=tentativi+1
       where id in (select id from stampe where stato='in_coda' order by creata_il,id for update skip locked limit $1)
       returning id,stampante,tipo,documento,creata_il as "creataIl",pagamento_id as "pagamentoId"`,[quanti])
