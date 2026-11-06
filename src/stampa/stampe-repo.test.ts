@@ -7,7 +7,7 @@ import { annullaOrdine, annullaRiga, annullaVoceConto, contoSessione, creaOrdine
 import { accettaOrdine, annullaOrdineCasa, creaOrdineCasa } from '@/casa/ordini-casa-repo'
 import { daPortare, portaComanda } from '@/comande/comande-repo'
 import { salvaImpostazioniCassa } from '@/cassa/impostazioni-repo'
-import { prendiLavori, registraEsito, riprovaLavoro, ristampaOrdine, statoCoda, lavoriInErrore } from './stampe-repo'
+import { archiviaLavoro, prendiLavori, registraEsito, riprovaLavoro, ristampaOrdine, statoCoda, lavoriInErrore } from './stampe-repo'
 import { testoSemplice } from './escpos'
 import type { DocumentoStampa } from './documento'
 import { ADESSO, ordineAsporto, preparaCasa } from '../../tests/db/casa-pronta'
@@ -157,6 +157,23 @@ describe('il ponte prende e riporta', () => {
     await stampaTutto(db)
     expect((await lavori(db))[0].stato).toBe('stampata')
   })
+  it('ignorare un lavoro in errore: non esce più, l’allarme si spegne; solo se è ancora in errore', async () => {
+    const { db } = ambiente
+    await carta(db,{ banco: true })
+    await ordina({ banco: 1 })
+    const [inCoda] = await lavori(db)
+    expect(await archiviaLavoro(db,inCoda.id)).toBe(false)
+    for (let i = 0; i < 5; i++) { const [l] = await prendiLavori(db); await registraEsito(db,l.id,{ ok: false,errore: 'carta finita' }) }
+    expect(await lavoriInErrore(db)).toMatchObject([{ id: inCoda.id,dove: 'Tavolo 5' }])
+    expect(await archiviaLavoro(db,inCoda.id)).toBe(true)
+    expect(await archiviaLavoro(db,inCoda.id)).toBe(false)
+    expect(await archiviaLavoro(db,'x')).toBe(false)
+    expect((await lavori(db))[0].stato).toBe('annullata')
+    expect(await riprovaLavoro(db,inCoda.id)).toBe(false)
+    expect(await prendiLavori(db)).toEqual([])
+    expect(await lavoriInErrore(db)).toEqual([])
+    expect((await statoCoda(db)).errori).toBe(0)
+  })
   it('ristampa: nuovi biglietti con la scritta RISTAMPA', async () => {
     const { db } = ambiente
     await carta(db)
@@ -183,6 +200,47 @@ describe('annulli', () => {
     expect(testoSemplice(dopo.at(-1)!.documento)).not.toContain('1 x 1 Salmone')
     await annullaRiga(db,o.righe.find(r => r.reparto === 'cucina')!.id,UTENTE)
     expect((await lavori(db)).find(l => l.stampante === 'cucina')!.stato).toBe('annullata')
+  })
+  it('dopo una ristampa ancora in coda: ANNULLATO per il biglietto già uscito, e la copia si corregge restando RISTAMPA', async () => {
+    const { db } = ambiente
+    await carta(db,{ banco: true })
+    const piatto2 = (await db.query<{ id: string }>("select id from piatti where categoria_id='tartare' order by posizione offset 1 limit 1"))[0].id
+    const e = await creaOrdineTavolo(db,sessione,[{ piattoId: piatti.banco,quantita: 1,nota: '' },{ piattoId: piatto2,quantita: 1,nota: '' }],randomUUID()); if (!e.ok) throw new Error(e.errore)
+    await stampaTutto(db)
+    expect(await ristampaOrdine(db,e.ordine.id)).toBe(1)
+    await annullaRiga(db,e.ordine.righe[0].id,UTENTE)
+    const dopo = await lavori(db)
+    expect(dopo.map(l => [l.tipo,l.stato])).toEqual([['comanda','stampata'],['comanda','in_coda'],['annullo','in_coda']])
+    const [,copia,annullo] = dopo.map(l => testoSemplice(l.documento))
+    expect(annullo).toContain('ANNULLATO'); expect(annullo).toContain('1 x 1 Salmone')
+    expect(copia).toContain('RISTAMPA'); expect(copia).not.toContain('1 x 1 Salmone')
+    // Tolto anche l'ultimo piatto: la copia non esce più, ANNULLATO solo per la riga nuova.
+    await annullaRiga(db,e.ordine.righe[1].id,UTENTE)
+    expect((await lavori(db)).map(l => [l.tipo,l.stato])).toEqual([['comanda','stampata'],['comanda','annullata'],['annullo','in_coda'],['annullo','in_coda']])
+  })
+  it('più biglietti usciti della stessa comanda: un solo ANNULLATO', async () => {
+    const { db } = ambiente
+    await carta(db,{ banco: true })
+    const o = await ordina({ banco: 1 })
+    await stampaTutto(db)
+    await ristampaOrdine(db,o.id)
+    await stampaTutto(db)
+    await annullaOrdine(db,o.id,UTENTE)
+    expect((await lavori(db)).filter(l => l.tipo === 'annullo')).toHaveLength(1)
+  })
+  it('comanda in errore e poi annullata: chi la riprova non stampa i piatti tolti; senza piatti esce dall’allarme', async () => {
+    const { db } = ambiente
+    await carta(db,{ banco: true })
+    const piatto2 = (await db.query<{ id: string }>("select id from piatti where categoria_id='tartare' order by posizione offset 1 limit 1"))[0].id
+    const e = await creaOrdineTavolo(db,sessione,[{ piattoId: piatti.banco,quantita: 1,nota: '' },{ piattoId: piatto2,quantita: 1,nota: '' }],randomUUID()); if (!e.ok) throw new Error(e.errore)
+    for (let i = 0; i < 5; i++) { const [l] = await prendiLavori(db); await registraEsito(db,l.id,{ ok: false,errore: 'carta finita' }) }
+    await annullaRiga(db,e.ordine.righe[0].id,UTENTE)
+    const [lavoro] = await lavori(db)
+    expect(lavoro.stato).toBe('errore')
+    expect(testoSemplice(lavoro.documento)).not.toContain('1 x 1 Salmone')
+    await annullaRiga(db,e.ordine.righe[1].id,UTENTE)
+    expect((await lavori(db)).map(l => [l.tipo,l.stato])).toEqual([['comanda','annullata']])
+    expect((await statoCoda(db)).errori).toBe(0)
   })
   it('comanda già stampata: biglietto ANNULLATO al reparto, solo con le righe tolte (riga, voce del conto, ordine intero)', async () => {
     const { db } = ambiente

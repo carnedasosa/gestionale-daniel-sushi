@@ -22,6 +22,7 @@ import { colonnaCucina } from '@/domain/stati-casa'
 import type { VistaStaff } from './vista'
 import { avanzaOrdine, annullaOrdineStaff, annullaRigaStaff } from './azioni'
 import { ristampaComande } from './azioni-stampa'
+import { StampeInErrore, type LavoroInErroreClient } from './StampeInErrore'
 import type { Allarme } from '@/stampa/instradamento'
 import { ChipComande, DaPortare } from './DaPortare'
 import { useArrivi } from './useArrivi'
@@ -59,8 +60,8 @@ export function CardOrdine({ ordine: o,ora,nuovo,inCorso,leggi,esegui,comande,ri
 export interface DatiStaff {
   tavoli: TavoloStaff[]; ordini: OrdineClient[]; riepiloghi: RiepilogoTavolo[]; contiRecenti: (Omit<ContoRecente,'chiusaIl'> & { chiusaIl: string })[]; casa: OrdineCasaClient[]; ordiniOnline: OrdiniOnline; menu?: CategoriaElenco[] | null
   daPortare?: VoceDaPortareClient[]; comande?: Record<string,StatoReparto[]>
-  /** Comande su carta: se qualche reparto le usa e che cosa dire alla cassa delle stampanti. */
-  stampa?: { usata: boolean; allarme: Allarme }
+  /** Comande su carta: se qualche reparto le usa, che cosa dire alla cassa delle stampanti e le stampe da riprovare o ignorare. */
+  stampa?: { usata: boolean; allarme: Allarme; inErrore: LavoroInErroreClient[] }
 }
 const COLONNE = [
   { chiave: 'da_preparare',titolo: 'Da preparare',punto: '' },
@@ -104,6 +105,7 @@ export function SchermoStaff({ dati,ora,vista = 'ordini',uscita,postazione = 'ca
       online={onlineAmmesso(postazione) ? <OrdiniOnlineBarra stato={ordiniOnline} {...azioniDi('ordini-online')} uscita={uscita} /> : null} />
     {errore && <p role="alert" className="b-avviso b-avviso--ritardo b-staff__avviso">{errore}</p>}
     {postazione === 'cassa' && mostrati.stampa?.allarme && <p role="alert" className="b-avviso b-avviso--ritardo b-staff__avviso">{mostrati.stampa.allarme.testo}</p>}
+    {postazione === 'cassa' && <StampeInErrore lavori={mostrati.stampa?.inErrore ?? []} azioniDi={azioniDi} />}
     <section aria-label="Ordini" hidden={vista !== 'ordini'} className="b-staff__vista">
       <DaPortare voci={mostrati.daPortare ?? []} nuove={nuoviDaPortare} azioniDi={azioniDi} />
       <div className={`b-colonne${accetta ? '' : ' b-colonne--sala'}`}>

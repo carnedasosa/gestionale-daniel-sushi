@@ -6,6 +6,7 @@ export type Stampante = typeof STAMPANTI[number]
 export const ETICHETTA_STAMPANTE: Record<Stampante,string> = { cassa: 'Cassa',banco: 'Banco sushi',cucina: 'Cucina',fiscale: 'Registratore telematico' }
 export const TIPI_LAVORO = ['comanda','annullo','preconto','scontrino','prova'] as const
 export type TipoLavoro = typeof TIPI_LAVORO[number]
+export const ETICHETTA_TIPO_LAVORO: Record<TipoLavoro,string> = { comanda: 'Comanda',annullo: 'Biglietto ANNULLATO',preconto: 'Pre-conto',scontrino: 'Scontrino',prova: 'Prova' }
 
 /** Quali reparti hanno le comande su carta (impostazione della cassa). */
 export interface StampaReparti { banco: boolean; cucina: boolean; sala: boolean }
@@ -49,6 +50,6 @@ export function allarmeStampa(s: StatoCoda, usata: boolean, adesso: Date): Allar
   if (s.incerte) return { tipo: 'incerte',testo: `${s.incerte === 1 ? 'Uno scontrino' : `${s.incerte} scontrini`} da controllare sul registratore.` }
   if (!s.ponteVistoIl || secondi(s.ponteVistoIl) > ALLARME_SECONDI) return { tipo: 'ponte',testo: 'Stampanti scollegate: il ponte di stampa non risponde. Le comande restano in coda.' }
   if (s.piuVecchia && secondi(s.piuVecchia) > ALLARME_SECONDI) return { tipo: 'coda',testo: `${s.inCoda === 1 ? 'Una stampa ferma' : `${s.inCoda} stampe ferme`} in coda: controlla carta e stampanti.` }
-  if (s.errori) return { tipo: 'errori',testo: `${s.errori === 1 ? 'Una stampa non riuscita' : `${s.errori} stampe non riuscite`}: controlla le stampanti e ristampa.` }
+  if (s.errori) return { tipo: 'errori',testo: `${s.errori === 1 ? 'Una stampa non riuscita' : `${s.errori} stampe non riuscite`}: controlla le stampanti, poi Riprova o Ignora.` }
   return null
 }

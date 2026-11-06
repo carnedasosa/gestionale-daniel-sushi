@@ -54,27 +54,31 @@ export async function accodaComande(tx: Db, ordineId: string, opzioni: { ristamp
 
 /**
  * Righe tolte da un ordine (o l'ordine intero, `'tutte'`): chiamata dopo l'annullamento, nella stessa transazione.
- * Comanda ancora in coda → si ristampa senza quelle righe (o non si stampa più); già presa dal reparto → biglietto ANNULLATO.
+ * Per ogni comanda si guardano tutti i suoi biglietti, non solo l'ultimo: dopo una ristampa l'originale può essere già dal
+ * reparto mentre la copia è ancora in coda. Ciò che non è uscito (in coda o in errore, che si può riprovare) si corregge o
+ * non esce più; se almeno un biglietto è arrivato al reparto, uno solo ANNULLATO.
  */
 export async function annunciaAnnullo(tx: Db, ordineId: string, righeTolte: string[] | 'tutte', adesso = new Date()): Promise<void> {
-  const lavori = await tx.query<{ id: string; stato: string; stampante: Stampante; reparto: Reparto; comandaId: string }>(`select distinct on (c.id) s.id,s.stato,s.stampante,c.reparto,c.id as "comandaId"
-    from stampe s join comande c on c.id=s.comanda_id where c.ordine_id=$1 and s.tipo='comanda' order by c.id,s.creata_il desc`,[ordineId])
+  const lavori = await tx.query<{ id: string; stato: string; stampante: Stampante; reparto: Reparto; comandaId: string }>(`select s.id,s.stato,s.stampante,c.reparto,c.id as "comandaId"
+    from stampe s join comande c on c.id=s.comanda_id where c.ordine_id=$1 and s.tipo='comanda' order by c.id,s.creata_il,s.id`,[ordineId])
   if (!lavori.length) return
   const t = await testata(tx,ordineId)
   if (!t) return
   const righe = (await leggiRigheOrdini(tx,[ordineId])).get(ordineId) ?? []
   const tolte = righeTolte === 'tutte' ? righe.filter(r => !r.annullata) : righe.filter(r => righeTolte.includes(r.id))
-  for (const l of lavori) {
-    const delReparto = tolte.filter(r => r.reparto === l.reparto)
+  for (const comandaId of new Set(lavori.map(l => l.comandaId))) {
+    const biglietti = lavori.filter(l => l.comandaId === comandaId), { reparto,stampante } = biglietti[0]
+    const delReparto = tolte.filter(r => r.reparto === reparto)
     if (!delReparto.length) continue
-    // Nessuno lo ha ancora preso: lo si corregge invece di stampare due biglietti.
-    if (l.stato === 'in_coda') {
-      const d = datiComanda(t,l.reparto,righeTolte === 'tutte' ? [] : righe)
+    const d = datiComanda(t,reparto,righeTolte === 'tutte' ? [] : righe)
+    for (const [i,l] of biglietti.entries()) {
+      if (l.stato !== 'in_coda' && l.stato !== 'errore') continue
       if (!d.righe.length) await tx.query(`update stampe set stato='annullata',finita_il=clock_timestamp() where id=$1`,[l.id])
-      else await tx.query('update stampe set documento=$2::text::jsonb where id=$1',[l.id,JSON.stringify(bigliettoComanda(d))])
-    } else if (l.stato === 'in_stampa' || l.stato === 'stampata') {
-      await inserisci(tx,{ stampante: l.stampante,tipo: 'annullo',documento: bigliettoAnnullo({ ...t,reparto: l.reparto,righe: delReparto },adesso),ordineId,comandaId: l.comandaId })
+      // Il primo biglietto di una comanda è l'originale, i successivi sono ristampe.
+      else await tx.query('update stampe set documento=$2::text::jsonb where id=$1',[l.id,JSON.stringify(bigliettoComanda(d,{ ristampa: i > 0 }))])
     }
+    if (biglietti.some(l => l.stato === 'in_stampa' || l.stato === 'stampata'))
+      await inserisci(tx,{ stampante,tipo: 'annullo',documento: bigliettoAnnullo({ ...t,reparto,righe: delReparto },adesso),ordineId,comandaId })
   }
 }
 
@@ -167,6 +171,12 @@ export async function riprovaLavoro(db: Db, id: string): Promise<boolean> {
   return (await db.query(`update stampe set stato='in_coda',tentativi=0,errore=null,finita_il=null where id=$1 and stato='errore' and stampante<>'fiscale' returning id`,[id])).length === 1
 }
 
+/** Lavoro in errore che non serve più: non esce e sparisce dall'allarme. Anche fiscale: lo scontrino resta da rimandare dal conto. */
+export async function archiviaLavoro(db: Db, id: string): Promise<boolean> {
+  if (!idValido(id)) return false
+  return (await db.query(`update stampe set stato='annullata',finita_il=clock_timestamp() where id=$1 and stato='errore' returning id`,[id])).length === 1
+}
+
 /** Per l'allarme della cassa: errori e incerti delle ultime 12 ore. */
 export async function statoCoda(db: Db): Promise<StatoCoda> {
   const [s] = await db.query<StatoCoda>(`select (select visto_il from ponte_stampa where id=1) as "ponteVistoIl",
@@ -175,7 +185,10 @@ export async function statoCoda(db: Db): Promise<StatoCoda> {
     count(*) filter (where stato='incerta' and creata_il > now() - interval '12 hours')::int as incerte from stampe`)
   return s
 }
-export interface LavoroInErrore { id: string; stampante: Stampante; tipo: TipoLavoro; errore: string | null; creataIl: Date }
+/** `dove`: il tavolo o il nome del cliente, per capire di che cosa si tratta. */
+export interface LavoroInErrore { id: string; stampante: Stampante; tipo: TipoLavoro; errore: string | null; creataIl: Date; dove: string | null }
 export async function lavoriInErrore(db: Db): Promise<LavoroInErrore[]> {
-  return db.query<LavoroInErrore>(`select id,stampante,tipo,errore,creata_il as "creataIl" from stampe where stato='errore' and creata_il > now() - interval '12 hours' order by creata_il`)
+  return db.query<LavoroInErrore>(`select s.id,s.stampante,s.tipo,s.errore,s.creata_il as "creataIl",coalesce(t.nome,o.cliente_nome) as dove
+    from stampe s left join ordini o on o.id=s.ordine_id left join sessioni_tavolo se on se.id=coalesce(s.sessione_id,o.sessione_id) left join tavoli t on t.id=se.tavolo_id
+    where s.stato='errore' and s.creata_il > now() - interval '12 hours' order by s.creata_il limit 30`)
 }

@@ -6,7 +6,7 @@ import { apriSessione, creaTavolo, impostaCoperti } from '@/tavoli/repo'
 import { contoSessione, creaOrdineTavolo } from '@/tavoli/ordini-repo'
 import { salvaImpostazioniCassa } from '@/cassa/impostazioni-repo'
 import { annullaPagamento, registraPagamento, statoPagamenti, type RichiestaPagamento } from '@/cassa/pagamenti-repo'
-import { prendiLavori } from '@/stampa/stampe-repo'
+import { archiviaLavoro, lavoriInErrore, prendiLavori, riprovaLavoro, statoCoda } from '@/stampa/stampe-repo'
 import { perIlPonte } from '@/stampa/ponte'
 import { chiaveVoce, type MetodoPagamento } from '@/domain/divisione-conto'
 import { leggiImpostazioniFiscali, registraEsitoPonte, richiediScontrino, risolviIncerto, salvaImpostazioniFiscali } from './scontrini-repo'
@@ -124,6 +124,20 @@ describe('esiti del registratore', () => {
     await ponteRisponde(db,l => ({ id: l,ok: false,errore: 'registratore non raggiungibile (ECONNREFUSED)',incerto: false }))
     expect((await scontrinoDi(db,id)).scontrino).toBe('errore')
     expect(await annullaPagamento(db,id,UTENTE)).toBe('ok')
+  })
+  it('scontrino rifiutato nell’allarme: non si riprova da lì, si può ignorare e resta da rimandare dal conto', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,1]])
+    const id = await paga({ modo: 'tutto' })
+    await richiediScontrino(db,id)
+    await ponteRisponde(db,l => ({ id: l,ok: true,risposta: '<response success="false" code="EPTR_REC_EMPTY"/>' }))
+    const [l] = await lavoriInErrore(db)
+    expect(l).toMatchObject({ stampante: 'fiscale',tipo: 'scontrino',dove: 'Tavolo 5' })
+    expect(await riprovaLavoro(db,l.id)).toBe(false)
+    expect(await archiviaLavoro(db,l.id)).toBe(true)
+    expect((await statoCoda(db)).errori).toBe(0)
+    expect((await scontrinoDi(db,id)).scontrino).toBe('errore')
+    expect(await richiediScontrino(db,id)).toEqual({ ok: true })
   })
   it('senza risposta o risposta illeggibile: incerto, non riparte da solo; la cassa decide', async () => {
     const { db } = ambiente

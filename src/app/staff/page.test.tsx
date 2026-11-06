@@ -1,10 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-const m = vi.hoisted(() => ({ ruolo: vi.fn(),elenco: vi.fn(),ordini: vi.fn(),riepiloghi: vi.fn(),conti: vi.fn(),casa: vi.fn(),disponibilita: vi.fn(),email: vi.fn(),cookie: vi.fn(),attive: vi.fn(),portare: vi.fn(),riepilogo: vi.fn(),menu: vi.fn(),coda: vi.fn(),cassa: vi.fn() }))
+const m = vi.hoisted(() => ({ ruolo: vi.fn(),elenco: vi.fn(),ordini: vi.fn(),riepiloghi: vi.fn(),conti: vi.fn(),casa: vi.fn(),disponibilita: vi.fn(),email: vi.fn(),cookie: vi.fn(),attive: vi.fn(),portare: vi.fn(),riepilogo: vi.fn(),menu: vi.fn(),coda: vi.fn(),inErrore: vi.fn(),cassa: vi.fn() }))
 vi.mock('next/headers',() => ({ cookies: async () => ({ get: (nome: string) => nome === 'ds_postazione' && m.cookie() ? { value: m.cookie() } : undefined }) }))
 vi.mock('@/comande/comande-repo',() => ({ comandeAttive: m.attive,daPortare: m.portare,riepilogoComande: m.riepilogo,comandaPerClient: (c: object) => c }))
 vi.mock('@/menu/repo',() => ({ leggiMenu: m.menu }))
-vi.mock('@/stampa/stampe-repo',() => ({ statoCoda: m.coda }))
+vi.mock('@/stampa/stampe-repo',() => ({ statoCoda: m.coda,lavoriInErrore: m.inErrore }))
+vi.mock('./azioni-stampa',() => ({ ristampaComande: vi.fn(),riprovaStampa: vi.fn(),ignoraStampa: vi.fn(),stampaPreconto: vi.fn() }))
 vi.mock('@/cassa/impostazioni-repo',() => ({ leggiImpostazioniCassa: m.cassa }))
 vi.mock('./azioni-postazione',() => ({ impostaPostazione: vi.fn() }))
 vi.mock('@/auth/sessione',() => ({ richiediRuolo: m.ruolo }))
@@ -68,4 +69,11 @@ it('cassa: ordini, striscia «Da portare» e stato delle comande', async () => {
 it('cassa: legge lo stato della coda di stampa e le impostazioni dei reparti su carta', async () => {
   await AreaStaff()
   expect(m.coda).toHaveBeenCalledWith({}); expect(m.cassa).toHaveBeenCalledWith({})
+  expect(m.inErrore).not.toHaveBeenCalled()
+})
+it('cassa: con stampe in errore le legge e le offre da riprovare o ignorare', async () => {
+  m.coda.mockResolvedValue({ ponteVistoIl: new Date(),inCoda: 0,piuVecchia: null,errori: 1,incerte: 0 })
+  m.inErrore.mockResolvedValue([{ id: 'l1',stampante: 'banco',tipo: 'comanda',errore: 'carta finita',creataIl: new Date('2026-11-06T19:15:00Z'),dove: 'Tavolo 5' }])
+  const dati = (await AreaStaff()).props.children.at(-1).props.children.props.dati
+  expect(dati.stampa.inErrore).toEqual([expect.objectContaining({ id: 'l1',creataIl: '2026-11-06T19:15:00.000Z' })])
 })
