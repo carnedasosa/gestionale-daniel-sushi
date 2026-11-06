@@ -93,6 +93,8 @@ describe('instradamento', () => {
   it('un lavoro fiscale scaduto non riparte da solo', () => {
     expect(esitoScadenza('fiscale')).toBe('incerta')
     for (const s of ['cassa','banco','cucina'] as const) expect(esitoScadenza(s)).toBe('in_coda')
+    expect(esitoScadenza('banco',4)).toBe('in_coda'); expect(esitoScadenza('banco',5)).toBe('errore')
+    expect(esitoScadenza('fiscale',5)).toBe('incerta')
   })
   it('allarme alla cassa: incerti, ponte zitto, coda ferma, errori; niente se la stampa non si usa', () => {
     const adesso = new Date('2026-10-29T20:00:00Z'), poco = new Date('2026-10-29T19:59:55Z'), tanto = new Date('2026-10-29T19:58:00Z')

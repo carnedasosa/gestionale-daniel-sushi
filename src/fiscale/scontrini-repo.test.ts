@@ -153,6 +153,17 @@ describe('esiti del registratore', () => {
     expect((await scontrinoDi(db,id)).scontrino).toBe('incerto')
     expect((await db.query<{ stato: string }>(`select stato from stampe`))[0].stato).toBe('incerta')
   })
+  it('il tetto dei tentativi non vale per i fiscali: scaduto resta incerto, mai errore né rimandabile', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,1]])
+    const id = await paga({ modo: 'tutto' })
+    await richiediScontrino(db,id)
+    await prendiLavori(db)
+    await db.query(`update stampe set presa_il=now()-interval '2 minutes',tentativi=5`)
+    await prendiLavori(db)
+    expect((await db.query<{ stato: string }>('select stato from stampe'))[0].stato).toBe('incerta')
+    expect((await scontrinoDi(db,id)).scontrino).toBe('incerto')
+  })
   it('lavoro fiscale scaduto: blocca il pagamento prima di toccare la coda, come fa l’esito del registratore', async () => {
     const { db } = ambiente
     await ordina([[salmone,1]])

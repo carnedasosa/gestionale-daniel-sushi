@@ -89,6 +89,24 @@ describe('il ponte prende e riporta', () => {
     expect((await prendiLavori(db)).map(l => l.id).sort()).toEqual(presi.map(l => l.id).sort())
     expect((await lavori(db)).map(l => l.tentativi)).toEqual([2,2])
   })
+  it('ponte che prende e non riporta mai l’esito: dopo 5 tentativi errore, non si riprende più e si può riprovare', async () => {
+    const { db } = ambiente
+    await carta(db,{ banco: true })
+    await ordina({ banco: 1 })
+    const scade = () => db.query(`update stampe set presa_il=now()-interval '2 minutes' where stato='in_stampa'`)
+    for (let i = 1; i <= 5; i++) {
+      expect(await prendiLavori(db)).toHaveLength(1)
+      expect((await lavori(db))[0]).toMatchObject({ stato: 'in_stampa',tentativi: i })
+      await scade()
+    }
+    expect(await prendiLavori(db)).toEqual([])
+    const [l] = await lavori(db)
+    expect(l).toMatchObject({ stato: 'errore',tentativi: 5 })
+    expect(await lavoriInErrore(db)).toMatchObject([{ id: l.id,errore: "Il ponte non ha riportato l'esito." }])
+    expect((await statoCoda(db))).toMatchObject({ errori: 1,inCoda: 0 })
+    expect(await riprovaLavoro(db,l.id)).toBe(true)
+    expect(await prendiLavori(db)).toHaveLength(1)
+  })
   it('stampata: la comanda passa in preparazione, va in «Da portare»; «Portate» la chiude e l’ordine è servito', async () => {
     const { db } = ambiente
     await carta(db)

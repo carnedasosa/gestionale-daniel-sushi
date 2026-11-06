@@ -21,15 +21,16 @@ export function stampanteDelLavoro(tipo: Exclude<TipoLavoro,'comanda' | 'annullo
   return tipo === 'scontrino' ? 'fiscale' : 'cassa'
 }
 
-/**
- * Un lavoro rimasto «in stampa» oltre il limite: quelli normali tornano in coda (al più una ristampa doppia),
- * quelli fiscali no, perché un secondo invio potrebbe battere un secondo scontrino: restano da controllare.
- */
-export function esitoScadenza(stampante: Stampante): 'in_coda' | 'incerta' {
-  return stampante === 'fiscale' ? 'incerta' : 'in_coda'
-}
 export const SCADENZA_LAVORO_SECONDI = 60
 export const TENTATIVI_MASSIMI = 5
+/**
+ * Un lavoro rimasto «in stampa» oltre il limite: quelli normali tornano in coda (al più una ristampa doppia) finché non
+ * finiscono i tentativi, quelli fiscali no, perché un secondo invio potrebbe battere un secondo scontrino: restano da controllare.
+ */
+export function esitoScadenza(stampante: Stampante, tentativi = 0): 'in_coda' | 'incerta' | 'errore' {
+  if (stampante === 'fiscale') return 'incerta'
+  return tentativi >= TENTATIVI_MASSIMI ? 'errore' : 'in_coda'
+}
 /** Allarme alla cassa: ponte zitto o lavoro fermo in coda da più di così. */
 export const ALLARME_SECONDI = 30
 

@@ -88,8 +88,9 @@ export async function ristampaOrdine(db: Db, ordineId: string): Promise<number> 
 }
 
 /**
- * Lavori rimasti «in stampa» oltre il limite: tornano in coda, i fiscali diventano «incerti» anche sul pagamento (la cassa
- * lo vede e decide guardando il registratore). Lock nell'ordine pagamenti → stampe, lo stesso di registraEsitoFiscale e
+ * Lavori rimasti «in stampa» oltre il limite: tornano in coda fino a TENTATIVI_MASSIMI, poi errore (un ponte che muore
+ * prima di riportare l'esito non stampa all'infinito); i fiscali diventano «incerti» anche sul pagamento (la cassa lo
+ * vede e decide guardando il registratore), a qualunque tentativo. Lock nell'ordine pagamenti → stampe, lo stesso di registraEsitoFiscale e
  * richiediScontrino: se fosse incrociato, a perdere potrebbe essere l'esito del registratore, che il ponte non rimanda.
  * Gli id si fissano prima dei lock e si ricontrollano dopo: nel frattempo l'esito può essere arrivato.
  */
@@ -99,10 +100,12 @@ async function scadiLavori(tx: Db): Promise<void> {
   if (!scaduti.length) return
   const pagamenti = scaduti.flatMap(l => l.pagamentoId ? [l.pagamentoId] : [])
   if (pagamenti.length) await tx.query('select id from pagamenti where id=any($1::uuid[]) order by id for update',[pagamenti])
-  await tx.query(`with scaduti as (update stampe set stato=case when stampante='fiscale' then $2 else $3 end
+  const FINITI = `stampante<>'fiscale' and tentativi >= $5`
+  await tx.query(`with scaduti as (update stampe set stato=case when stampante='fiscale' then $2 when ${FINITI} then $6 else $3 end,
+        errore=case when ${FINITI} then 'Il ponte non ha riportato l''esito.' else errore end,finita_il=case when ${FINITI} then clock_timestamp() else finita_il end
       where id=any($4::uuid[]) and ${SCADUTO} returning pagamento_id,stampante)
     update pagamenti set scontrino='incerto',scontrino_errore='Il registratore non ha risposto in tempo.' where id in (select pagamento_id from scaduti where stampante='fiscale')`,
-    [SCADENZA_LAVORO_SECONDI,esitoScadenza('fiscale'),esitoScadenza('cassa'),scaduti.map(l => l.id)])
+    [SCADENZA_LAVORO_SECONDI,esitoScadenza('fiscale'),esitoScadenza('cassa'),scaduti.map(l => l.id),TENTATIVI_MASSIMI,esitoScadenza('cassa',TENTATIVI_MASSIMI)])
 }
 
 /**
