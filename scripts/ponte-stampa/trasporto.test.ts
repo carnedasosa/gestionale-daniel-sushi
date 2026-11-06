@@ -3,16 +3,25 @@ import { createServer, type Server } from 'node:net'
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { eseguiLavoro, giro, inviaFpmate, inviaTcp, leggiConfigurazione, type Configurazione, type LavoroRicevuto } from './trasporto'
+import { LAVORI_FISCALI_PER_GIRO, LAVORI_PER_GIRO, SCADENZA_LAVORO_SECONDI } from '@/stampa/instradamento'
+import { eseguiLavoro, giro, inviaFpmate, inviaTcp, leggiConfigurazione, TIMEOUT_FPMATE_MS, TIMEOUT_TCP_MS, type Configurazione, type LavoroRicevuto } from './trasporto'
 
-let server: Server | null = null, cartella: string | null = null
-afterEach(() => { server?.close(); server = null; if (cartella) rmSync(cartella,{ recursive: true,force: true }); cartella = null })
+let server: Server | null = null, cartella: string | null = null, muta: Server | null = null
+afterEach(() => { server?.close(); server = null; muta?.close(); muta = null; if (cartella) rmSync(cartella,{ recursive: true,force: true }); cartella = null })
 /** Una «stampante» finta sulla porta 9100 di questo PC: raccoglie i byte ricevuti. */
 function stampanteFinta(): Promise<{ porta: number; ricevuto: () => Buffer }> {
   const pezzi: Buffer[] = []
   return new Promise(ok => {
     server = createServer(s => { s.on('data',d => pezzi.push(d)); s.on('end',() => s.end()) })
     server.listen(0,'127.0.0.1',() => ok({ porta: (server!.address() as { port: number }).port,ricevuto: () => Buffer.concat(pezzi) }))
+  })
+}
+/** Stampante che prende i byte e non chiude mai la connessione. */
+function stampanteMuta(): Promise<{ porta: number; ricevuto: () => Buffer }> {
+  const pezzi: Buffer[] = []
+  return new Promise(ok => {
+    muta = createServer({ allowHalfOpen: true },s => { s.on('data',d => pezzi.push(d)); s.on('error',() => {}) })
+    muta.listen(0,'127.0.0.1',() => ok({ porta: (muta!.address() as { port: number }).port,ricevuto: () => Buffer.concat(pezzi) }))
   })
 }
 const lavoro = (extra: Partial<LavoroRicevuto> = {}): LavoroRicevuto => ({ id: 'l1',stampante: 'banco',tipo: 'comanda',formato: 'escpos',dati: Buffer.from('COMANDA\n').toString('base64'),anteprima: 'COMANDA',...extra })
@@ -29,6 +38,12 @@ describe('stampanti termiche', () => {
     const s = await stampanteFinta(); server!.close(); server = null
     await expect(inviaTcp('127.0.0.1',s.porta,Buffer.from('x'))).rejects.toThrow()
     expect(await eseguiLavoro(lavoro(),config({ stampanti: { banco: { host: '127.0.0.1',porta: s.porta } } }))).toMatchObject({ id: 'l1',ok: false })
+  })
+  it('stampante che prende i byte e non chiude: scade il tempo e l’esito è «non riuscita» (F2: da provare sulle stampanti vere)', async () => {
+    const s = await stampanteMuta()
+    await expect(inviaTcp('127.0.0.1',s.porta,Buffer.from('x'),50)).rejects.toThrow('non risponde')
+    expect(s.ricevuto().toString()).toBe('x')
+    expect(await eseguiLavoro(lavoro(),config({ stampanti: { banco: { host: '127.0.0.1',porta: s.porta } } }),fetch,50)).toEqual({ id: 'l1',ok: false,errore: expect.stringContaining('non risponde') })
   })
   it('lavoro per una stampante non configurata nel ponte', async () => {
     expect(await eseguiLavoro(lavoro({ stampante: 'cucina' }),config())).toEqual({ id: 'l1',ok: false,errore: 'stampante «cucina» non configurata nel ponte' })
@@ -72,6 +87,42 @@ describe('modalità prova e giro completo', () => {
     expect(chiamate.map(c => c.url)).toEqual(['https://gestionale.example/api/stampa/coda','https://gestionale.example/api/stampa/esito'])
     expect((chiamate[0].init!.headers as Record<string,string>).Authorization).toBe(`Bearer ${'t'.repeat(40)}`)
     expect(JSON.parse(String(chiamate[1].init!.body))).toEqual({ id: 'l1',ok: true })
+  })
+  it('un giro con le stampanti ferme finisce molto prima che i suoi lavori scadano', () => {
+    const scadenza = SCADENZA_LAVORO_SECONDI * 1000
+    expect(LAVORI_PER_GIRO * TIMEOUT_TCP_MS).toBeLessThanOrEqual(scadenza / 2)
+    expect(LAVORI_FISCALI_PER_GIRO * TIMEOUT_FPMATE_MS).toBeLessThanOrEqual(scadenza / 2)
+  })
+  /** Il gestionale finto: dà i lavori e tiene l'ordine e il momento degli esiti. */
+  const gestionale = (lavori: LavoroRicevuto[], rispondi: (id: string) => Response = () => Response.json({ registrato: true })) => {
+    const esiti: { id: string; ok: boolean; dopoMs: number }[] = [], partenza = Date.now()
+    const recupera = (async (url: URL | string, init?: RequestInit) => {
+      if (String(url).endsWith('/coda')) return Response.json({ lavori })
+      const e = JSON.parse(String(init!.body)) as { id: string; ok: boolean }
+      esiti.push({ ...e,dopoMs: Date.now() - partenza })
+      return rispondi(e.id)
+    }) as typeof fetch
+    return { esiti,recupera }
+  }
+  it('banco fermo e cucina accesa: la cucina esce subito, il banco va in fila, ogni esito arriva', async () => {
+    const banco = await stampanteMuta(), cucina = await stampanteFinta()
+    const lavori = [lavoro({ id: 'b1' }),lavoro({ id: 'b2' }),lavoro({ id: 'b3' }),lavoro({ id: 'c1',stampante: 'cucina' }),lavoro({ id: 'c2',stampante: 'cucina' })]
+    const { esiti,recupera } = gestionale(lavori)
+    const c = config({ stampanti: { banco: { host: '127.0.0.1',porta: banco.porta },cucina: { host: '127.0.0.1',porta: cucina.porta } } })
+    expect(await giro(c,recupera,200)).toBe(5)
+    expect(esiti.map(e => e.id).filter(id => id.startsWith('b'))).toEqual(['b1','b2','b3'])
+    expect(esiti.slice(0,2).map(e => [e.id,e.ok])).toEqual([['c1',true],['c2',true]])
+    expect(esiti.filter(e => e.id.startsWith('b')).every(e => !e.ok)).toBe(true)
+    // In fila sulla stessa stampante: il terzo aspetta i primi due.
+    expect(esiti.find(e => e.id === 'b3')!.dopoMs).toBeGreaterThanOrEqual(550)
+  })
+  it('il gestionale non prende un esito: quella coda si ferma, le altre finiscono, il giro segnala l’errore', async () => {
+    const banco = await stampanteFinta(), cucina = await stampanteMuta()
+    const lavori = [lavoro({ id: 'b1' }),lavoro({ id: 'b2' }),lavoro({ id: 'c1',stampante: 'cucina' }),lavoro({ id: 'c2',stampante: 'cucina' })]
+    const { esiti,recupera } = gestionale(lavori,id => id === 'b1' ? new Response('',{ status: 500 }) : Response.json({ registrato: true }))
+    const c = config({ stampanti: { banco: { host: '127.0.0.1',porta: banco.porta },cucina: { host: '127.0.0.1',porta: cucina.porta } } })
+    await expect(giro(c,recupera,50)).rejects.toThrow('HTTP 500')
+    expect(esiti.map(e => e.id).sort()).toEqual(['b1','c1','c2'])
   })
   it('gestionale che risponde male: il giro si ferma con un errore (si riprova al giro dopo)', async () => {
     await expect(giro(config(),(async () => new Response('',{ status: 401 })) as unknown as typeof fetch)).rejects.toThrow('HTTP 401')

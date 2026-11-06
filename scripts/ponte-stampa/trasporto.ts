@@ -18,8 +18,13 @@ export interface LavoroRicevuto { id: string; stampante: NomeStampante; tipo: st
 export type EsitoSenzaId = { ok: true; risposta?: string } | { ok: false; errore: string; incerto?: boolean; risposta?: string }
 export type Esito = EsitoSenzaId & { id: string }
 
+// Tempo massimo di un lavoro. Sul server un lavoro scade dopo SCADENZA_LAVORO_SECONDI: un giro intero con la stampante
+// ferma deve finire molto prima, altrimenti gli ultimi lavori ripartono da capo (lo controlla trasporto.test.ts).
+export const TIMEOUT_TCP_MS = 3_000
+export const TIMEOUT_FPMATE_MS = 30_000
+
 /** Byte ESC/POS alla porta 9100: riuscito quando la stampante chiude la connessione senza errori. */
-export function inviaTcp(host: string, porta: number, byte: Uint8Array, timeoutMs = 10_000): Promise<void> {
+export function inviaTcp(host: string, porta: number, byte: Uint8Array, timeoutMs = TIMEOUT_TCP_MS): Promise<void> {
   return new Promise((ok,ko) => {
     const s = createConnection({ host,port: porta })
     const timer = setTimeout(() => { s.destroy(); ko(new Error(`stampante ${host}:${porta} non risponde`)) },timeoutMs)
@@ -35,7 +40,7 @@ const MAI_ARRIVATO = new Set(['ECONNREFUSED','ENOTFOUND','EHOSTUNREACH','ENETUNR
  * Scontrino al registratore telematico Epson (fpmate.cgi). Con una risposta HTTP l'esito lo legge il server dall'XML;
  * senza risposta l'esito è «incerto» (lo scontrino potrebbe essere uscito) salvo che la connessione non sia mai partita.
  */
-export async function inviaFpmate(url: string, xml: string, recupera: typeof fetch = fetch, timeoutMs = 30_000): Promise<EsitoSenzaId> {
+export async function inviaFpmate(url: string, xml: string, recupera: typeof fetch = fetch, timeoutMs = TIMEOUT_FPMATE_MS): Promise<EsitoSenzaId> {
   try {
     const r = await recupera(url,{ method: 'POST',body: xml,signal: AbortSignal.timeout(timeoutMs),headers: { 'Content-Type': 'text/xml; charset=utf-8','SOAPAction': '""','If-Modified-Since': 'Thu, 01 Jan 1970 00:00:00 GMT' } })
     const risposta = (await r.text()).slice(0,20000)
@@ -47,7 +52,7 @@ export async function inviaFpmate(url: string, xml: string, recupera: typeof fet
 }
 
 /** Un lavoro: alla stampante giusta, o nella cartella di prova. Non lancia mai: ogni problema diventa un esito. */
-export async function eseguiLavoro(l: LavoroRicevuto, c: Configurazione, recupera: typeof fetch = fetch): Promise<Esito> {
+export async function eseguiLavoro(l: LavoroRicevuto, c: Configurazione, recupera: typeof fetch = fetch, timeoutTcpMs = TIMEOUT_TCP_MS): Promise<Esito> {
   try {
     if (c.prova) {
       mkdirSync(c.prova,{ recursive: true })
@@ -63,24 +68,33 @@ export async function eseguiLavoro(l: LavoroRicevuto, c: Configurazione, recuper
     }
     const s = c.stampanti[l.stampante]
     if (!s) return { id: l.id,ok: false,errore: `stampante «${l.stampante}» non configurata nel ponte` }
-    await inviaTcp(s.host,s.porta ?? 9100,Buffer.from(l.dati,'base64'))
+    await inviaTcp(s.host,s.porta ?? 9100,Buffer.from(l.dati,'base64'),timeoutTcpMs)
     return { id: l.id,ok: true }
   } catch (err) {
     return { id: l.id,ok: false,errore: err instanceof Error ? err.message : 'errore sconosciuto' }
   }
 }
 
-/** Un giro: chiede i lavori, li esegue in ordine e riporta ogni esito appena c'è. Restituisce quanti lavori ha fatto. */
-export async function giro(c: Configurazione, recupera: typeof fetch = fetch): Promise<number> {
+/**
+ * Un giro: chiede i lavori e riporta ogni esito appena c'è. Una coda per stampante: in ordine sulla stessa stampante,
+ * in parallelo fra stampanti diverse, così il banco spento non fa aspettare la cucina. Se il gestionale non prende un esito
+ * quella coda si ferma, le altre finiscono, e l'errore esce a giro finito. Restituisce quanti lavori ha preso.
+ */
+export async function giro(c: Configurazione, recupera: typeof fetch = fetch, timeoutTcpMs = TIMEOUT_TCP_MS): Promise<number> {
   const intestazioni = { Authorization: `Bearer ${c.token}` }
   const r = await recupera(new URL('/api/stampa/coda',c.server),{ headers: intestazioni,signal: AbortSignal.timeout(15_000) })
   if (!r.ok) throw new Error(`gestionale: HTTP ${r.status} su /api/stampa/coda`)
   const { lavori } = await r.json() as { lavori: LavoroRicevuto[] }
-  for (const l of lavori) {
-    const esito = await eseguiLavoro(l,c,recupera)
-    const e = await recupera(new URL('/api/stampa/esito',c.server),{ method: 'POST',headers: { ...intestazioni,'Content-Type': 'application/json' },body: JSON.stringify(esito),signal: AbortSignal.timeout(15_000) })
-    if (!e.ok) throw new Error(`gestionale: HTTP ${e.status} su /api/stampa/esito`)
-  }
+  const code = new Map<NomeStampante,LavoroRicevuto[]>()
+  for (const l of lavori) code.set(l.stampante,[...code.get(l.stampante) ?? [],l])
+  const finite = await Promise.allSettled([...code.values()].map(async coda => {
+    for (const l of coda) {
+      const esito = await eseguiLavoro(l,c,recupera,timeoutTcpMs)
+      const e = await recupera(new URL('/api/stampa/esito',c.server),{ method: 'POST',headers: { ...intestazioni,'Content-Type': 'application/json' },body: JSON.stringify(esito),signal: AbortSignal.timeout(15_000) })
+      if (!e.ok) throw new Error(`gestionale: HTTP ${e.status} su /api/stampa/esito`)
+    }
+  }))
+  for (const f of finite) if (f.status === 'rejected') throw f.reason
   return lavori.length
 }
 

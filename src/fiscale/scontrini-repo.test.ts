@@ -153,6 +153,58 @@ describe('esiti del registratore', () => {
     expect((await scontrinoDi(db,id)).scontrino).toBe('incerto')
     expect((await db.query<{ stato: string }>(`select stato from stampe`))[0].stato).toBe('incerta')
   })
+  describe('risposta dell’RT arrivata dopo la scadenza del lavoro', () => {
+    const incerto = async () => {
+      const { db } = ambiente
+      await ordina([[salmone,1]])
+      const id = await paga({ modo: 'tutto' })
+      await richiediScontrino(db,id)
+      const [l] = await prendiLavori(db)
+      await db.query(`update stampe set presa_il=now()-interval '2 minutes'`)
+      await prendiLavori(db)
+      expect((await scontrinoDi(db,id)).scontrino).toBe('incerto')
+      return { id,lavoro: l.id }
+    }
+    const statoLavoro = async () => (await ambiente.db.query<{ stato: string }>('select stato from stampe'))[0].stato
+    it('emesso: numero e chiusura non si perdono, non resta niente da controllare', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: RISPOSTA_OK(12) })).toBe(true)
+      expect(await scontrinoDi(db,id)).toMatchObject({ scontrino: 'emesso',scontrinoNumero: '12',scontrinoErrore: null })
+      expect(await statoLavoro()).toBe('stampata')
+      expect(await risolviIncerto(db,id,false)).toBe(false)
+    })
+    it('rifiutato: come se fosse arrivata in tempo, si può rimandare', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: '<response success="false" code="EPTR_REC_EMPTY"/>' })).toBe(true)
+      expect((await scontrinoDi(db,id)).scontrino).toBe('errore')
+      expect(await statoLavoro()).toBe('errore')
+    })
+    it('senza una risposta leggibile resta incerto, col motivo di prima', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: '<html>?</html>' })).toBe(false)
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: false,errore: 'tempo scaduto',incerto: true })).toBe(false)
+      expect(await scontrinoDi(db,id)).toMatchObject({ scontrino: 'incerto',scontrinoErrore: 'Il registratore non ha risposto in tempo.' })
+      expect(await statoLavoro()).toBe('incerta')
+    })
+    it('se la cassa ha già deciso, la sua decisione resta', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      expect(await risolviIncerto(db,id,false)).toBe(true)
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: RISPOSTA_OK(12) })).toBe(false)
+      expect((await scontrinoDi(db,id)).scontrino).toBe('errore')
+    })
+  })
+  it('il ponte prende uno scontrino alla volta: il registratore può metterci fino a 30 s', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,3]])
+    const ids = [await paga({ modo: 'romana',persone: 3 }),await paga({ modo: 'romana',persone: 2 }),await paga({ modo: 'romana',persone: 1 })]
+    for (const id of ids) await richiediScontrino(db,id)
+    for (const id of ids) {
+      const presi = await prendiLavori(db)
+      expect(presi.map(l => l.pagamentoId)).toEqual([id])
+      await registraEsitoPonte(db,{ id: presi[0].id,ok: true,risposta: RISPOSTA_OK(1) })
+    }
+    expect(await prendiLavori(db)).toEqual([])
+  })
   it('il tetto dei tentativi non vale per i fiscali: scaduto resta incerto, mai errore né rimandabile', async () => {
     const { db } = ambiente
     await ordina([[salmone,1]])
@@ -186,8 +238,8 @@ describe('esiti del registratore', () => {
     const [l] = await prendiLavori(db)
     await db.query(`update stampe set presa_il=now()-interval '2 minutes'`)
     await Promise.all([prendiLavori(db),registraEsitoPonte(db,{ id: l.id,ok: true,risposta: RISPOSTA_OK(7) })])
-    expect((await db.query<{ stato: string }>('select stato from stampe'))[0].stato).toMatch(/stampata|incerta/)
-    expect((await scontrinoDi(db,id)).scontrino).toMatch(/emesso|incerto/)
+    expect((await db.query<{ stato: string }>('select stato from stampe'))[0].stato).toBe('stampata')
+    expect(await scontrinoDi(db,id)).toMatchObject({ scontrino: 'emesso',scontrinoNumero: '7',scontrinoErrore: null })
   })
   it('ponte in prova: scontrino «di prova», il pagamento resta modificabile', async () => {
     const { db } = ambiente

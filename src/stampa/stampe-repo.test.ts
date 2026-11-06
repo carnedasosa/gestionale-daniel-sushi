@@ -89,6 +89,17 @@ describe('il ponte prende e riporta', () => {
     expect((await prendiLavori(db)).map(l => l.id).sort()).toEqual(presi.map(l => l.id).sort())
     expect((await lavori(db)).map(l => l.tentativi)).toEqual([2,2])
   })
+  it('un giro prende al più 10 lavori; uno scontrino in attesa non resta dietro a una coda di comande', async () => {
+    const { db } = ambiente
+    await carta(db,{ banco: true })
+    for (let i = 0; i < 11; i++) await ordina({ banco: 1 })
+    const pagamento = (await db.query<{ id: string }>(`insert into pagamenti (sessione_id,importo_cent,metodo,modo,descrizione,utente_id) values ($1,100,'carta','importo','Importo libero',$2) returning id`,[sessione,UTENTE]))[0].id
+    await db.query(`insert into stampe (stampante,tipo,documento,pagamento_id) values ('fiscale','scontrino','{"righe":[]}',$1)`,[pagamento])
+    const presi = await prendiLavori(db)
+    expect(presi).toHaveLength(10)
+    expect(presi.filter(l => l.stampante === 'fiscale')).toHaveLength(1)
+    expect(presi.filter(l => l.stampante === 'banco')).toHaveLength(9)
+  })
   it('ponte che prende e non riporta mai l’esito: dopo 5 tentativi errore, non si riprende più e si può riprovare', async () => {
     const { db } = ambiente
     await carta(db,{ banco: true })
