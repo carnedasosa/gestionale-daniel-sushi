@@ -23,6 +23,7 @@ export type EsitoPagamento = { ok: true; pagamento: Pagamento; giaRegistrato?: t
 const COLONNE = `id,importo_cent as "importoCent",metodo,modo,descrizione,dettaglio,creato_il as "creatoIl",annullato_il is not null as annullato,
   scontrino,scontrino_numero as "scontrinoNumero",scontrino_errore as "scontrinoErrore"`
 const NON_VALIDO = { ok: false as const,errore: 'Pagamento non valido.' }
+const CHIAVE_USATA = { ok: false as const,errore: 'Risulta già un incasso diverso o tolto: controlla i pagamenti e riprova.',chiaveUsata: true as const }
 
 export function richiestaValida(r: unknown): r is RichiestaPagamento {
   if (!r || typeof r !== 'object') return false
@@ -82,7 +83,7 @@ export async function registraPagamento(db: Db, d: Destinazione, r: RichiestaPag
     const [p] = await tx.query<Pagamento>(`select ${COLONNE} from pagamenti where chiave_invio=$1 and ${colonna}=$2`,[chiaveInvio,id])
     if (!p) return null
     const uguale = !p.annullato && p.metodo === metodo && p.modo === r.modo && (r.modo !== 'importo' || p.importoCent === r.importoCent)
-    return uguale ? { ok: true,pagamento: p,giaRegistrato: true } : { ok: false,errore: 'Risulta già un incasso diverso o tolto: controlla i pagamenti e riprova.',chiaveUsata: true }
+    return uguale ? { ok: true,pagamento: p,giaRegistrato: true } : CHIAVE_USATA
   }
   return db.transazione(async tx => {
     const t = await totaleDi(tx,d,true)
@@ -107,8 +108,8 @@ export async function registraPagamento(db: Db, d: Destinazione, r: RichiestaPag
       on conflict (chiave_invio) where chiave_invio is not null do nothing returning ${COLONNE}`,
       [id,importoCent,metodo,r.modo,descrizione,dettaglio ? JSON.stringify(dettaglio) : null,utenteId,chiaveInvio])
     if (p) return { ok: true,pagamento: p }
-    // La chiave c'è già: se non è di questo conto, la richiesta non è valida.
-    return await giaRegistrato(tx) ?? NON_VALIDO
+    // La chiave c'è già, su un altro conto.
+    return await giaRegistrato(tx) ?? CHIAVE_USATA
   })
 }
 

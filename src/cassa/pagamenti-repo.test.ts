@@ -135,7 +135,7 @@ describe('chiave di invio', () => {
     expect(await registraPagamento(db,{ sessioneId: sessione },{ modo: 'importo',importoCent: 100 },'carta',UTENTE,'x')).toEqual({ ok: false,errore: 'Pagamento non valido.' })
     const t2 = await creaTavolo(db,'Tavolo 8','tavolo-8'), s2 = (await apriSessione(db,t2.id)).id
     const e = await creaOrdineTavolo(db,s2,[{ piattoId: p1,quantita: 1,nota: '' }],randomUUID()); if (!e.ok) throw new Error(e.errore)
-    expect(await registraPagamento(db,{ sessioneId: s2 },{ modo: 'importo',importoCent: 100 },'carta',UTENTE,chiave)).toEqual({ ok: false,errore: 'Pagamento non valido.' })
+    expect(await registraPagamento(db,{ sessioneId: s2 },{ modo: 'importo',importoCent: 100 },'carta',UTENTE,chiave)).toMatchObject({ ok: false,chiaveUsata: true })
     expect(await quanti()).toBe(2)
   })
   it('stessa chiave ma richiesta diversa: non è un successo, e non scrive niente', async () => {
