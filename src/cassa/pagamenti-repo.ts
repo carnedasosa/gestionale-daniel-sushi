@@ -37,6 +37,22 @@ export function richiestaValida(r: unknown): r is RichiestaPagamento {
 function destinazioneValida(d: Destinazione): boolean {
   return 'sessioneId' in d ? idValido(d.sessioneId) : idValido(d.ordineId)
 }
+/** Quota alla romana come si legge sul conto. Le persone non hanno una colonna: è questo testo a dire per quante era. */
+const descrizioneRomana = (persone: number) => persone === 1 ? 'Ultima quota alla romana' : `Quota alla romana (1 di ${persone})`
+/** Porzioni confrontabili: sommate per voce, senza quelle a zero, in ordine. Arrivano dal telefono: se sono storte, risultano diverse. */
+function improntaPorzioni(porzioni: PorzioneScelta[]): string {
+  const somme = new Map<string,number>()
+  for (const s of porzioni) somme.set(s?.chiave,(somme.get(s?.chiave) ?? 0) + s?.quantita)
+  return JSON.stringify([...somme].filter(([,q]) => q > 0).sort(([a],[b]) => a < b ? -1 : 1))
+}
+/** L'incasso già scritto con questa chiave è proprio ciò che si chiede ora? Se no, non è un nuovo tentativo ma un'altra richiesta. */
+function stessaRichiesta(p: Pagamento, r: RichiestaPagamento, metodo: MetodoPagamento): boolean {
+  if (p.annullato || p.metodo !== metodo || p.modo !== r.modo) return false
+  if (r.modo === 'importo') return p.importoCent === r.importoCent
+  if (r.modo === 'romana') return p.descrizione === descrizioneRomana(r.persone)
+  if (r.modo === 'piatti') return p.dettaglio?.coperti === r.coperti && improntaPorzioni(p.dettaglio.porzioni) === improntaPorzioni(r.porzioni)
+  return true
+}
 
 async function pagamentiValidi(tx: Db, d: Destinazione): Promise<Pagamento[]> {
   const [colonna,id] = 'sessioneId' in d ? ['sessione_id',d.sessioneId] : ['ordine_id',d.ordineId]
@@ -73,7 +89,7 @@ export async function statoPagamenti(db: Db, d: Destinazione): Promise<StatoPaga
  * ciò che supera il residuo. Il tavolo può essere anche già chiuso: si incassa spesso dopo «Chiudi tavolo».
  * `chiaveInvio` rende la richiesta idempotente (doppio tocco, nuovo tentativo dopo un errore di rete): la stessa chiave
  * restituisce l'incasso già scritto, prima di guardare il residuo, che nel frattempo può essere già a zero. Se quell'incasso
- * è stato tolto o è diverso da ciò che si chiede ora, non è un successo: lo si dice, senza scrivere niente.
+ * è stato tolto o è diverso da ciò che si chiede ora (metodo, importo, persone, porzioni), non è un successo: lo si dice, senza scrivere niente.
  */
 export async function registraPagamento(db: Db, d: Destinazione, r: RichiestaPagamento, metodo: MetodoPagamento, utenteId: string, chiaveInvio: string): Promise<EsitoPagamento> {
   if (!destinazioneValida(d) || !richiestaValida(r) || !metodoValido(metodo) || !idValido(utenteId) || !idValido(chiaveInvio)) return NON_VALIDO
@@ -82,8 +98,7 @@ export async function registraPagamento(db: Db, d: Destinazione, r: RichiestaPag
   const giaRegistrato = async (tx: Db): Promise<EsitoPagamento | null> => {
     const [p] = await tx.query<Pagamento>(`select ${COLONNE} from pagamenti where chiave_invio=$1 and ${colonna}=$2`,[chiaveInvio,id])
     if (!p) return null
-    const uguale = !p.annullato && p.metodo === metodo && p.modo === r.modo && (r.modo !== 'importo' || p.importoCent === r.importoCent)
-    return uguale ? { ok: true,pagamento: p,giaRegistrato: true } : CHIAVE_USATA
+    return stessaRichiesta(p,r,metodo) ? { ok: true,pagamento: p,giaRegistrato: true } : CHIAVE_USATA
   }
   return db.transazione(async tx => {
     const t = await totaleDi(tx,d,true)
@@ -95,7 +110,7 @@ export async function registraPagamento(db: Db, d: Destinazione, r: RichiestaPag
     if (s.residuoCent <= 0) return { ok: false,errore: 'Il conto è già saldato.' }
     let importoCent: number, descrizione: string, dettaglio: DettaglioPiatti | null = null
     if (r.modo === 'tutto') { importoCent = s.residuoCent; descrizione = s.pagatoCent ? 'Saldo' : 'Conto intero' }
-    else if (r.modo === 'romana') { importoCent = allaRomana(s.residuoCent,r.persone)[0]; descrizione = r.persone === 1 ? 'Ultima quota alla romana' : `Quota alla romana (1 di ${r.persone})` }
+    else if (r.modo === 'romana') { importoCent = allaRomana(s.residuoCent,r.persone)[0]; descrizione = descrizioneRomana(r.persone) }
     else if (r.modo === 'importo') { importoCent = r.importoCent; descrizione = 'Importo libero' }
     else {
       const q = quotaPerPiatti(t.conto!.voci,t.conto!,s.pagato,r.porzioni,r.coperti)

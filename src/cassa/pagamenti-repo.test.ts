@@ -150,6 +150,31 @@ describe('chiave di invio', () => {
     expect(await quanti()).toBe(1)
     expect((await statoPagamenti(db,d))!.pagatoCent).toBe(500)
   })
+  it('romana con la stessa chiave ma per un altro numero di persone: è un’altra richiesta, non il vecchio incasso', async () => {
+    const { db } = ambiente
+    await ordina([{ piattoId: p1,quantita: 3 }])
+    const chiave = randomUUID(), d = { sessioneId: sessione }
+    expect(await registraPagamento(db,d,{ modo: 'romana',persone: 3 },'carta',UTENTE,chiave)).toMatchObject({ ok: true })
+    expect(await registraPagamento(db,d,{ modo: 'romana',persone: 2 },'carta',UTENTE,chiave)).toMatchObject({ ok: false,chiaveUsata: true })
+    expect(await registraPagamento(db,d,{ modo: 'romana',persone: 3 },'carta',UTENTE,chiave)).toMatchObject({ ok: true,giaRegistrato: true })
+    expect(await registraPagamento(db,d,{ modo: 'romana',persone: 2 },'carta',UTENTE,randomUUID())).toMatchObject({ ok: true })
+    expect(await quanti()).toBe(2)
+  })
+  it('per piatti con la stessa chiave: contano porzioni e coperti, non l’ordine in cui arrivano', async () => {
+    const { db } = ambiente
+    await salvaImpostazioniCassa(db,{ copertoCent: 150,stampa: { banco: false,cucina: false,sala: false } })
+    await ordina([{ piattoId: p1,quantita: 2 },{ piattoId: p2,quantita: 2 }])
+    await impostaCoperti(db,sessione,2)
+    const [a,b] = (await contoSessione(db,sessione))!.voci.map(chiaveVoce)
+    const chiave = randomUUID(), d = { sessioneId: sessione }
+    const scelta = (qa: number, qb: number, coperti: number) => ({ modo: 'piatti' as const,porzioni: [{ chiave: a,quantita: qa },{ chiave: b,quantita: qb }],coperti })
+    expect(await registraPagamento(db,d,scelta(1,1,1),'carta',UTENTE,chiave)).toMatchObject({ ok: true })
+    expect(await registraPagamento(db,d,{ modo: 'piatti',porzioni: [{ chiave: b,quantita: 1 },{ chiave: a,quantita: 1 }],coperti: 1 },'carta',UTENTE,chiave)).toMatchObject({ ok: true,giaRegistrato: true })
+    expect(await registraPagamento(db,d,scelta(2,1,1),'carta',UTENTE,chiave)).toMatchObject({ ok: false,chiaveUsata: true })
+    expect(await registraPagamento(db,d,scelta(1,1,0),'carta',UTENTE,chiave)).toMatchObject({ ok: false,chiaveUsata: true })
+    expect(await registraPagamento(db,d,{ modo: 'piatti',porzioni: [null as never],coperti: 1 },'carta',UTENTE,chiave)).toMatchObject({ ok: false,chiaveUsata: true })
+    expect(await quanti()).toBe(1)
+  })
   it('incasso tolto: rimandarlo con la stessa chiave non è un successo; con una chiave nuova si incassa', async () => {
     const { db } = ambiente
     await ordina([{ piattoId: p1,quantita: 2 }])
