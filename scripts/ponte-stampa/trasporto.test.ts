@@ -152,7 +152,7 @@ describe('modalità prova e giro completo', () => {
   })
   it('registratore fermo: la coda fiscale ha il suo giro e le comande escono lo stesso', async () => {
     const s = await stampanteFinta()
-    let sblocca = (_r: Response) => {}
+    let sblocca: (r: Response) => void = () => {}
     const registratore = new Promise<Response>(r => { sblocca = r })
     const lavori = { termiche: [lavoro({ id: 'b1' })],fiscale: [lavoro({ id: 'f1',stampante: 'fiscale',formato: 'fpmate',dati: '<x/>' })] }
     const esiti: string[] = []
