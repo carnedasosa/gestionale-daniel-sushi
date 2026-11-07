@@ -88,8 +88,10 @@ export function leggiConfigurazione(testo: string, ambiente: Record<string,strin
   const c = JSON.parse(testo) as Configurazione
   c.token = ambiente.STAMPA_TOKEN ?? c.token
   if (!c.server || !/^https?:\/\//.test(c.server)) throw new Error('«server» deve essere l’indirizzo del gestionale (https://…)')
+  let indirizzo: URL
+  try { indirizzo = new URL(c.server) } catch { throw new Error('«server» non è un indirizzo valido (https://…)') }
   // Il token viaggia in ogni richiesta: in chiaro solo verso lo stesso PC, per le prove.
-  if (c.server.startsWith('http://') && !['localhost','127.0.0.1'].includes(new URL(c.server).hostname)) throw new Error('«server» deve essere in https://: in http:// il token viaggerebbe in chiaro (ammesso solo per localhost e 127.0.0.1)')
+  if (indirizzo.protocol === 'http:' && !['localhost','127.0.0.1'].includes(indirizzo.hostname)) throw new Error('«server» deve essere in https://: in http:// il token viaggerebbe in chiaro (ammesso solo per localhost e 127.0.0.1)')
   if (!c.token || c.token.length < 32) throw new Error('Manca il token: STAMPA_TOKEN nell’ambiente o «token» nel file (almeno 32 caratteri)')
   if (!c.stampanti || typeof c.stampanti !== 'object') throw new Error('Manca l’elenco «stampanti»')
   return c
