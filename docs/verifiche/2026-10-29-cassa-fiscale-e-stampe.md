@@ -38,7 +38,7 @@ Nota: Next.js 16.4.0 ferma `next build` una volta sì e una no con `SecurityFata
 - **Registratore telematico vero**: il driver segue il protocollo Epson `fpmate.cgi` del driver aperto OCA, ma va provato sull'RT di Daniele (marca e modello da chiedere): uno scontrino da 0,01 € di prova, poi un pagamento con carta per l'indice del pagamento elettronico.
 - **Stampanti delle comande**: ESC/POS su porta 9100 (Epson TM-T20/m30 e compatibili); da provare carta, taglio e accentate sulle stampanti scelte.
 - **Ponte**: acceso sul PC della cassa con `STAMPA_TOKEN` (da mettere anche su Vercel), con la rete del locale.
-- **Migrazioni** (sei, tutte additive) da applicare al DB reale prima del merge.
+- **Migrazioni** (sette, tutte additive: coperti, pagamenti, foto, vini, coda di stampa, pre-conto, scontrini) da applicare al DB reale prima del merge.
 
 ## Note per la prova in sala
 

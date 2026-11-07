@@ -1,7 +1,8 @@
 {
   "server": "https://gestionale-daniel-sushi.vercel.app",
-  "token": "metti qui STAMPA_TOKEN, oppure lascialo vuoto e usa la variabile d'ambiente",
+  "token": "SOSTITUISCI CON STAMPA_TOKEN",
   "intervalloSecondi": 2,
+  "prova": "",
   "stampanti": {
     "cassa": { "host": "192.168.1.31", "porta": 9100 },
     "banco": { "host": "192.168.1.32", "porta": 9100 },

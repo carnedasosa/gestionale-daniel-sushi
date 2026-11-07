@@ -9,15 +9,19 @@ Il lavoro è diviso in tappe:
 - **Tappa 3**: asporto e domicilio: zone, orari, fasce, checkout, accettazione con suono, pagina dello stato ed email.
 - **Tappa 4**: messa online: connessione cifrata al database, Vercel a Francoforte, prove end-to-end, poi dominio ed email.
 - **Il locale**: ordini dalla cassa (telefono e WhatsApp), comanda del cameriere, reparti nel menù (banco sushi, cucina, sala), comande per reparto e postazioni dei dispositivi.
+- **Cassa, scontrino e stampe**: coperti, divisione del conto e pagamenti, pre-conto, scontrino dal registratore telematico, comande stampate per reparto con il ponte di stampa, foto dei piatti e carta dei vini.
 
 Documentazione di progetto:
 
 - Specifica: [`docs/superpowers/specs/2026-10-11-gestionale-ordini-design.md`](docs/superpowers/specs/2026-10-11-gestionale-ordini-design.md)
 - Specifica della tappa 3: [`docs/superpowers/specs/2026-10-12-tappa-3-domicilio-asporto-design.md`](docs/superpowers/specs/2026-10-12-tappa-3-domicilio-asporto-design.md)
 - Specifica della tappa 4: [`docs/superpowers/specs/2026-10-13-tappa-4-messa-online-design.md`](docs/superpowers/specs/2026-10-13-tappa-4-messa-online-design.md)
+- Specifica del design «Banco»: [`docs/superpowers/specs/2026-10-14-design-banco-design.md`](docs/superpowers/specs/2026-10-14-design-banco-design.md)
 - Specifica del locale (reparti, postazioni, cassa e cameriere): [`docs/superpowers/specs/2026-10-16-reparti-e-cassa-design.md`](docs/superpowers/specs/2026-10-16-reparti-e-cassa-design.md)
-- Verbali delle prove: [`docs/verifiche/`](docs/verifiche/) (l'ultima serata simulata: [`2026-10-16-serata-quattro-dispositivi.md`](docs/verifiche/2026-10-16-serata-quattro-dispositivi.md))
+- Specifica di cassa, fiscale e stampe: [`docs/superpowers/specs/2026-10-29-cassa-fiscale-e-stampe-design.md`](docs/superpowers/specs/2026-10-29-cassa-fiscale-e-stampe-design.md)
+- Verbali delle prove: [`docs/verifiche/`](docs/verifiche/) (l'ultima serata simulata: [`2026-10-17-serata-tipo.md`](docs/verifiche/2026-10-17-serata-tipo.md); la code review completa: [`2026-11-06-code-review.md`](docs/verifiche/2026-11-06-code-review.md)). Le specifiche descrivono lo stato alla loro data: ciò che elencano come «fuori perimetro» può essere stato realizzato in una tappa successiva, e lo dice una nota in testa alla sezione.
 - Piani di lavoro: [`docs/superpowers/plans/`](docs/superpowers/plans/)
+- Allergeni: proposta ricavata dagli ingredienti e scheda stampabile in [`docs/allergeni/`](docs/allergeni/)
 
 ## Requisiti
 
@@ -41,9 +45,11 @@ Documentazione di progetto:
    | `APP_URL` (opzionale) | URL assoluto dell'app per i QR e per i link nelle email, es. `https://ordini.esempio.it`; se assente i QR usano l'host della richiesta e le email restano spente |
    | `RESEND_API_KEY` (opzionale) | Resend → API Keys; senza, le email ai clienti restano spente |
    | `EMAIL_MITTENTE` (opzionale) | mittente su un dominio verificato in Resend, es. `Daniel's Sushi <ordini@tuodominio.it>` |
-   | `CRON_SECRET` (opzionale) | stringa casuale di almeno 16 caratteri; su Vercel protegge il cron di anonimizzazione |
+   | `CRON_SECRET` (obbligatoria in produzione) | stringa casuale di almeno 16 caratteri; protegge il cron di anonimizzazione. **Senza, il cron risponde 401 e la pulizia dei dati personali non parte mai** |
+   | `STAMPA_TOKEN` (con le stampanti) | almeno 32 caratteri, uguale sul ponte di stampa e su Vercel; senza, le API `/api/stampa/*` rispondono 503 (vedi **Comande su carta e ponte di stampa**) |
    | `ORDINI_CASA_PROVA` (solo locale) | `1` per provare gli ordini da casa senza allergeni confermati; ignorata in produzione |
-   | `E2E_EMAIL`, `E2E_PASSWORD` (solo locale) | utente di prova creato in Supabase → Authentication → Users, solo per `npm run e2e`; sul database reale non ha ruoli |
+   | `E2E_EMAIL`, `E2E_PASSWORD` (locale e CI) | utente di prova creato in Supabase → Authentication → Users, solo per `npm run e2e` (in CI sono segreti del repository); sul database reale non ha ruoli |
+   | `E2E_DEBUG`, `E2E_FOTO`, `E2E_SCHERMATE` (solo locale) | `E2E_DEBUG=1` fa stampare al database finto le interrogazioni; `E2E_FOTO=1` salva in `test-results/foto` le schermate della prova della cassa; `E2E_SCHERMATE=<cartella>` salva lì la schermata della comanda del cameriere |
 
    Queste variabili sono lette solo dal server e non finiscono mai nel browser. Non committare `.env.local`.
 
@@ -59,12 +65,15 @@ Documentazione di progetto:
 
 | Comando | Cosa fa |
 | --- | --- |
-| `npm test` | esegue i test |
+| `npm run dev` | avvia l'app in sviluppo su http://localhost:3000 |
+| `npm test` | esegue i test (`npm run test:watch` li tiene in ascolto) |
 | `npm run typecheck` | controlla i tipi TypeScript |
 | `npm run lint` | esegue ESLint |
-| `npm run build` | compila l'app per la produzione |
-| `npm run e2e` | prove end-to-end nel browser (tavolo, ordine da casa, ordine dalla cassa, reparti) sulla build di produzione, con un database finto |
+| `npm run build` | compila l'app per la produzione (`npm start` la avvia) |
+| `npm run e2e` | prove end-to-end nel browser (tavolo, ordine da casa, ordine dalla cassa, reparti, cassa e scontrino col ponte in prova) sulla build di produzione, con un database finto |
 | `npm run serata` | simulazione di una serata intera a quattro dispositivi dello staff (circa 5 minuti con la compilazione), sullo stesso database finto |
+| `npm run seed` | rigenera `supabase/seed.sql` da `data/menu-sito.json` |
+| `npm run ruolo -- <email> admin\|staff` | assegna un ruolo a un utente sul database reale (vedi **Utenti**) |
 
 ## Prove end-to-end
 
@@ -78,11 +87,10 @@ L'app gira su Vercel, con le funzioni a Francoforte (`regions` in `vercel.json`)
 
 ## Database
 
-- Le migrazioni sono in `supabase/migrations/` e si applicano in ordine di nome. Le ultime tre, del locale, vanno applicate **in quest'ordine**, ognuna prima del deploy che la legge:
-  1. `20261016120000_origine_ordini.sql` — colonna `ordini.origine` (`cliente`, `cassa`, `cameriere`) e vincoli per gli ordini della cassa;
-  2. `20261017120000_reparti_menu.sql` — `categorie.reparto` e `righe_ordine.reparto`, con i reparti delle righe già esistenti;
-  3. `20261018120000_comande_reparto.sql` — tabella `comande`, con le comande anche per gli ordini già esistenti.
-- `20261106120000_chiave_invio_pagamenti.sql` aggiunge `pagamenti.chiave_invio` (unica quando presente; i pagamenti già registrati restano senza). **Va applicata prima del deploy che la legge**: senza, ogni incasso fallisce.
+- Le migrazioni sono in `supabase/migrations/` e si applicano in ordine di nome, ognuna prima del deploy che la legge; ogni migrazione va autorizzata prima di toccare il database reale. Oltre a quelle delle tappe descritte più sotto (tavoli, casa, origine, reparti, comande):
+  - `20261015120000_registro_annullamenti.sql` — tabella `registro_annullamenti` (chi ha annullato cosa, dal conto);
+  - le sette del 29/10, tutte additive, per la cassa: `20261029120000_coperti.sql` (coperti e `impostazioni_cassa`), `20261029130000_pagamenti.sql`, `20261029140000_foto_piatti.sql`, `20261029150000_vini.sql`, `20261029160000_coda_stampa.sql` (tabelle `stampe` e `ponte_stampa`), `20261029170000_preconto.sql`, `20261029180000_scontrini.sql` (reparti fiscali e stato fiscale dei pagamenti). Sono già applicate al database reale dal 29/10;
+  - le due del 06/11, dalle correzioni della code review: `20261106120000_chiave_invio_pagamenti.sql` aggiunge `pagamenti.chiave_invio` (unica quando presente; i pagamenti già registrati restano senza; senza la colonna ogni incasso fallisce) e `20261106130000_tentativi_accesso.sql` crea la tabella `tentativi_accesso` del limite di login (vedi [Utenti](#utenti)). Sono applicate al database reale dal 07/11.
 - Il seed del menù è generato da `data/menu-sito.json` con `npm run seed`, che scrive `supabase/seed.sql`. Il seed è pensato per un database vuoto.
 - **Controlli di coerenza degli ordini.** Lo stato degli ordini e i totali li tiene allineati il codice, non il database. `scripts/sql/coerenza-ordini.sql` raccoglie interrogazioni di sola lettura che cercano gli ordini incoerenti: totale diverso da righe attive + consegna, stato che non segue le comande dei reparti, comande senza righe attive o righe attive senza comanda, comande «sala» negli ordini da casa, chiavi d'invio e comande doppie. Sul DB reale si eseguono in una transazione read only con `npx tsx --env-file=.env.local scripts/interroga-sql.ts scripts/sql/coerenza-ordini.sql`. Ogni controllo stampa una tabella: **zero righe vuol dire tutto coerente**, altrimenti ogni riga è un ordine da sistemare, con i valori trovati e quelli attesi. Il test `tests/db/coerenza-ordini.test.ts` esegue lo stesso file su PGlite.
 
@@ -109,8 +117,11 @@ Le nuove registrazioni sono disattivate in Supabase: solo gli utenti creati a ma
 | `/ordina` | riepilogo e conferma dell'ordine da casa |
 | `/ordine/[token]` | stato dell'ordine da casa, aggiornato da solo |
 | `/privacy` | informativa privacy (testo provvisorio) |
+| `/stato` | risposta vuota senza database: le schermate la chiamano prima di ogni aggiornamento per controllare la connessione |
 | `/accesso` | accesso per admin e staff |
+| `/admin` | rimanda a `/admin/menu` (admin) |
 | `/admin/menu` | gestione del menù, foto, nuovi piatti e vini (admin) |
+| `/admin/menu/[id]`, `/admin/menu/nuovo` | scheda di un piatto o di un vino, e creazione di una voce nuova (admin) |
 | `/admin/cassa` | coperto, comande su carta e registratore telematico (admin) |
 | `/admin/poke` | prezzi, regole e allergeni degli ingredienti della poke (admin) |
 | `/admin/domicilio` | impostazioni, zone, orari e chiusure degli ordini da casa (admin) |
@@ -210,7 +221,7 @@ La poke composta si abilita quando l'admin ha impostato prezzo base ed extra. Gl
 
 Il carrello e la sua chiave di invio si conservano in `sessionStorage` per quella sessione del tavolo. Ritentare lo stesso carrello non crea un ordine doppio; cambiare quantità, note o righe genera una nuova chiave. Le poke diventate non valide vanno ricomposte prima dell’invio. Più telefoni vedono gli stessi ordini e il totale in **Ordinato finora**. L'accesso usa cookie `httpOnly`, `sameSite=lax`, sicuri in produzione: sessione di 12 ore e dispositivo di un anno. Cinque errori dallo stesso dispositivo, oppure venti dalla stessa rete (sul Wi-Fi del locale tutti i telefoni hanno lo stesso indirizzo), nella sessione aperta e negli ultimi dieci minuti, bloccano ulteriori tentativi. Trenta errori per sessione bloccano ogni nuovo accesso, anche da dispositivi o reti mai visti, finché il personale non preme «Sblocca». Lo staff può sbloccare la sessione; riaprire il tavolo azzera il conteggio.
 
-Lo schermo staff si aggiorna ogni 5 secondi e il tavolo ogni 10. L'aggiornamento si ferma nelle schede nascoste e riparte subito quando tornano visibili o torna la connessione. Prima del refresh viene controllata la connessione con `GET /stato`, senza DB: se manca, la schermata resta visibile con l’ora dell’ultimo aggiornamento e riprende automaticamente. Il browser non legge mai il database: viene usato `router.refresh()`, senza Supabase Realtime o policy di lettura API. `cacheComponents` resta disabilitato. I test SQL usano PGlite con tutte le migrazioni reali e transazioni, senza Docker. PGlite serializza le transazioni e non prova la concorrenza reale: in Postgres le garanzie dipendono dagli indici unici e dai lock.
+Lo schermo staff si aggiorna ogni 5 secondi e il tavolo ogni 10. L'aggiornamento si ferma nelle schede nascoste e riparte subito quando tornano visibili o torna la connessione; un aggiornamento che non risponde entro 30 secondi viene lasciato andare e se ne avvia un altro. Prima del refresh viene controllata la connessione con `GET /stato`, senza DB: se manca, la schermata resta visibile con l’ora dell’ultimo aggiornamento e riprende automaticamente. Il browser non legge mai il database: viene usato `router.refresh()`, senza Supabase Realtime o policy di lettura API. `cacheComponents` resta disabilitato. I test SQL usano PGlite con tutte le migrazioni reali e transazioni, senza Docker. PGlite serializza le transazioni e non prova la concorrenza reale: in Postgres le garanzie dipendono dagli indici unici e dai lock.
 
 ## Ordini da casa
 
@@ -228,7 +239,7 @@ Applica la migrazione `20261016120000_origine_ordini.sql`: aggiunge la colonna `
 
 Gli ordini presi al telefono o su WhatsApp si inseriscono da **Nuovo ordine** nella barra dello schermo staff (`/staff/nuovo-ordine`): stesso menù del sito, poi **Dati del cliente** con asporto o domicilio, orario, nome e telefono, pagamento; l'email è facoltativa e non si chiede il consenso privacy (l'ordine è dettato a voce). L'ordine nasce già **accettato**, va in cucina con il chip «Dalla cassa» e **occupa l'orario** come quelli del sito; per questi ordini non partono email e non valgono i limiti per telefono e per rete. Gli ordini dalla cassa valgono anche con **Apri ordini di oggi** spento (l'interruttore governa solo il sito): la cassa può ordinare anche con gli ordini online chiusi o con allergeni da confermare (l'obbligo vale per la vendita a distanza), ma non in un giorno di chiusura e solo nei turni impostati. Sotto ogni orario c'è l'occupazione (es. `3/4`); gli orari pieni o troppo vicini sono barrati e si sbloccano con **Forza**: il sito vedrà quell'orario pieno.
 
-Le email (ricevuto, accettato, rifiutato, annullato) si accodano nel database e partono subito dopo l'azione; quelle non riuscite si ritentano a ogni aggiornamento dello schermo staff, fino a 5 volte. Le email che non partono nemmeno al quinto tentativo compaiono come avviso in `/admin/domicilio`, con l'ultimo errore e l'ora, perché quei clienti vanno avvisati a mano; il cron notturno scrive inoltre nei log di Vercel una riga con i conteggi delle pulizie e delle email in errore. Servono `RESEND_API_KEY`, `EMAIL_MITTENTE` con un dominio verificato e `APP_URL`; senza, le email restano in coda e l'app funziona lo stesso. Ogni giorno alle 3 il cron di Vercel (`vercel.json`) chiama `/api/cron/anonimizza`, che fa quattro pulizie idempotenti: toglie i dati personali (nome, telefono, email, indirizzo, note) dagli ordini da casa più vecchi di 12 mesi, azzera dopo 30 giorni l'indirizzo di rete del cliente (serve solo al limite di 10 ordini l'ora per rete) e cancella i tentativi di codice al tavolo più vecchi di 30 giorni, con il loro indirizzo IP e l'identificativo del dispositivo, e quelli di login (vedi [Utenti](#utenti)). La risposta riporta i conteggi delle pulizie e delle email in errore.
+Le email (ricevuto, accettato, rifiutato, annullato) si accodano nel database e partono subito dopo l'azione; quelle non riuscite si ritentano a ogni aggiornamento dello schermo staff, fino a 5 volte. Le email che non partono nemmeno al quinto tentativo compaiono come avviso in `/admin/domicilio`, con l'ultimo errore e l'ora, perché quei clienti vanno avvisati a mano; il cron notturno scrive inoltre nei log di Vercel una riga con i conteggi delle pulizie e delle email in errore. Servono `RESEND_API_KEY`, `EMAIL_MITTENTE` con un dominio verificato e `APP_URL`; senza, le email restano in coda e l'app funziona lo stesso. Ogni giorno alle 3 UTC (le 4 o le 5 di Roma) il cron di Vercel (`vercel.json`) chiama `/api/cron/anonimizza`, che fa quattro pulizie idempotenti: toglie i dati personali (nome, telefono, email, indirizzo, note) dagli ordini da casa più vecchi di 12 mesi, azzera dopo 30 giorni l'indirizzo di rete del cliente (serve solo al limite di 10 ordini l'ora per rete) e cancella i tentativi di codice al tavolo più vecchi di 30 giorni, con il loro indirizzo IP e l'identificativo del dispositivo, e quelli di login (vedi [Utenti](#utenti)). La risposta riporta i conteggi delle pulizie e delle email in errore. I biglietti già stampati degli ordini da casa (tabella `stampe`) conservano il nome del cliente oltre i 12 mesi: la pulizia non li tocca ancora (rilievo C3 della code review del 06/11).
 
 ## Allergeni
 

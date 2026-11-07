@@ -10,12 +10,12 @@ Next.js 16 ha API diverse da quelle note (es. `src/proxy.ts` al posto di `middle
 
 ```bash
 npm run dev            # http://localhost:3000 (serve .env.local, vedi .env.example)
-npm test               # vitest run: unit + test SQL su PGlite
+npm test               # vitest run: unit + test SQL su PGlite (npm run test:watch per tenerli in ascolto)
 npx vitest run src/tavoli/repo.test.ts        # un solo file
 npx vitest run -t "crea tavoli"               # un solo test per nome
 npm run typecheck      # tsc --noEmit
 npm run lint
-npm run build
+npm run build          # npm start avvia la build
 npm run e2e            # Playwright sulla build di produzione + DB finto PGlite (porte 3100 e DB in e2e/dati.ts)
 npm run serata         # simulazione lunga di una serata (playwright.serata.config.ts)
 npm run seed           # rigenera supabase/seed.sql da data/menu-sito.json
@@ -32,10 +32,10 @@ La CI (`.github/workflows/ci.yml`) esegue typecheck, lint, test, e2e e serata su
 
 **Strati** (dal più puro al più esterno):
 - `src/domain/` — logica pura senza I/O (carrello, poke, fasce orarie, soldi in centesimi, stati di tavolo/casa, ora di Roma, limiti dei tentativi). Test unitari accanto a ogni file.
-- `src/menu/`, `src/tavoli/`, `src/casa/`, `src/auth/` — repository SQL (`*-repo.ts`, `repo.ts`) e servizi per area: menù, tavoli/ordini al tavolo, ordini da casa (impostazioni, coda email Resend, cron di anonimizzazione).
-- `src/cassa/` (coperto, pagamenti, pre-conto), `src/stampa/` (coda di stampa `stampe`, biglietti e ESC/POS puri, instradamento, API per il ponte), `src/fiscale/` (documento commerciale neutro, driver Epson `fpmate.cgi`, scontrini). Il ponte di stampa del locale è `scripts/ponte-stampa.ts` (solo trasporto, Node senza dipendenze). Un lavoro fiscale senza esito non si riaccoda mai da solo: diventa «incerto».
+- `src/menu/`, `src/tavoli/`, `src/comande/`, `src/casa/`, `src/auth/` — repository SQL (`*-repo.ts`, `repo.ts`) e servizi per area: menù (foto, vini), tavoli/ordini al tavolo (sessioni, coperti, numero d'ordine giornaliero), comande per reparto (tabella `comande`, stato dell'ordine derivato), ordini da casa (impostazioni, coda email Resend, cron di anonimizzazione). `src/lib/supabase/` ha solo i client Supabase per l'auth.
+- `src/cassa/` (prezzo del coperto, pagamenti e divisione del conto, pre-conto), `src/stampa/` (coda di stampa `stampe`, biglietti e ESC/POS puri, instradamento, API per il ponte), `src/fiscale/` (documento commerciale neutro, driver Epson `fpmate.cgi`, scontrini). Il ponte di stampa del locale è `scripts/ponte-stampa.ts` (solo trasporto, Node senza dipendenze). Un lavoro fiscale senza esito non si riaccoda mai da solo: diventa «incerto».
 - `src/app/**/azioni.ts` — Server Actions (`'use server'`): **prima istruzione sempre `await richiediRuolo('admin'|'staff')`** per le aree protette, poi validazione, repository, `revalidatePath`. Gli errori del DB si registrano con `console.error(err.message)` e diventano messaggi in italiano nello stato restituito.
-- `src/app/` — route: `(cliente)` (menù pubblico `/`, `/ordina`, `/ordine/[token]`), `tavolo/[chiave]`, `staff`, `admin`, `accesso`, `api/cron/anonimizza`.
+- `src/app/` — route: `(cliente)` (menù pubblico `/`, `/ordina`, `/ordine/[token]`, `/privacy`), `tavolo/[chiave]`, `staff`, `admin`, `accesso`, `stato` (probe senza DB), `foto/[piatto]/[versione]`, `api/cron/anonimizza`, `api/stampa/{coda,esito}` (per il ponte, con `STAMPA_TOKEN`).
 - `src/componenti/`, `src/ordinare/` — componenti condivisi; `src/ordinare/` contiene carrello, card e composizione poke usati sia al tavolo sia da casa.
 
 **Autorizzazione**: `src/proxy.ts` aggiorna la sessione Supabase su `/admin`, `/staff`, `/accesso`; il controllo vero è `richiediRuolo` (`src/auth/sessione.ts`) in ogni layout e azione protetti. Ruoli in tabella `profili`: `admin` include `staff`. Il login ha un limite proprio (`src/domain/limiti-accesso.ts`, tabella `tentativi_accesso`): il tentativo si registra prima di chiamare Supabase e si toglie se non è una password sbagliata, così le richieste in parallelo si contano. I cookie di sessione sono `httpOnly` (`src/lib/supabase/opzioni-cookie.ts`): nessun codice nel browser può leggerli, quindi `createBrowserClient` non va usato. Gli header di sicurezza stanno in `next.config.ts`; la CSP è solo `Report-Only` e `e2e/accesso.spec.ts` controlla che le pagine vere non la violino.
