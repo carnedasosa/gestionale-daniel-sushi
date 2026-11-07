@@ -18,10 +18,16 @@ export interface LavoroRicevuto { id: string; stampante: NomeStampante; tipo: st
 export type EsitoSenzaId = { ok: true; risposta?: string } | { ok: false; errore: string; incerto?: boolean; risposta?: string }
 export type Esito = EsitoSenzaId & { id: string }
 
-// Tempo massimo di un lavoro. Sul server un lavoro scade dopo SCADENZA_LAVORO_SECONDI: un giro intero con la stampante
-// ferma deve finire molto prima, altrimenti gli ultimi lavori ripartono da capo (lo controlla trasporto.test.ts).
+// Le due code che il ponte chiede al gestionale, ognuna col suo ciclo: il registratore fermo non fa aspettare le comande.
+export const CODE_PONTE = ['termiche','fiscale'] as const
+export type CodaPonte = typeof CODE_PONTE[number]
+
+// Tempi massimi. Sul server un lavoro scade dopo SCADENZA_LAVORO_SECONDI: un giro con le stampanti ferme e il gestionale lento
+// deve finire molto prima, altrimenti gli ultimi lavori ripartono da capo (i conti stanno in trasporto.test.ts).
 export const TIMEOUT_TCP_MS = 3_000
 export const TIMEOUT_FPMATE_MS = 30_000
+export const TIMEOUT_CODA_MS = 10_000
+export const TIMEOUT_ESITO_MS = 5_000
 
 /**
  * Byte ESC/POS alla porta 9100: riuscito appena sono partiti tutti (`finish`). Non si aspetta la chiusura: una termica può
@@ -88,11 +94,14 @@ export async function eseguiLavoro(l: LavoroRicevuto, c: Configurazione, recuper
 /**
  * Un giro: chiede i lavori e riporta ogni esito appena c'è. Una coda per stampante: in ordine sulla stessa stampante,
  * in parallelo fra stampanti diverse, così il banco spento non fa aspettare la cucina. Se il gestionale non prende un esito
- * quella coda si ferma, le altre finiscono, e l'errore esce a giro finito. Restituisce quanti lavori ha preso.
+ * quella coda si ferma, le altre finiscono, e gli errori escono a giro finito. `coda`: solo termiche o solo scontrini;
+ * senza, tutti i lavori. Restituisce quanti lavori ha preso.
  */
-export async function giro(c: Configurazione, recupera: typeof fetch = fetch, timeoutTcpMs = TIMEOUT_TCP_MS): Promise<number> {
+export async function giro(c: Configurazione, { coda,recupera = fetch,timeoutTcpMs = TIMEOUT_TCP_MS }: { coda?: CodaPonte; recupera?: typeof fetch; timeoutTcpMs?: number } = {}): Promise<number> {
   const intestazioni = { Authorization: `Bearer ${c.token}` }
-  const r = await recupera(new URL('/api/stampa/coda',c.server),{ headers: intestazioni,signal: AbortSignal.timeout(15_000) })
+  const indirizzo = new URL('/api/stampa/coda',c.server)
+  if (coda) indirizzo.searchParams.set('coda',coda)
+  const r = await recupera(indirizzo,{ headers: intestazioni,signal: AbortSignal.timeout(TIMEOUT_CODA_MS) })
   if (!r.ok) throw new Error(`gestionale: HTTP ${r.status} su /api/stampa/coda`)
   const { lavori } = await r.json() as { lavori: LavoroRicevuto[] }
   const code = new Map<NomeStampante,LavoroRicevuto[]>()
@@ -100,11 +109,13 @@ export async function giro(c: Configurazione, recupera: typeof fetch = fetch, ti
   const finite = await Promise.allSettled([...code.values()].map(async coda => {
     for (const l of coda) {
       const esito = await eseguiLavoro(l,c,recupera,timeoutTcpMs)
-      const e = await recupera(new URL('/api/stampa/esito',c.server),{ method: 'POST',headers: { ...intestazioni,'Content-Type': 'application/json' },body: JSON.stringify(esito),signal: AbortSignal.timeout(15_000) })
+      const e = await recupera(new URL('/api/stampa/esito',c.server),{ method: 'POST',headers: { ...intestazioni,'Content-Type': 'application/json' },body: JSON.stringify(esito),signal: AbortSignal.timeout(TIMEOUT_ESITO_MS) })
       if (!e.ok) throw new Error(`gestionale: HTTP ${e.status} su /api/stampa/esito`)
     }
   }))
-  for (const f of finite) if (f.status === 'rejected') throw f.reason
+  const errori = finite.flatMap(f => f.status === 'rejected' ? [f.reason as Error] : [])
+  if (errori.length === 1) throw errori[0]
+  if (errori.length) throw new AggregateError(errori,errori.map(e => e.message).join(' · '))
   return lavori.length
 }
 

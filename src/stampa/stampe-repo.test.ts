@@ -8,6 +8,7 @@ import { accettaOrdine, annullaOrdineCasa, creaOrdineCasa } from '@/casa/ordini-
 import { daPortare, portaComanda } from '@/comande/comande-repo'
 import { salvaImpostazioniCassa } from '@/cassa/impostazioni-repo'
 import { archiviaLavoro, prendiLavori, registraEsito, riprovaLavoro, ristampaOrdine, statoCoda, lavoriInErrore } from './stampe-repo'
+import { LAVORI_PER_STAMPANTE } from './instradamento'
 import { testoSemplice } from './escpos'
 import type { DocumentoStampa } from './documento'
 import { ADESSO, ordineAsporto, preparaCasa } from '../../tests/db/casa-pronta'
@@ -30,7 +31,7 @@ const ordina = async (q: Partial<Record<'banco' | 'cucina' | 'sala',number>>) =>
 }
 const lavori = (db: Db) => db.query<{ id: string; stampante: string; tipo: string; stato: string; documento: DocumentoStampa; tentativi: number }>('select id,stampante,tipo,stato,documento,tentativi from stampe order by creata_il,stampante')
 const testi = async (db: Db) => (await lavori(db)).map(l => testoSemplice(l.documento))
-const stampaTutto = async (db: Db) => { for (const l of await prendiLavori(db)) await registraEsito(db,l.id,{ ok: true }) }
+const stampaTutto = async (db: Db) => { for (let presi = await prendiLavori(db); presi.length; presi = await prendiLavori(db)) for (const l of presi) await registraEsito(db,l.id,{ ok: true }) }
 const statoComande = async (db: Db, ordineId: string) => db.query<{ reparto: string; stato: string; stampata: boolean; portata: boolean }>(
   'select reparto,stato,stampata_il is not null as stampata,portata_il is not null as portata from comande where ordine_id=$1 order by reparto',[ordineId])
 
@@ -89,16 +90,30 @@ describe('il ponte prende e riporta', () => {
     expect((await prendiLavori(db)).map(l => l.id).sort()).toEqual(presi.map(l => l.id).sort())
     expect((await lavori(db)).map(l => l.tentativi)).toEqual([2,2])
   })
-  it('un giro prende al più 10 lavori; uno scontrino in attesa non resta dietro a una coda di comande', async () => {
+  it('un giro ha un tetto per stampante: una fila al banco non fa aspettare né la cucina né lo scontrino', async () => {
     const { db } = ambiente
-    await carta(db,{ banco: true })
-    for (let i = 0; i < 11; i++) await ordina({ banco: 1 })
+    await carta(db)
+    for (let i = 0; i < 5; i++) await ordina({ banco: 1 })
+    await ordina({ cucina: 1 })
     const pagamento = (await db.query<{ id: string }>(`insert into pagamenti (sessione_id,importo_cent,metodo,modo,descrizione,utente_id) values ($1,100,'carta','importo','Importo libero',$2) returning id`,[sessione,UTENTE]))[0].id
     await db.query(`insert into stampe (stampante,tipo,documento,pagamento_id) values ('fiscale','scontrino','{"righe":[]}',$1)`,[pagamento])
     const presi = await prendiLavori(db)
-    expect(presi).toHaveLength(10)
-    expect(presi.filter(l => l.stampante === 'fiscale')).toHaveLength(1)
-    expect(presi.filter(l => l.stampante === 'banco')).toHaveLength(9)
+    expect(presi.map(l => l.stampante).sort()).toEqual([...Array(LAVORI_PER_STAMPANTE).fill('banco'),'cucina','fiscale'])
+  })
+  it('le code si chiedono separate: le comande non escono con lo scontrino e viceversa, e una scadenza vale per tutte', async () => {
+    const { db } = ambiente
+    await carta(db)
+    await ordina({ banco: 1,cucina: 1 })
+    const pagamento = (await db.query<{ id: string }>(`insert into pagamenti (sessione_id,importo_cent,metodo,modo,descrizione,utente_id) values ($1,100,'carta','importo','Importo libero',$2) returning id`,[sessione,UTENTE]))[0].id
+    await db.query(`insert into stampe (stampante,tipo,documento,pagamento_id) values ('fiscale','scontrino','{"righe":[]}',$1)`,[pagamento])
+    expect((await prendiLavori(db,'fiscale')).map(l => l.stampante)).toEqual(['fiscale'])
+    expect(await prendiLavori(db,'fiscale')).toEqual([])
+    const termiche = await prendiLavori(db,'termiche')
+    expect(termiche.map(l => l.stampante).sort()).toEqual(['banco','cucina'])
+    expect(await prendiLavori(db,'termiche')).toEqual([])
+    await db.query(`update stampe set presa_il=now()-interval '2 minutes'`)
+    expect((await prendiLavori(db,'fiscale'))).toEqual([])
+    expect((await lavori(db)).filter(l => l.stampante !== 'fiscale').map(l => l.stato)).toEqual(['in_coda','in_coda'])
   })
   it('ponte che prende e non riporta mai l’esito: dopo 5 tentativi errore, non si riprende più e si può riprovare', async () => {
     const { db } = ambiente

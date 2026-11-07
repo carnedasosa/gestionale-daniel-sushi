@@ -8,7 +8,7 @@ import { numeroGiorno } from '@/tavoli/numero-giorno'
 import { idValido } from '@/tavoli/validazione'
 import { leggiImpostazioniCassa } from '@/cassa/impostazioni-repo'
 import { bigliettoAnnullo, bigliettoComanda, type DatiComanda } from './biglietti'
-import { esitoScadenza, LAVORI_FISCALI_PER_GIRO, LAVORI_PER_GIRO, SCADENZA_LAVORO_SECONDI, stampanteDelReparto, TENTATIVI_MASSIMI, type StatoCoda, type Stampante, type TipoLavoro } from './instradamento'
+import { esitoScadenza, LAVORI_FISCALI_PER_GIRO, LAVORI_PER_STAMPANTE, SCADENZA_LAVORO_SECONDI, STAMPANTI, stampanteDelReparto, TENTATIVI_MASSIMI, type CodaStampa, type StatoCoda, type Stampante, type TipoLavoro } from './instradamento'
 import type { DocumentoStampa } from './documento'
 
 // Ordine dei lock, come nel resto del gestionale: sessione → ordine → comande → pagamenti → stampe.
@@ -113,20 +113,24 @@ async function scadiLavori(tx: Db): Promise<void> {
 }
 
 /**
- * Il ponte chiede lavoro: segnale di vita (al più ogni 10 s), poi i lavori scaduti (vedi scadiLavori) e se ne prendono
- * fino a `quanti`, i più vecchi prima, con al più LAVORI_FISCALI_PER_GIRO scontrini. `skip locked`: due ponti accesi non
- * stampano due volte.
+ * Il ponte chiede lavoro: segnale di vita (al più ogni 10 s), poi i lavori scaduti (vedi scadiLavori) e se ne prendono,
+ * i più vecchi prima, al più LAVORI_PER_STAMPANTE per ogni termica e LAVORI_FISCALI_PER_GIRO scontrini, della sola `coda`
+ * chiesta. `skip locked`: due ponti accesi non stampano due volte.
  */
-export async function prendiLavori(db: Db, quanti = LAVORI_PER_GIRO): Promise<Lavoro[]> {
+export async function prendiLavori(db: Db, coda?: CodaStampa): Promise<Lavoro[]> {
   return db.transazione(async tx => {
     await tx.query(`update ponte_stampa set visto_il=clock_timestamp() where id=1 and (visto_il is null or visto_il < clock_timestamp() - interval '10 seconds')`)
     await scadiLavori(tx)
-    const scegli = (quali: string, limite: number) => tx.query<{ id: string }>(`select id from stampe where stato='in_coda' and ${quali} order by creata_il,id for update skip locked limit $1`,[limite])
-    const fiscali = await scegli(`stampante='fiscale'`,Math.min(quanti,LAVORI_FISCALI_PER_GIRO))
-    const altri = await scegli(`stampante<>'fiscale'`,quanti - fiscali.length)
+    const scelti: string[] = []
+    for (const stampante of STAMPANTI) {
+      const fiscale = stampante === 'fiscale'
+      if (coda && (coda === 'fiscale') !== fiscale) continue
+      const righe = await tx.query<{ id: string }>(`select id from stampe where stato='in_coda' and stampante=$1 order by creata_il,id for update skip locked limit $2`,[stampante,fiscale ? LAVORI_FISCALI_PER_GIRO : LAVORI_PER_STAMPANTE])
+      scelti.push(...righe.map(l => l.id))
+    }
     const presi = await tx.query<Lavoro>(`update stampe set stato='in_stampa',presa_il=clock_timestamp(),tentativi=tentativi+1
       where id=any($1::uuid[])
-      returning id,stampante,tipo,documento,creata_il as "creataIl",pagamento_id as "pagamentoId"`,[[...fiscali,...altri].map(l => l.id)])
+      returning id,stampante,tipo,documento,creata_il as "creataIl",pagamento_id as "pagamentoId"`,[scelti])
     return presi.sort((a,b) => new Date(a.creataIl).getTime() - new Date(b.creataIl).getTime())
   })
 }

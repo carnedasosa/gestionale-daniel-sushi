@@ -24,11 +24,16 @@ export function stampanteDelLavoro(tipo: Exclude<TipoLavoro,'comanda' | 'annullo
 
 export const SCADENZA_LAVORO_SECONDI = 60
 /**
- * Quanti lavori prende il ponte a ogni giro. Sulla stessa stampante vanno in fila, quindi `quanti × timeout` del ponte deve
- * stare sotto la scadenza: con 3 s per le termiche ne bastano 10; il registratore può metterci 30 s, quindi uno alla volta.
+ * Quanti lavori prende il ponte a ogni giro, per stampante. Sulla stessa stampante vanno in fila, ognuno col suo esito da
+ * riportare: `quanti × (timeout + esito)` deve stare ben sotto la scadenza (i conti stanno in trasporto.test.ts). Fra stampanti
+ * diverse vanno in parallelo. Il registratore può metterci 30 s, quindi uno alla volta.
  */
-export const LAVORI_PER_GIRO = 10
+export const LAVORI_PER_STAMPANTE = 2
 export const LAVORI_FISCALI_PER_GIRO = 1
+/** Il ponte chiede le due code separatamente: il registratore fermo non deve far aspettare le comande. Senza coda, tutto insieme. */
+export const CODE_STAMPA = ['termiche','fiscale'] as const
+export type CodaStampa = typeof CODE_STAMPA[number]
+export function codaValida(c: unknown): c is CodaStampa { return (CODE_STAMPA as readonly unknown[]).includes(c) }
 export const TENTATIVI_MASSIMI = 5
 /**
  * Un lavoro rimasto «in stampa» oltre il limite: quelli normali tornano in coda (al più una ristampa doppia) finché non
