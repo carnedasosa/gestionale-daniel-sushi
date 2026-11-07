@@ -120,9 +120,9 @@ Scartati: stampa dal browser con `window.print()` (una sola stampante per dispos
 | Prezzo del coperto | 0 € (si contano i coperti, non si addebitano) | admin → Cassa e stampe |
 | Coperti all'apertura | facoltativi | — |
 | Comande delle bevande | non stampate (le prende la sala) | admin → Cassa e stampe |
-| Reparto fiscale | 1 per tutto (somministrazione 10%) | admin → menù, categoria |
+| Reparto fiscale | 1 per tutto (somministrazione 10%) | admin → Cassa e stampe (realizzato lì, non nella categoria del menù) |
 | Vini ordinabili da casa | sì, come le birre | — |
-| Chiusura con residuo da pagare | permessa, segnalata | — |
+| Chiusura con residuo da pagare | permessa; il residuo si legge nella sezione Pagamenti del conto, la chiusura in sé non avvisa | — |
 
 ## 6. Cosa serve dal locale (domande per Daniele)
 
@@ -136,7 +136,7 @@ Scartati: stampa dal browser con `window.print()` (una sola stampante per dispos
 
 ## 7. Migrazioni e rilascio
 
-Nuove migrazioni (tutte additive, i dati esistenti restano validi): coperti e impostazioni cassa, pagamenti, coda di stampa, reparti fiscali e stato fiscale, foto, vini. **Vanno autorizzate e applicate al DB reale prima del merge**: `main` va in produzione da solo. Variabile nuova su Vercel: `STAMPA_TOKEN` (la inserisce l'utente).
+Nuove migrazioni (sette, tutte additive, i dati esistenti restano validi): coperti e impostazioni cassa, pagamenti, foto, vini, coda di stampa, pre-conto, reparti fiscali e stato fiscale. **Vanno autorizzate e applicate al DB reale prima del merge**: `main` va in produzione da solo. Variabile nuova su Vercel: `STAMPA_TOKEN` (la inserisce l'utente).
 
 ## 8. Piano dei commit
 

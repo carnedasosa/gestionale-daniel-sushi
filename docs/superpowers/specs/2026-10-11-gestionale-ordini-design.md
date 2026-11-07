@@ -53,7 +53,7 @@ Più telefoni allo stesso tavolo usano lo stesso codice: ognuno invia i suoi ord
 
 Se gli ordini online sono chiusi (fuori orario, interruttore spento, nessuna fascia libera oggi) il menù resta consultabile e il checkout spiega perché non si può ordinare.
 
-### 4.2 Cliente al tavolo — `/tavolo/[tavolo]`
+### 4.2 Cliente al tavolo — `/tavolo/[tavolo]` (realizzata come `/tavolo/[chiave]`, con la chiave casuale del QR al posto dello slug: correzioni della tappa 2)
 1. Scansiona il QR del tavolo → inserisce il **codice di 4 cifre**. Codice giusto → il telefono resta collegato a quella sessione del tavolo finché è aperta.
 2. Stesso menù (con allergeni), carrello con note e poke.
 3. **Invia ordine** → va diretto in cucina (nessuna accettazione: il codice è già il controllo).
@@ -134,5 +134,7 @@ Non bloccano lo sviluppo (si usano valori provvisori), ma vanno raccolti prima d
 - Dominio su cui pubblicare l'app
 
 ## 10. Fuori dalla v1
+
+> Aggiornamento del 06/11/2026: la stampante di comande è stata realizzata il 29/10 (coda di stampa e ponte, spec `2026-10-29-cassa-fiscale-e-stampe-design.md`), insieme a pagamenti in cassa e scontrino dal registratore telematico (§6 «Fiscale» non vale più). La tappa 4 (messa online), il locale (reparti, cassa, cameriere) e la cassa fiscale sono tappe aggiunte dopo il §7: l'elenco aggiornato è nel README.
 
 Pagamento online · SMS/WhatsApp · stampante di comande · ordini per i giorni successivi · account cliente e storico personale · «chiama il cameriere»/«chiedi il conto» dal tavolo · statistiche avanzate · migrazione del sito statico nell'app (il sito potrà leggere il menù dall'app in seguito, per avere una sola fonte).

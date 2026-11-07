@@ -236,7 +236,7 @@ Tutte le nuove tabelle con RLS attiva, privilegi revocati ad `anon` e `authentic
 
 ## 8. Fuori da questa tappa
 
-Storico ordini con filtri in admin · cambio password staff dall'admin · annullamento da parte del cliente · ordini per i giorni successivi · pagamento online · SMS/WhatsApp · turni a cavallo della mezzanotte · TLS verso il pooler (tema separato già annotato).
+Storico ordini con filtri in admin · cambio password staff dall'admin · annullamento da parte del cliente · ordini per i giorni successivi · pagamento online · SMS/WhatsApp · turni a cavallo della mezzanotte · TLS verso il pooler (tema separato già annotato; realizzato nella tappa 4 del 13/10, `src/server/tls-db.ts`).
 
 ## 9. Da chiedere a Daniel prima del go-live
 

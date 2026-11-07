@@ -155,4 +155,4 @@ Parte quando il dominio è registrato. Il suo piano si scrive allora, perché di
 
 ## 8. Fuori da questa tappa
 
-Monitoraggio e avvisi (oltre ai log di Vercel) · backup aggiuntivi oltre a quelli giornalieri di Supabase · «Enforce SSL» lato Supabase · test end-to-end in CI su GitHub · statistiche · quanto già escluso dalla v1 (§10 della spec generale).
+Monitoraggio e avvisi (oltre ai log di Vercel) · backup aggiuntivi oltre a quelli giornalieri di Supabase · «Enforce SSL» lato Supabase · test end-to-end in CI su GitHub (realizzati il 14/10, `.github/workflows/ci.yml`, con la serata simulata) · statistiche · quanto già escluso dalla v1 (§10 della spec generale).

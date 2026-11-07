@@ -201,7 +201,7 @@ Ogni passo lascia l'app funzionante e tutti i test verdi.
 
 ## 11. Fuori da questa tappa
 
-- Funzioni nuove oltre alle cinque del §6 (per esempio statistiche, stampa automatica delle comande, ricerca nel menù dei clienti).
+- Funzioni nuove oltre alle cinque del §6 (per esempio statistiche, stampa automatica delle comande, ricerca nel menù dei clienti). La stampa delle comande è poi arrivata il 29/10 (spec `2026-10-29-cassa-fiscale-e-stampe-design.md`).
 - Un'ora salvata per ogni stato dell'ordine (servirebbe una migrazione).
 - Un tema scuro forzato per lo staff indipendente dal dispositivo.
 - La fase B della tappa 4 (dominio, email, QR definitivi): resta come pianificata.
