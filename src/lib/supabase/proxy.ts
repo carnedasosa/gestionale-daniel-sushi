@@ -1,11 +1,13 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { ruoloRichiesto } from '@/auth/regole'
+import { opzioniCookieSessione } from './opzioni-cookie'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    cookieOptions: opzioniCookieSessione(),
     cookies: {
       getAll() {
         return request.cookies.getAll()

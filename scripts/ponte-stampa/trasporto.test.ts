@@ -82,4 +82,10 @@ describe('modalità prova e giro completo', () => {
     expect(() => leggiConfigurazione(testo,{})).toThrow('token')
     expect(() => leggiConfigurazione(JSON.stringify({ server: 'ftp://g',token: 'x'.repeat(32),stampanti: {} }),{})).toThrow('server')
   })
+  it('configurazione: http:// solo verso lo stesso PC, il token non viaggia in chiaro', () => {
+    const conServer = (server: string) => JSON.stringify({ server,token: 'x'.repeat(32),stampanti: {} })
+    for (const s of ['http://g.example','http://192.168.1.10:3000','http://localhost.g.example','http://127.0.0.1@g.example']) expect(() => leggiConfigurazione(conServer(s),{})).toThrow('https://')
+    for (const s of ['http://localhost:3000','http://127.0.0.1:3100','https://g.example']) expect(leggiConfigurazione(conServer(s),{}).server).toBe(s)
+    for (const s of ['http://','https://']) expect(() => leggiConfigurazione(conServer(s),{})).toThrow('non è un indirizzo valido')
+  })
 })
