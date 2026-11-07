@@ -16,6 +16,8 @@ beforeEach(() => {
   vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {})
   m.prenota.mockResolvedValue({ id: '7',errori: { email: 0,rete: 0 } })
   m.signIn.mockResolvedValue({ data: { user: null },error: { status: 400,code: 'invalid_credentials' } })
+  m.annulla.mockResolvedValue(undefined)
+  m.signOut.mockResolvedValue({ error: null })
   m.redirect.mockImplementation((url: string) => { throw new Error(`NEXT_REDIRECT ${url}`) })
 })
 
@@ -56,8 +58,46 @@ it('credenziali giuste: il tentativo non conta, poi legge il ruolo e reindirizza
   m.signIn.mockResolvedValue({ data: { user: { id: ID } },error: null })
   m.leggiRuolo.mockResolvedValue('staff')
   await expect(entra({ errore: null },modulo('a@b.it','giusta','/staff?vista=conti'))).rejects.toThrow('NEXT_REDIRECT /staff?vista=conti')
-  prima(m.prenota,m.signIn); prima(m.signIn,m.annulla); prima(m.annulla,m.leggiRuolo)
+  prima(m.prenota,m.signIn); prima(m.signIn,m.leggiRuolo); prima(m.leggiRuolo,m.annulla)
+  // Il redirect lancia un'eccezione: se finisse nel try, il login riuscito diventerebbe un errore.
+  prima(m.annulla,m.redirect)
+  expect(m.annulla).toHaveBeenCalledWith({},'7')
   expect(m.redirect).toHaveBeenCalledTimes(1)
+  expect(m.signOut).not.toHaveBeenCalled()
+})
+
+it('credenziali giuste ma ruolo illeggibile: non lascia dentro chi vede «non riuscito»', async () => {
+  m.signIn.mockResolvedValue({ data: { user: { id: ID } },error: null })
+  m.leggiRuolo.mockRejectedValue(new Error('database giù'))
+  expect((await entra({ errore: null },modulo())).errore).toContain('Accesso non riuscito')
+  expect(m.signOut).toHaveBeenCalledWith({ scope: 'local' })
+  expect(m.annulla).toHaveBeenCalledWith({},'7')
+  expect(console.error).toHaveBeenCalledWith('database giù')
+  expect(m.redirect).not.toHaveBeenCalled()
+})
+
+it('anche l’uscita fallisce: risponde comunque «non riuscito» e lo lascia nei log', async () => {
+  m.signIn.mockResolvedValue({ data: { user: { id: ID } },error: null })
+  m.leggiRuolo.mockRejectedValue(new Error('database giù'))
+  m.signOut.mockRejectedValue(new Error('supabase giù'))
+  expect((await entra({ errore: null },modulo())).errore).toContain('Accesso non riuscito')
+  expect(console.error).toHaveBeenCalledWith('supabase giù')
+})
+
+it('signInWithPassword lancia invece di restituire l’errore: non conta come password sbagliata', async () => {
+  m.signIn.mockRejectedValue(new Error('rete'))
+  expect((await entra({ errore: null },modulo())).errore).toContain('Accesso non riuscito')
+  expect(m.annulla).toHaveBeenCalledWith({},'7')
+  expect(m.signOut).not.toHaveBeenCalled()
+})
+
+it('l’annullo non riesce dopo un login buono: entra lo stesso, resta un errore in più nel conteggio', async () => {
+  m.signIn.mockResolvedValue({ data: { user: { id: ID } },error: null })
+  m.leggiRuolo.mockResolvedValue('staff')
+  m.annulla.mockRejectedValue(new Error('annullo fallito'))
+  await expect(entra({ errore: null },modulo('a@b.it','giusta','/staff'))).rejects.toThrow('NEXT_REDIRECT /staff')
+  expect(m.signOut).not.toHaveBeenCalled()
+  expect(console.error).toHaveBeenCalledWith('annullo fallito')
 })
 
 it('account senza ruolo: password giusta quindi non è un errore, ma esce subito', async () => {

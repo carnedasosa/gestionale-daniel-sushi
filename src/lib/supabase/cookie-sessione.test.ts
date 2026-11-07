@@ -2,7 +2,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 // Niente mock di @supabase/ssr: gira la libreria vera e si finge solo la rete, così si controllano i cookie che escono davvero.
 const m = vi.hoisted(() => ({ salvati: [] as { name: string; value: string; options: Record<string,unknown> }[] }))
-vi.mock('next/headers', () => ({ cookies: async () => ({ getAll: () => [], set: (name: string, value: string, options: Record<string,unknown>) => { m.salvati.push({ name,value,options }) } }) }))
+// Come in una Server Action, getAll vede subito ciò che set ha appena scritto.
+vi.mock('next/headers', () => ({ cookies: async () => ({
+  getAll: () => [...new Map(m.salvati.map(c => [c.name,c])).values()].filter(c => c.options.maxAge !== 0).map(({ name,value }) => ({ name,value })),
+  set: (name: string, value: string, options: Record<string,unknown>) => { m.salvati.push({ name,value,options }) },
+}) }))
 import { createClient } from './server'
 import { updateSession } from './proxy'
 
@@ -41,6 +45,16 @@ it('login: la sessione finisce in un cookie httpOnly e lax, secure solo in produ
     expect(cookie?.options).toMatchObject({ httpOnly: true,secure,sameSite: 'lax',path: '/' })
   }
   expect(chiamate[0]).toContain('/auth/v1/token?grant_type=password')
+})
+
+it('login seguito da uscita locale sullo stesso client: il cookie appena scritto viene cancellato', async () => {
+  fingiRete(url => url.pathname === '/auth/v1/logout' ? new Response(null,{ status: 204 }) : json(sessione(ora() + 3600,'r1')))
+  const supabase = await createClient()
+  await supabase.auth.signInWithPassword({ email: utente.email,password: 'segreta' })
+  expect(m.salvati.filter(c => c.name === NOME).at(-1)?.options.maxAge).toBeGreaterThan(0)
+  const { error } = await supabase.auth.signOut({ scope: 'local' })
+  expect(error).toBeNull()
+  expect(m.salvati.filter(c => c.name === NOME).at(-1)).toMatchObject({ value: '',options: { maxAge: 0 } })
 })
 
 function richiesta(percorso: string, cookie?: string) {
