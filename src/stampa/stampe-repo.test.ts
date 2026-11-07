@@ -5,7 +5,7 @@ import { creaDbDiTest } from '../../tests/db/pglite'
 import { apriSessione, chiudiSessione, creaTavolo } from '@/tavoli/repo'
 import { annullaOrdine, annullaRiga, annullaVoceConto, contoSessione, creaOrdineTavolo, ordiniDellaSessione } from '@/tavoli/ordini-repo'
 import { accettaOrdine, annullaOrdineCasa, creaOrdineCasa } from '@/casa/ordini-casa-repo'
-import { daPortare, portaComanda } from '@/comande/comande-repo'
+import { avanzaComanda, comandeAttive, daPortare, portaComanda } from '@/comande/comande-repo'
 import { salvaImpostazioniCassa } from '@/cassa/impostazioni-repo'
 import { archiviaLavoro, prendiLavori, registraEsito, riprovaLavoro, ristampaOrdine, statoCoda, lavoriInErrore } from './stampe-repo'
 import { LAVORI_PER_STAMPANTE } from './instradamento'
@@ -89,6 +89,20 @@ describe('il ponte prende e riporta', () => {
     await db.query(`update stampe set presa_il=now()-interval '2 minutes'`)
     expect((await prendiLavori(db)).map(l => l.id).sort()).toEqual(presi.map(l => l.id).sort())
     expect((await lavori(db)).map(l => l.tentativi)).toEqual([2,2])
+  })
+  it('comanda ignorata: resta da preparare e fuori da «Da portare», si porta avanti dal reparto, e la chiusura del tavolo la segnala', async () => {
+    const { db } = ambiente
+    await carta(db,{ banco: true })
+    await ordina({ banco: 1 })
+    for (let i = 0; i < 5; i++) { const [l] = await prendiLavori(db); await registraEsito(db,l.id,{ ok: false,errore: 'carta finita' }) }
+    const [l] = await lavori(db)
+    expect(await archiviaLavoro(db,l.id)).toBe(true)
+    expect(await daPortare(db)).toEqual([])
+    const [c] = await comandeAttive(db,'banco')
+    expect(c.stato).toBe('da_preparare')
+    expect(await portaComanda(db,c.id)).toBeNull()
+    expect(await chiudiSessione(db,sessione)).toMatchObject({ ok: false,motivo: 'ordini_in_cucina' })
+    expect(await avanzaComanda(db,c.id,'da_preparare')).toBe(true)
   })
   it('un giro ha un tetto per stampante: una fila al banco non fa aspettare né la cucina né lo scontrino', async () => {
     const { db } = ambiente
