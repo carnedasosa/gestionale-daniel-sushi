@@ -14,6 +14,7 @@ import { ChipComande } from './DaPortare'
 import { annullaRigaStaff } from './azioni'
 import { ristampaComande } from './azioni-stampa'
 import { incassa } from './azioni-pagamenti'
+import { creaInvioIncasso } from './invio-incasso'
 import { accettaOrdineStaff, annullaOrdineCasaStaff, apriOrdiniOnline, avanzaOrdineCasaStaff, chiudiOrdiniOnline, rifiutaOrdineStaff } from './azioni-casa'
 import type { Esegui } from './useEsegui'
 export interface OrdiniOnline { accesi: boolean; asporto: string | null; domicilio: string | null }
@@ -59,6 +60,19 @@ const VERBO: Record<string,string> = { 'In preparazione': 'Inizia a preparare',P
 export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare,comande,ristampa = false }: { ordine: OrdineCasaClient; ora: string; inCorso: boolean; esegui: Esegui; daAccettare: boolean; comande?: StatoReparto[]; ristampa?: boolean }) {
   const lunga = daAccettare && attesaLunga(o.creatoIl,new Date(ora))
   const avanza = azioneAvanzaCasa(o.tipo,o.stato)
+  // Stessa regola del pannello «Incassa»: dopo un errore di rete si riprova con la stessa chiave.
+  const [invio] = useState(() => creaInvioIncasso())
+  const incassaEScontrino = () => {
+    const chiave = invio.parti()
+    if (!chiave) return
+    esegui(async () => {
+      try {
+        const e = await incassa({ ordineId: o.id },{ modo: 'tutto' },o.pagamento,chiave,true)
+        invio.finito(e.ok || !!e.chiaveUsata)
+        return e
+      } catch (err) { invio.finito(false); throw err }
+    })
+  }
   const minuti = Math.max(0,Math.floor((new Date(ora).getTime() - new Date(o.creatoIl).getTime()) / 60000))
   const titolo = `${o.tipo === 'domicilio' ? 'Domicilio' : 'Asporto'} ${oraRoma(new Date(o.fascia))} · n. ${o.numeroGiorno}`
   return <article className={`b-comanda${daAccettare ? ' b-comanda--accettare' : ''}${lunga ? ' b-comanda--ritardo' : ''}${!daAccettare && o.stato === 'in_preparazione' ? ' b-comanda--preparazione' : ''}${['pronto','in_consegna'].includes(o.stato) ? ' b-comanda--pronto' : ''}`}>
@@ -83,9 +97,9 @@ export function CardOrdineCasa({ ordine: o,ora,inCorso,esegui,daAccettare,comand
       {avanza && <button type="button" className="b-btn b-btn--principale b-btn--staff" disabled={inCorso} onClick={() => esegui(() => avanzaOrdineCasaStaff(o.id,o.stato))}>{VERBO[avanza] ?? avanza}</button>}
       <AltreAzioni titolo={`Altre azioni · ${titolo}`}>{chiudi => <>
         {ristampa && <button type="button" className="b-btn b-btn--secondario" disabled={inCorso} onClick={() => { chiudi(); esegui(() => ristampaComande(o.id)) }}>Ristampa comande</button>}
-        {/* Prima del ritiro o della partenza: lo scontrino va nel sacchetto. Il residuo è già zero al secondo tentativo: il server rifiuta, anche con una chiave nuova. */}
+        {/* Prima del ritiro o della partenza: lo scontrino va nel sacchetto. */}
         <ConfermaAzione stile="secondario" inCorso={inCorso} domanda={`Incassare ${formatEuro(o.totaleCent)} (${o.pagamento === 'carta' ? 'carta' : 'contanti'}) ed emettere lo scontrino dell’ordine n. ${o.numeroGiorno}?`}
-          conferma={() => { chiudi(); esegui(() => incassa({ ordineId: o.id },{ modo: 'tutto' },o.pagamento,crypto.randomUUID(),true)) }}>Incassa e scontrino</ConfermaAzione>
+          conferma={() => { chiudi(); incassaEScontrino() }}>Incassa e scontrino</ConfermaAzione>
         {o.righe.filter(r => !r.annullata).map(r => <ConfermaAzione key={r.id} inCorso={inCorso} domanda={`Annullare ${r.nome}?`} conferma={() => { chiudi(); esegui(() => annullaRigaStaff(r.id)) }}>Annulla {r.nome}</ConfermaAzione>)}
         <ConfermaAzione inCorso={inCorso} domanda={`Annullare l’ordine n. ${o.numeroGiorno}? Il cliente riceverà un’email.`} conferma={() => { chiudi(); esegui(() => annullaOrdineCasaStaff(o.id)) }}>Annulla tutto l’ordine</ConfermaAzione>
       </>}</AltreAzioni>
