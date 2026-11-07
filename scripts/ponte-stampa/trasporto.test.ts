@@ -28,7 +28,7 @@ const lavoro = (extra: Partial<LavoroRicevuto> = {}): LavoroRicevuto => ({ id: '
 const config = (extra: Partial<Configurazione> = {}): Configurazione => ({ server: 'https://gestionale.example',token: 't'.repeat(40),stampanti: {},...extra })
 
 describe('stampanti termiche', () => {
-  it('manda i byte alla porta 9100 e aspetta la chiusura', async () => {
+  it('manda i byte alla porta 9100', async () => {
     const s = await stampanteFinta()
     await inviaTcp('127.0.0.1',s.porta,Buffer.from([0x1b,0x40,0x41]))
     await new Promise(r => setTimeout(r,20))
@@ -39,11 +39,13 @@ describe('stampanti termiche', () => {
     await expect(inviaTcp('127.0.0.1',s.porta,Buffer.from('x'))).rejects.toThrow()
     expect(await eseguiLavoro(lavoro(),config({ stampanti: { banco: { host: '127.0.0.1',porta: s.porta } } }))).toMatchObject({ id: 'l1',ok: false })
   })
-  it('stampante che prende i byte e non chiude: scade il tempo e l’esito è «non riuscita» (F2: da provare sulle stampanti vere)', async () => {
-    const s = await stampanteMuta()
-    await expect(inviaTcp('127.0.0.1',s.porta,Buffer.from('x'),50)).rejects.toThrow('non risponde')
+  it('stampante che prende i byte e non chiude: riuscito appena sono partiti, senza aspettare che scada il tempo', async () => {
+    const s = await stampanteMuta(), partenza = Date.now()
+    await inviaTcp('127.0.0.1',s.porta,Buffer.from('x'),5000)
+    expect(Date.now() - partenza).toBeLessThan(2500)
+    await new Promise(r => setTimeout(r,20))
     expect(s.ricevuto().toString()).toBe('x')
-    expect(await eseguiLavoro(lavoro(),config({ stampanti: { banco: { host: '127.0.0.1',porta: s.porta } } }),fetch,50)).toEqual({ id: 'l1',ok: false,errore: expect.stringContaining('non risponde') })
+    expect(await eseguiLavoro(lavoro(),config({ stampanti: { banco: { host: '127.0.0.1',porta: s.porta } } }),fetch,50)).toEqual({ id: 'l1',ok: true })
   })
   it('lavoro per una stampante non configurata nel ponte', async () => {
     expect(await eseguiLavoro(lavoro({ stampante: 'cucina' }),config())).toEqual({ id: 'l1',ok: false,errore: 'stampante «cucina» non configurata nel ponte' })
@@ -94,7 +96,7 @@ describe('modalità prova e giro completo', () => {
     expect(LAVORI_FISCALI_PER_GIRO * TIMEOUT_FPMATE_MS).toBeLessThanOrEqual(scadenza / 2)
   })
   /** Il gestionale finto: dà i lavori e tiene l'ordine e il momento degli esiti. */
-  const gestionale = (lavori: LavoroRicevuto[], rispondi: (id: string) => Response = () => Response.json({ registrato: true })) => {
+  const gestionale = (lavori: LavoroRicevuto[], rispondi: (id: string) => Response | Promise<Response> = () => Response.json({ registrato: true })) => {
     const esiti: { id: string; ok: boolean; dopoMs: number }[] = [], partenza = Date.now()
     const recupera = (async (url: URL | string, init?: RequestInit) => {
       if (String(url).endsWith('/coda')) return Response.json({ lavori })
@@ -104,17 +106,25 @@ describe('modalità prova e giro completo', () => {
     }) as typeof fetch
     return { esiti,recupera }
   }
-  it('banco fermo e cucina accesa: la cucina esce subito, il banco va in fila, ogni esito arriva', async () => {
-    const banco = await stampanteMuta(), cucina = await stampanteFinta()
-    const lavori = [lavoro({ id: 'b1' }),lavoro({ id: 'b2' }),lavoro({ id: 'b3' }),lavoro({ id: 'c1',stampante: 'cucina' }),lavoro({ id: 'c2',stampante: 'cucina' })]
-    const { esiti,recupera } = gestionale(lavori)
-    const c = config({ stampanti: { banco: { host: '127.0.0.1',porta: banco.porta },cucina: { host: '127.0.0.1',porta: cucina.porta } } })
-    expect(await giro(c,recupera,200)).toBe(5)
+  it('banco spento e cucina accesa: la cucina esce, il banco riporta l’errore, ogni esito arriva', async () => {
+    const spenta = await stampanteFinta(); server!.close()
+    const cucina = await stampanteFinta()
+    const { esiti,recupera } = gestionale([lavoro({ id: 'b1' }),lavoro({ id: 'b2' }),lavoro({ id: 'c1',stampante: 'cucina' })])
+    const c = config({ stampanti: { banco: { host: '127.0.0.1',porta: spenta.porta },cucina: { host: '127.0.0.1',porta: cucina.porta } } })
+    expect(await giro(c,recupera)).toBe(3)
+    expect(esiti.map(e => [e.id,e.ok]).sort()).toEqual([['b1',false],['b2',false],['c1',true]])
+  })
+  it('in fila sulla stessa stampante, in parallelo fra stampanti diverse', async () => {
+    const s = await stampanteFinta(), attesa = 150
+    const lavori = [lavoro({ id: 'b1' }),lavoro({ id: 'b2' }),lavoro({ id: 'b3' }),lavoro({ id: 'c1',stampante: 'cucina' })]
+    const { esiti,recupera } = gestionale(lavori,async () => { await new Promise(r => setTimeout(r,attesa)); return Response.json({ registrato: true }) })
+    const c = config({ stampanti: { banco: { host: '127.0.0.1',porta: s.porta },cucina: { host: '127.0.0.1',porta: s.porta } } })
+    expect(await giro(c,recupera)).toBe(4)
     expect(esiti.map(e => e.id).filter(id => id.startsWith('b'))).toEqual(['b1','b2','b3'])
-    expect(esiti.slice(0,2).map(e => [e.id,e.ok])).toEqual([['c1',true],['c2',true]])
-    expect(esiti.filter(e => e.id.startsWith('b')).every(e => !e.ok)).toBe(true)
-    // In fila sulla stessa stampante: il terzo aspetta i primi due.
-    expect(esiti.find(e => e.id === 'b3')!.dopoMs).toBeGreaterThanOrEqual(550)
+    const quando = (id: string) => esiti.find(e => e.id === id)!.dopoMs
+    // Il terzo aspetta che il gestionale abbia preso i primi due; la cucina no.
+    expect(quando('b3')).toBeGreaterThanOrEqual(2 * attesa - 20)
+    expect(quando('c1')).toBeLessThan(quando('b3'))
   })
   it('il gestionale non prende un esito: quella coda si ferma, le altre finiscono, il giro segnala l’errore', async () => {
     const banco = await stampanteFinta(), cucina = await stampanteMuta()

@@ -23,14 +23,24 @@ export type Esito = EsitoSenzaId & { id: string }
 export const TIMEOUT_TCP_MS = 3_000
 export const TIMEOUT_FPMATE_MS = 30_000
 
-/** Byte ESC/POS alla porta 9100: riuscito quando la stampante chiude la connessione senza errori. */
+/**
+ * Byte ESC/POS alla porta 9100: riuscito appena sono partiti tutti (`finish`). Non si aspetta la chiusura: una termica può
+ * tardare a chiudere, o non chiudere mai, e rimandare il biglietto lo stamperebbe di nuovo. Errore solo se la connessione
+ * non riesce o si rompe prima della fine della scrittura. Dopo il successo il tempo serve solo a non lasciare il socket aperto
+ * (una promessa già risolta ignora il resto). `finish` vuol dire consegnati al sistema, non stampati: carta finita o coperchio
+ * aperto non si vedono, e su Windows nemmeno una stampante che ha smesso di leggere.
+ */
 export function inviaTcp(host: string, porta: number, byte: Uint8Array, timeoutMs = TIMEOUT_TCP_MS): Promise<void> {
   return new Promise((ok,ko) => {
     const s = createConnection({ host,port: porta })
-    const timer = setTimeout(() => { s.destroy(); ko(new Error(`stampante ${host}:${porta} non risponde`)) },timeoutMs)
-    s.on('error',err => { clearTimeout(timer); ko(err) })
+    const chiudi = (errore: Error) => { clearTimeout(timer); s.destroy(); ko(errore) }
+    const timer = setTimeout(() => chiudi(new Error(`stampante ${host}:${porta} non risponde`)),timeoutMs)
     s.on('connect',() => { s.end(Buffer.from(byte)) })
-    s.on('close',errore => { clearTimeout(timer); if (!errore) ok() })
+    s.on('finish',() => ok())
+    s.on('error',chiudi)
+    s.on('close',() => chiudi(new Error(`stampante ${host}:${porta}: connessione chiusa prima della fine`)))
+    // I byte di stato che la stampante manda indietro non servono, ma vanno letti perché il socket si chiuda pulito.
+    s.resume()
   })
 }
 
