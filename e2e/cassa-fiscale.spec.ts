@@ -89,7 +89,9 @@ test('cassa: coperti, comande su carta col ponte, pre-conto, romana con scontrin
     }
     await expect(cassa.getByText('Saldato')).toBeVisible()
     await expect(cassa.getByText('Scontrino in stampa')).toHaveCount(2)
-    expect(await ponte()).toBe(2)
+    // Uno scontrino per giro: il registratore può metterci fino a 30 secondi.
+    expect(await ponte()).toBe(1)
+    expect(await ponte()).toBe(1)
     await cassa.reload()
     await expect(cassa.getByText('Scontrino di prova')).toHaveCount(2)
     await foto(cassa,'conto-saldato')
@@ -100,6 +102,23 @@ test('cassa: coperti, comande su carta col ponte, pre-conto, romana con scontrin
     // Tutto servito e pagato: il tavolo si chiude senza domande.
     await cassa.getByRole('button',{ name: 'Chiudi tavolo' }).click()
     await expect(cassa.getByText(/^Tavolo chiuso alle/)).toBeVisible()
+
+    // Una stampa non riuscita: la cassa la vede, la riprova (il ponte la rifà), poi ne ignora un'altra e l'avviso sparisce.
+    const inErrore = () => db.query(`update stampe set stato='errore',errore='carta finita',tentativi=5 where id=(select id from stampe where tipo='preconto' order by creata_il limit 1)`)
+    await inErrore()
+    await cassa.goto('/staff')
+    const errori = cassa.getByRole('list',{ name: 'Stampe non riuscite' })
+    await expect(errori).toContainText('Pre-conto'); await expect(errori).toContainText('carta finita')
+    await foto(cassa,'stampe-in-errore')
+    await errori.getByRole('button',{ name: 'Riprova' }).click()
+    await expect(errori).toHaveCount(0)
+    expect(await ponte()).toBe(1)
+    await inErrore()
+    await cassa.reload()
+    await errori.getByRole('button',{ name: 'Ignora' }).click()
+    await cassa.getByRole('dialog',{ name: 'Conferma' }).getByRole('button',{ name: 'Ignora' }).click()
+    await expect(errori).toHaveCount(0)
+    expect(await ponte()).toBe(0)
 
     // Admin: un vino nuovo compare nella carta dei vini del menù pubblico.
     await cassa.goto('/admin/menu/nuovo?categoria=vini')

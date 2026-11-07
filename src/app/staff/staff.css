@@ -3,6 +3,9 @@
 .b-staff__vista { padding: 18px 20px 28px; }
 .b-staff__vista[hidden] { display: none; }
 .b-staff__avviso { margin: 12px 20px 0; }
+.b-stampe-errore { list-style: none; }
+.b-stampe-errore__voce { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.b-stampe-errore__voce > span:first-child { flex: 1 1 240px; }
 .b-staff__vuoto { padding: 24px 20px; }
 
 .b-staff-barra { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; min-height: 76px; padding: 10px 20px; background: var(--b-barra); color: var(--b-su-barra); }

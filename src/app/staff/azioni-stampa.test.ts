@@ -1,11 +1,11 @@
-import { beforeEach, expect, it, vi } from 'vitest'
-const m = vi.hoisted(() => ({ richiediRuolo: vi.fn(), ristampaOrdine: vi.fn(), accodaPreconto: vi.fn(), revalidatePath: vi.fn() }))
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+const m = vi.hoisted(() => ({ richiediRuolo: vi.fn(), ristampaOrdine: vi.fn(), riprovaLavoro: vi.fn(), archiviaLavoro: vi.fn(), accodaPreconto: vi.fn(), revalidatePath: vi.fn() }))
 vi.mock('@/auth/sessione', () => ({ richiediRuolo: m.richiediRuolo }))
 vi.mock('@/server/db', () => ({ db: {} }))
-vi.mock('@/stampa/stampe-repo', () => ({ ristampaOrdine: m.ristampaOrdine }))
+vi.mock('@/stampa/stampe-repo', () => ({ ristampaOrdine: m.ristampaOrdine,riprovaLavoro: m.riprovaLavoro,archiviaLavoro: m.archiviaLavoro }))
 vi.mock('@/cassa/preconto-repo', () => ({ accodaPreconto: m.accodaPreconto }))
 vi.mock('next/cache', () => ({ revalidatePath: m.revalidatePath }))
-import { ristampaComande, stampaPreconto } from './azioni-stampa'
+import { ignoraStampa, riprovaStampa, ristampaComande, stampaPreconto } from './azioni-stampa'
 const id = '11111111-1111-4111-8111-111111111111'
 beforeEach(() => { vi.resetAllMocks(); vi.spyOn(console,'error').mockImplementation(() => {}); m.richiediRuolo.mockResolvedValue({ userId: 'u',ruolo: 'staff' }) })
 
@@ -32,4 +32,25 @@ it('pre-conto: staff prima del repo, persone da 1 a 50 o nessuna, conto vuoto sp
   expect(m.accodaPreconto).not.toHaveBeenCalled()
   m.accodaPreconto.mockRejectedValueOnce(new Error('giù'))
   expect(await stampaPreconto(id,null)).toEqual({ ok: false,errore: 'Pre-conto non stampato, riprova.' })
+})
+describe.each([['riprova',riprovaStampa,m.riprovaLavoro],['ignora',ignoraStampa,m.archiviaLavoro]] as const)('stampa in errore: %s',(_,azione,repo) => {
+  it('staff prima del repo, poi la pagina si aggiorna', async () => {
+    repo.mockResolvedValueOnce(true)
+    expect(await azione(id)).toEqual({ ok: true })
+    expect(m.richiediRuolo).toHaveBeenCalledWith('staff')
+    expect(m.richiediRuolo.mock.invocationCallOrder[0]).toBeLessThan(repo.mock.invocationCallOrder[0])
+    expect(repo).toHaveBeenCalledWith(expect.anything(),id)
+    expect(m.revalidatePath).toHaveBeenCalledWith('/staff')
+  })
+  it('senza ruolo non tocca il DB; id non valido, già sistemata ed errori del DB in italiano', async () => {
+    m.richiediRuolo.mockRejectedValueOnce(new Error('NEXT_REDIRECT'))
+    await expect(azione(id)).rejects.toThrow('NEXT_REDIRECT')
+    expect(await azione('x')).toMatchObject({ ok: false })
+    expect(repo).not.toHaveBeenCalled()
+    repo.mockResolvedValueOnce(false)
+    expect(await azione(id)).toMatchObject({ ok: false,errore: expect.stringContaining('non è più in errore') })
+    repo.mockRejectedValueOnce(new Error('giù'))
+    expect(await azione(id)).toEqual({ ok: false,errore: 'Operazione non riuscita, riprova.' })
+    expect(m.revalidatePath).not.toHaveBeenCalled()
+  })
 })

@@ -128,13 +128,15 @@ type StatoScontrino = 'emesso' | 'errore' | 'incerto' | 'prova'
 /**
  * Lo scontrino è uscito? Risposta dell'RT letta qui: emesso (con numero e chiusura Z), rifiutato (non uscito: si può
  * rimandare), illeggibile o senza risposta (incerto: decide la cassa guardando l'RT). In prova il ponte risponde «PROVA».
+ * La risposta dell'RT è la verità: vale anche se arriva a lavoro già scaduto e diventato «incerto» (finché la cassa non ha
+ * deciso); un esito senza una risposta leggibile, a quel punto, non aggiunge niente.
  */
 async function registraEsitoFiscale(db: Db, e: EsitoDalPonte): Promise<boolean> {
   return db.transazione(async tx => {
     const [rif] = await tx.query<{ pagamentoId: string }>('select pagamento_id as "pagamentoId" from stampe where id=$1',[e.id])
     await tx.query('select id from pagamenti where id=$1 for update',[rif.pagamentoId])
     const [l] = await tx.query<{ stato: string }>('select stato from stampe where id=$1 for update',[e.id])
-    if (l.stato !== 'in_stampa') return false
+    if (l.stato !== 'in_stampa' && !(l.stato === 'incerta' && e.ok)) return false
     let stato: StatoScontrino, dati: { numero?: string | null; data?: string | null; z?: string | null; errore?: string | null } = {}
     if (e.ok && e.risposta === 'PROVA') stato = 'prova'
     else if (e.ok) {
@@ -144,6 +146,7 @@ async function registraEsitoFiscale(db: Db, e: EsitoDalPonte): Promise<boolean> 
       else { stato = 'incerto'; dati = { errore: 'Risposta del registratore non leggibile.' } }
     } else if (e.incerto) { stato = 'incerto'; dati = { errore: e.errore } }
     else { stato = 'errore'; dati = { errore: e.errore } }
+    if (l.stato === 'incerta' && stato === 'incerto') return false
     const statoLavoro = stato === 'emesso' || stato === 'prova' ? 'stampata' : stato === 'incerto' ? 'incerta' : 'errore'
     await tx.query('update stampe set stato=$2,finita_il=clock_timestamp(),errore=$3 where id=$1',[e.id,statoLavoro,dati.errore?.slice(0,300) ?? null])
     await tx.query(`update pagamenti set scontrino=$2,scontrino_numero=$3,scontrino_data=$4,scontrino_z=$5,scontrino_errore=$6,scontrino_il=case when $2 in ('emesso','prova') then clock_timestamp() end where id=$1`,

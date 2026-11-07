@@ -5,7 +5,7 @@ vi.mock('./azioni', () => ({ apriTavolo: vi.fn(), chiudiTavolo: vi.fn(), avanzaO
 vi.mock('./azioni-menu', () => ({ cambiaDisponibilitaStaff: vi.fn() }))
 vi.mock('./azioni-comande', () => ({ avanzaComandaStaff: vi.fn(),portaComandaStaff: vi.fn() }))
 vi.mock('./azioni-postazione', () => ({ impostaPostazione: vi.fn() }))
-vi.mock('./azioni-stampa', () => ({ ristampaComande: vi.fn() }))
+vi.mock('./azioni-stampa', () => ({ ristampaComande: vi.fn(),riprovaStampa: vi.fn(),ignoraStampa: vi.fn() }))
 vi.mock('./azioni-pagamenti', () => ({ incassa: vi.fn() }))
 vi.mock('./azioni-casa', () => ({ apriOrdiniOnline: vi.fn(), chiudiOrdiniOnline: vi.fn(), accettaOrdineStaff: vi.fn(), rifiutaOrdineStaff: vi.fn(), avanzaOrdineCasaStaff: vi.fn(), annullaOrdineCasaStaff: vi.fn() }))
 import { CardOrdine } from './SchermoStaff'
@@ -165,9 +165,20 @@ it('inizio turno: scelta della postazione preselezionata e suoni della postazion
 })
 it('reparti su carta: la cassa vede l’allarme delle stampanti, la sala no; le card offrono la ristampa', async () => {
   const { SchermoStaff } = await import('./SchermoStaff')
-  const dati = { tavoli: [],ordini: [tavolo],riepiloghi: [],contiRecenti: [],casa: [],ordiniOnline: online,stampa: { usata: true,allarme: { tipo: 'ponte' as const,testo: 'Stampanti scollegate: il ponte di stampa non risponde.' } } }
+  const dati = { tavoli: [],ordini: [tavolo],riepiloghi: [],contiRecenti: [],casa: [],ordiniOnline: online,stampa: { usata: true,allarme: { tipo: 'ponte' as const,testo: 'Stampanti scollegate: il ponte di stampa non risponde.' },inErrore: [] } }
   expect(renderToStaticMarkup(<SchermoStaff dati={dati} ora="2026-10-11T18:05:00Z" />)).toContain('Stampanti scollegate')
   expect(renderToStaticMarkup(<SchermoStaff dati={dati} ora="2026-10-11T18:05:00Z" postazione="sala" />)).not.toContain('Stampanti scollegate')
   expect(renderToStaticMarkup(<CardOrdine ordine={tavolo} ora="2026-10-11T18:05:00Z" nuovo={false} inCorso={false} leggi={() => {}} esegui={() => {}} ristampa />)).toContain('Ristampa comande')
   expect(renderToStaticMarkup(<CardOrdine ordine={tavolo} ora="2026-10-11T18:05:00Z" nuovo={false} inCorso={false} leggi={() => {}} esegui={() => {}} />)).not.toContain('Ristampa comande')
+})
+it('stampe in errore: alla cassa Riprova e Ignora con reparto, tavolo e motivo; lo scontrino si rimanda dal conto; la sala non le vede', async () => {
+  const { SchermoStaff } = await import('./SchermoStaff')
+  const inErrore = [{ id: 'l1',stampante: 'banco' as const,tipo: 'comanda' as const,errore: 'carta finita',creataIl: '2026-11-06T19:15:00.000Z',dove: 'Tavolo 5' }]
+  const dati = { tavoli: [],ordini: [],riepiloghi: [],contiRecenti: [],casa: [],ordiniOnline: online,stampa: { usata: true,allarme: { tipo: 'errori' as const,testo: 'Una stampa non riuscita' },inErrore } }
+  const html = renderToStaticMarkup(<SchermoStaff dati={dati} ora="2026-11-06T19:20:00Z" />)
+  for (const t of ['Riprova','Ignora','Comanda','Banco sushi','Tavolo 5','20:15','carta finita']) expect(html).toContain(t)
+  expect(renderToStaticMarkup(<SchermoStaff dati={dati} ora="2026-11-06T19:20:00Z" postazione="sala" />)).not.toContain('Riprova')
+  const fiscale = { ...dati,stampa: { ...dati.stampa,inErrore: [{ ...inErrore[0],stampante: 'fiscale' as const,tipo: 'scontrino' as const }] } }
+  const conScontrino = renderToStaticMarkup(<SchermoStaff dati={fiscale} ora="2026-11-06T19:20:00Z" />)
+  expect(conScontrino).not.toContain('Riprova'); expect(conScontrino).toContain('Si rimanda dal conto'); expect(conScontrino).toContain('Ignora')
 })

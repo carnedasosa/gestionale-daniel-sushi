@@ -6,7 +6,7 @@ import { apriSessione, creaTavolo, impostaCoperti } from '@/tavoli/repo'
 import { contoSessione, creaOrdineTavolo } from '@/tavoli/ordini-repo'
 import { salvaImpostazioniCassa } from '@/cassa/impostazioni-repo'
 import { annullaPagamento, registraPagamento, statoPagamenti, type RichiestaPagamento } from '@/cassa/pagamenti-repo'
-import { prendiLavori } from '@/stampa/stampe-repo'
+import { archiviaLavoro, lavoriInErrore, prendiLavori, riprovaLavoro, statoCoda } from '@/stampa/stampe-repo'
 import { perIlPonte } from '@/stampa/ponte'
 import { chiaveVoce, type MetodoPagamento } from '@/domain/divisione-conto'
 import { leggiImpostazioniFiscali, registraEsitoPonte, richiediScontrino, risolviIncerto, salvaImpostazioniFiscali } from './scontrini-repo'
@@ -25,7 +25,7 @@ beforeEach(async () => {
 })
 afterEach(async () => { await ambiente.pg.close() })
 const ordina = async (righe: [string,number][]) => { const e = await creaOrdineTavolo(ambiente.db,sessione,righe.map(([piattoId,quantita]) => ({ piattoId,quantita,nota: '' })),randomUUID()); if (!e.ok) throw new Error(e.errore) }
-const paga = async (r: RichiestaPagamento, metodo: MetodoPagamento = 'contanti') => { const e = await registraPagamento(ambiente.db,{ sessioneId: sessione },r,metodo,UTENTE); if (!e.ok) throw new Error(e.errore); return e.pagamento.id }
+const paga = async (r: RichiestaPagamento, metodo: MetodoPagamento = 'contanti') => { const e = await registraPagamento(ambiente.db,{ sessioneId: sessione },r,metodo,UTENTE,randomUUID()); if (!e.ok) throw new Error(e.errore); return e.pagamento.id }
 const documenti = async (db: Db) => (await db.query<{ documento: DocumentoCommerciale }>(`select documento from stampe where tipo='scontrino' order by creata_il`)).map(r => r.documento)
 /** Il ponte prende lo scontrino e il registratore risponde come Epson. */
 const ponteRisponde = async (db: Db, risposta: Parameters<typeof registraEsitoPonte>[1] extends infer E ? (id: string) => E : never) => {
@@ -94,7 +94,7 @@ describe('righe dello scontrino', () => {
     const { piatto } = await preparaCasa(db)
     await salvaImpostazioniFiscali(db,{ repartoCoperto: 1,repartoConsegna: 4,indiceCarta: 1,automatico: false },{})
     const o = await ordineAsporto(db,piatto)
-    const e = await registraPagamento(db,{ ordineId: o.id },{ modo: 'tutto' },'carta',UTENTE); if (!e.ok) throw new Error(e.errore)
+    const e = await registraPagamento(db,{ ordineId: o.id },{ modo: 'tutto' },'carta',UTENTE,randomUUID()); if (!e.ok) throw new Error(e.errore)
     expect(await richiediScontrino(db,e.pagamento.id)).toEqual({ ok: true })
     expect((await documenti(db))[0].righe).toEqual([{ descrizione: '1 Salmone',quantita: 2,prezzoUnitCent: 600,reparto: 1 }])
     expect((await leggiImpostazioniFiscali(db)).repartoConsegna).toBe(4)
@@ -125,6 +125,20 @@ describe('esiti del registratore', () => {
     expect((await scontrinoDi(db,id)).scontrino).toBe('errore')
     expect(await annullaPagamento(db,id,UTENTE)).toBe('ok')
   })
+  it('scontrino rifiutato nell’allarme: non si riprova da lì, si può ignorare e resta da rimandare dal conto', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,1]])
+    const id = await paga({ modo: 'tutto' })
+    await richiediScontrino(db,id)
+    await ponteRisponde(db,l => ({ id: l,ok: true,risposta: '<response success="false" code="EPTR_REC_EMPTY"/>' }))
+    const [l] = await lavoriInErrore(db)
+    expect(l).toMatchObject({ stampante: 'fiscale',tipo: 'scontrino',dove: 'Tavolo 5' })
+    expect(await riprovaLavoro(db,l.id)).toBe(false)
+    expect(await archiviaLavoro(db,l.id)).toBe(true)
+    expect((await statoCoda(db)).errori).toBe(0)
+    expect((await scontrinoDi(db,id)).scontrino).toBe('errore')
+    expect(await richiediScontrino(db,id)).toEqual({ ok: true })
+  })
   it('senza risposta o risposta illeggibile: incerto, non riparte da solo; la cassa decide', async () => {
     const { db } = ambiente
     await ordina([[salmone,1]])
@@ -152,6 +166,104 @@ describe('esiti del registratore', () => {
     expect(await prendiLavori(db)).toEqual([])
     expect((await scontrinoDi(db,id)).scontrino).toBe('incerto')
     expect((await db.query<{ stato: string }>(`select stato from stampe`))[0].stato).toBe('incerta')
+  })
+  describe('risposta dell’RT arrivata dopo la scadenza del lavoro', () => {
+    const incerto = async () => {
+      const { db } = ambiente
+      await ordina([[salmone,1]])
+      const id = await paga({ modo: 'tutto' })
+      await richiediScontrino(db,id)
+      const [l] = await prendiLavori(db)
+      await db.query(`update stampe set presa_il=now()-interval '2 minutes'`)
+      await prendiLavori(db)
+      expect((await scontrinoDi(db,id)).scontrino).toBe('incerto')
+      return { id,lavoro: l.id }
+    }
+    const statoLavoro = async () => (await ambiente.db.query<{ stato: string }>('select stato from stampe'))[0].stato
+    it('emesso: numero e chiusura non si perdono, non resta niente da controllare', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: RISPOSTA_OK(12) })).toBe(true)
+      expect(await scontrinoDi(db,id)).toMatchObject({ scontrino: 'emesso',scontrinoNumero: '12',scontrinoErrore: null })
+      expect(await statoLavoro()).toBe('stampata')
+      expect(await risolviIncerto(db,id,false)).toBe(false)
+    })
+    it('doppio esito: il secondo non cambia numero, data e chiusura dello scontrino già emesso', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      const registrati = async () => (await db.query(`select scontrino,scontrino_numero,scontrino_data,scontrino_z,scontrino_il from pagamenti where id=$1`,[id]))[0]
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: RISPOSTA_OK(12) })).toBe(true)
+      const primo = await registrati()
+      expect(primo).toMatchObject({ scontrino: 'emesso',scontrino_numero: '12',scontrino_z: '301' })
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: RISPOSTA_OK(13).replace('301','302') })).toBe(false)
+      expect(await registrati()).toEqual(primo)
+      expect(await statoLavoro()).toBe('stampata')
+    })
+    it('rifiutato: come se fosse arrivata in tempo, si può rimandare', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: '<response success="false" code="EPTR_REC_EMPTY"/>' })).toBe(true)
+      expect((await scontrinoDi(db,id)).scontrino).toBe('errore')
+      expect(await statoLavoro()).toBe('errore')
+    })
+    it('senza una risposta leggibile resta incerto, col motivo di prima', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: '<html>?</html>' })).toBe(false)
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: false,errore: 'tempo scaduto',incerto: true })).toBe(false)
+      expect(await scontrinoDi(db,id)).toMatchObject({ scontrino: 'incerto',scontrinoErrore: 'Il registratore non ha risposto in tempo.' })
+      expect(await statoLavoro()).toBe('incerta')
+    })
+    it('se la cassa ha già deciso, la sua decisione resta', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      expect(await risolviIncerto(db,id,false)).toBe(true)
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: RISPOSTA_OK(12) })).toBe(false)
+      expect((await scontrinoDi(db,id)).scontrino).toBe('errore')
+    })
+  })
+  it('il ponte prende uno scontrino alla volta: il registratore può metterci fino a 30 s', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,3]])
+    const ids = [await paga({ modo: 'romana',persone: 3 }),await paga({ modo: 'romana',persone: 2 }),await paga({ modo: 'romana',persone: 1 })]
+    for (const id of ids) await richiediScontrino(db,id)
+    for (const id of ids) {
+      const presi = await prendiLavori(db)
+      expect(presi.map(l => l.pagamentoId)).toEqual([id])
+      await registraEsitoPonte(db,{ id: presi[0].id,ok: true,risposta: RISPOSTA_OK(1) })
+    }
+    expect(await prendiLavori(db)).toEqual([])
+  })
+  it('il tetto dei tentativi non vale per i fiscali: scaduto resta incerto, mai errore né rimandabile', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,1]])
+    const id = await paga({ modo: 'tutto' })
+    await richiediScontrino(db,id)
+    await prendiLavori(db)
+    await db.query(`update stampe set presa_il=now()-interval '2 minutes',tentativi=5`)
+    await prendiLavori(db)
+    expect((await db.query<{ stato: string }>('select stato from stampe'))[0].stato).toBe('incerta')
+    expect((await scontrinoDi(db,id)).scontrino).toBe('incerto')
+  })
+  it('lavoro fiscale scaduto: blocca il pagamento prima di toccare la coda, come fa l’esito del registratore', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,1]])
+    await richiediScontrino(db,await paga({ modo: 'tutto' }))
+    await prendiLavori(db)
+    await db.query(`update stampe set presa_il=now()-interval '2 minutes'`)
+    // PGlite serializza le transazioni e non può provare l'incrocio: qui si controlla l'ordine delle istruzioni.
+    const sql: string[] = []
+    const spia = (d: Db): Db => ({ query: (testo,parametri) => { sql.push(testo); return d.query(testo,parametri) },transazione: fn => d.transazione(tx => fn(spia(tx))) })
+    await prendiLavori(spia(db))
+    const pagamenti = sql.findIndex(q => /from pagamenti .*for update/.test(q)), stampe = sql.findIndex(q => q.includes('update stampe'))
+    expect(pagamenti).toBeGreaterThanOrEqual(0)
+    expect(pagamenti).toBeLessThan(stampe)
+  })
+  it('l’esito arriva mentre il lavoro sta scadendo: vince chi blocca prima, il pagamento resta coerente', async () => {
+    const { db } = ambiente
+    await ordina([[salmone,1]])
+    const id = await paga({ modo: 'tutto' })
+    await richiediScontrino(db,id)
+    const [l] = await prendiLavori(db)
+    await db.query(`update stampe set presa_il=now()-interval '2 minutes'`)
+    await Promise.all([prendiLavori(db),registraEsitoPonte(db,{ id: l.id,ok: true,risposta: RISPOSTA_OK(7) })])
+    expect((await db.query<{ stato: string }>('select stato from stampe'))[0].stato).toBe('stampata')
+    expect(await scontrinoDi(db,id)).toMatchObject({ scontrino: 'emesso',scontrinoNumero: '7',scontrinoErrore: null })
   })
   it('ponte in prova: scontrino «di prova», il pagamento resta modificabile', async () => {
     const { db } = ambiente

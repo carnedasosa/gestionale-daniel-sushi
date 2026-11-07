@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { richiediRuolo } from '@/auth/sessione'
 import { db } from '@/server/db'
-import { ristampaOrdine } from '@/stampa/stampe-repo'
+import { archiviaLavoro, riprovaLavoro, ristampaOrdine } from '@/stampa/stampe-repo'
 import { accodaPreconto } from '@/cassa/preconto-repo'
 import { idValido } from '@/tavoli/validazione'
 import type { EsitoStaff } from './azioni'
@@ -19,6 +19,28 @@ export async function ristampaComande(ordineId: string): Promise<EsitoStaff> {
   if (!n) return { ok: false,errore: 'Niente da ristampare: nessun reparto di questo ordine lavora su carta.' }
   revalidatePath('/staff')
   return { ok: true }
+}
+
+async function suLavoroInErrore(id: string, fn: (id: string) => Promise<boolean>): Promise<EsitoStaff> {
+  if (!idValido(id)) return { ok: false,errore: 'Stampa non valida.' }
+  try {
+    if (!await fn(id)) return { ok: false,errore: 'Questa stampa non è più in errore: aggiorna la pagina.' }
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : 'errore sconosciuto')
+    return { ok: false,errore: 'Operazione non riuscita, riprova.' }
+  }
+  revalidatePath('/staff')
+  return { ok: true }
+}
+/** Stampa non riuscita, stampante sistemata: di nuovo in coda, con i tentativi azzerati. */
+export async function riprovaStampa(id: string): Promise<EsitoStaff> {
+  await richiediRuolo('staff')
+  return suLavoroInErrore(id,x => riprovaLavoro(db,x))
+}
+/** Stampa non riuscita che non serve più: non esce e non tiene acceso l'allarme. */
+export async function ignoraStampa(id: string): Promise<EsitoStaff> {
+  await richiediRuolo('staff')
+  return suLavoroInErrore(id,x => archiviaLavoro(db,x))
 }
 
 /** Pre-conto alla stampante della cassa; `persone` aggiunge la quota a testa sul residuo. */

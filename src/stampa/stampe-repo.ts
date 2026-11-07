@@ -8,10 +8,10 @@ import { numeroGiorno } from '@/tavoli/numero-giorno'
 import { idValido } from '@/tavoli/validazione'
 import { leggiImpostazioniCassa } from '@/cassa/impostazioni-repo'
 import { bigliettoAnnullo, bigliettoComanda, type DatiComanda } from './biglietti'
-import { esitoScadenza, SCADENZA_LAVORO_SECONDI, stampanteDelReparto, TENTATIVI_MASSIMI, type StatoCoda, type Stampante, type TipoLavoro } from './instradamento'
+import { esitoScadenza, LAVORI_FISCALI_PER_GIRO, LAVORI_PER_STAMPANTE, SCADENZA_LAVORO_SECONDI, STAMPANTI, stampanteDelReparto, TENTATIVI_MASSIMI, type CodaStampa, type StatoCoda, type Stampante, type TipoLavoro } from './instradamento'
 import type { DocumentoStampa } from './documento'
 
-// Ordine dei lock, come nel resto del gestionale: sessione → ordine → comande → stampe.
+// Ordine dei lock, come nel resto del gestionale: sessione → ordine → comande → pagamenti → stampe.
 
 export interface Lavoro { id: string; stampante: Stampante; tipo: TipoLavoro; documento: unknown; creataIl: Date; pagamentoId: string | null }
 interface Testata { tipo: TipoOrdine; origine: OrigineOrdine; numeroGiorno: number; tavoloNome: string | null; clienteNome: string | null; fascia: Date | null; creatoIl: Date }
@@ -54,27 +54,31 @@ export async function accodaComande(tx: Db, ordineId: string, opzioni: { ristamp
 
 /**
  * Righe tolte da un ordine (o l'ordine intero, `'tutte'`): chiamata dopo l'annullamento, nella stessa transazione.
- * Comanda ancora in coda → si ristampa senza quelle righe (o non si stampa più); già presa dal reparto → biglietto ANNULLATO.
+ * Per ogni comanda si guardano tutti i suoi biglietti, non solo l'ultimo: dopo una ristampa l'originale può essere già dal
+ * reparto mentre la copia è ancora in coda. Ciò che non è uscito (in coda o in errore, che si può riprovare) si corregge o
+ * non esce più; se almeno un biglietto è arrivato al reparto, uno solo ANNULLATO.
  */
 export async function annunciaAnnullo(tx: Db, ordineId: string, righeTolte: string[] | 'tutte', adesso = new Date()): Promise<void> {
-  const lavori = await tx.query<{ id: string; stato: string; stampante: Stampante; reparto: Reparto; comandaId: string }>(`select distinct on (c.id) s.id,s.stato,s.stampante,c.reparto,c.id as "comandaId"
-    from stampe s join comande c on c.id=s.comanda_id where c.ordine_id=$1 and s.tipo='comanda' order by c.id,s.creata_il desc`,[ordineId])
+  const lavori = await tx.query<{ id: string; stato: string; stampante: Stampante; reparto: Reparto; comandaId: string }>(`select s.id,s.stato,s.stampante,c.reparto,c.id as "comandaId"
+    from stampe s join comande c on c.id=s.comanda_id where c.ordine_id=$1 and s.tipo='comanda' order by c.id,s.creata_il,s.id`,[ordineId])
   if (!lavori.length) return
   const t = await testata(tx,ordineId)
   if (!t) return
   const righe = (await leggiRigheOrdini(tx,[ordineId])).get(ordineId) ?? []
   const tolte = righeTolte === 'tutte' ? righe.filter(r => !r.annullata) : righe.filter(r => righeTolte.includes(r.id))
-  for (const l of lavori) {
-    const delReparto = tolte.filter(r => r.reparto === l.reparto)
+  for (const comandaId of new Set(lavori.map(l => l.comandaId))) {
+    const biglietti = lavori.filter(l => l.comandaId === comandaId), { reparto,stampante } = biglietti[0]
+    const delReparto = tolte.filter(r => r.reparto === reparto)
     if (!delReparto.length) continue
-    // Nessuno lo ha ancora preso: lo si corregge invece di stampare due biglietti.
-    if (l.stato === 'in_coda') {
-      const d = datiComanda(t,l.reparto,righeTolte === 'tutte' ? [] : righe)
+    const d = datiComanda(t,reparto,righeTolte === 'tutte' ? [] : righe)
+    for (const [i,l] of biglietti.entries()) {
+      if (l.stato !== 'in_coda' && l.stato !== 'errore') continue
       if (!d.righe.length) await tx.query(`update stampe set stato='annullata',finita_il=clock_timestamp() where id=$1`,[l.id])
-      else await tx.query('update stampe set documento=$2::text::jsonb where id=$1',[l.id,JSON.stringify(bigliettoComanda(d))])
-    } else if (l.stato === 'in_stampa' || l.stato === 'stampata') {
-      await inserisci(tx,{ stampante: l.stampante,tipo: 'annullo',documento: bigliettoAnnullo({ ...t,reparto: l.reparto,righe: delReparto },adesso),ordineId,comandaId: l.comandaId })
+      // Il primo biglietto di una comanda è l'originale, i successivi sono ristampe.
+      else await tx.query('update stampe set documento=$2::text::jsonb where id=$1',[l.id,JSON.stringify(bigliettoComanda(d,{ ristampa: i > 0 }))])
     }
+    if (biglietti.some(l => l.stato === 'in_stampa' || l.stato === 'stampata'))
+      await inserisci(tx,{ stampante,tipo: 'annullo',documento: bigliettoAnnullo({ ...t,reparto,righe: delReparto },adesso),ordineId,comandaId })
   }
 }
 
@@ -88,20 +92,45 @@ export async function ristampaOrdine(db: Db, ordineId: string): Promise<number> 
 }
 
 /**
- * Il ponte chiede lavoro: segnale di vita (al più ogni 10 s), poi i lavori scaduti tornano in coda (i fiscali diventano
- * «incerti») e se ne prendono fino a `quanti`, i più vecchi prima. `skip locked`: due ponti accesi non stampano due volte.
+ * Lavori rimasti «in stampa» oltre il limite: tornano in coda fino a TENTATIVI_MASSIMI, poi errore (un ponte che muore
+ * prima di riportare l'esito non stampa all'infinito); i fiscali diventano «incerti» anche sul pagamento (la cassa lo
+ * vede e decide guardando il registratore), a qualunque tentativo. Lock nell'ordine pagamenti → stampe, lo stesso di registraEsitoFiscale e
+ * richiediScontrino: se fosse incrociato, a perdere potrebbe essere l'esito del registratore, che il ponte non rimanda.
+ * Gli id si fissano prima dei lock e si ricontrollano dopo: nel frattempo l'esito può essere arrivato.
  */
-export async function prendiLavori(db: Db, quanti = 10): Promise<Lavoro[]> {
+async function scadiLavori(tx: Db): Promise<void> {
+  const SCADUTO = `stato='in_stampa' and presa_il < clock_timestamp() - make_interval(secs => $1)`
+  const scaduti = await tx.query<{ id: string; pagamentoId: string | null }>(`select id,pagamento_id as "pagamentoId" from stampe where ${SCADUTO}`,[SCADENZA_LAVORO_SECONDI])
+  if (!scaduti.length) return
+  const pagamenti = scaduti.flatMap(l => l.pagamentoId ? [l.pagamentoId] : [])
+  if (pagamenti.length) await tx.query('select id from pagamenti where id=any($1::uuid[]) order by id for update',[pagamenti])
+  const FINITI = `stampante<>'fiscale' and tentativi >= $5`
+  await tx.query(`with scaduti as (update stampe set stato=case when stampante='fiscale' then $2 when ${FINITI} then $6 else $3 end,
+        errore=case when ${FINITI} then 'Il ponte non ha riportato l''esito.' else errore end,finita_il=case when ${FINITI} then clock_timestamp() else finita_il end
+      where id=any($4::uuid[]) and ${SCADUTO} returning pagamento_id,stampante)
+    update pagamenti set scontrino='incerto',scontrino_errore='Il registratore non ha risposto in tempo.' where id in (select pagamento_id from scaduti where stampante='fiscale')`,
+    [SCADENZA_LAVORO_SECONDI,esitoScadenza('fiscale'),esitoScadenza('cassa'),scaduti.map(l => l.id),TENTATIVI_MASSIMI,esitoScadenza('cassa',TENTATIVI_MASSIMI)])
+}
+
+/**
+ * Il ponte chiede lavoro: segnale di vita (al più ogni 10 s), poi i lavori scaduti (vedi scadiLavori) e se ne prendono,
+ * i più vecchi prima, al più LAVORI_PER_STAMPANTE per ogni termica e LAVORI_FISCALI_PER_GIRO scontrini, della sola `coda`
+ * chiesta. `skip locked`: due ponti accesi non stampano due volte.
+ */
+export async function prendiLavori(db: Db, coda?: CodaStampa): Promise<Lavoro[]> {
   return db.transazione(async tx => {
     await tx.query(`update ponte_stampa set visto_il=clock_timestamp() where id=1 and (visto_il is null or visto_il < clock_timestamp() - interval '10 seconds')`)
-    // Lo scontrino scaduto diventa incerto anche sul pagamento: la cassa lo vede e decide guardando il registratore.
-    await tx.query(`with scaduti as (update stampe set stato=case when stampante='fiscale' then $1 else $2 end
-        where stato='in_stampa' and presa_il < clock_timestamp() - make_interval(secs => $3) returning pagamento_id,stampante)
-      update pagamenti set scontrino='incerto',scontrino_errore='Il registratore non ha risposto in tempo.' where id in (select pagamento_id from scaduti where stampante='fiscale')`,
-      [esitoScadenza('fiscale'),esitoScadenza('cassa'),SCADENZA_LAVORO_SECONDI])
+    await scadiLavori(tx)
+    const scelti: string[] = []
+    for (const stampante of STAMPANTI) {
+      const fiscale = stampante === 'fiscale'
+      if (coda && (coda === 'fiscale') !== fiscale) continue
+      const righe = await tx.query<{ id: string }>(`select id from stampe where stato='in_coda' and stampante=$1 order by creata_il,id for update skip locked limit $2`,[stampante,fiscale ? LAVORI_FISCALI_PER_GIRO : LAVORI_PER_STAMPANTE])
+      scelti.push(...righe.map(l => l.id))
+    }
     const presi = await tx.query<Lavoro>(`update stampe set stato='in_stampa',presa_il=clock_timestamp(),tentativi=tentativi+1
-      where id in (select id from stampe where stato='in_coda' order by creata_il,id for update skip locked limit $1)
-      returning id,stampante,tipo,documento,creata_il as "creataIl",pagamento_id as "pagamentoId"`,[quanti])
+      where id=any($1::uuid[])
+      returning id,stampante,tipo,documento,creata_il as "creataIl",pagamento_id as "pagamentoId"`,[scelti])
     return presi.sort((a,b) => new Date(a.creataIl).getTime() - new Date(b.creataIl).getTime())
   })
 }
@@ -146,6 +175,12 @@ export async function riprovaLavoro(db: Db, id: string): Promise<boolean> {
   return (await db.query(`update stampe set stato='in_coda',tentativi=0,errore=null,finita_il=null where id=$1 and stato='errore' and stampante<>'fiscale' returning id`,[id])).length === 1
 }
 
+/** Lavoro in errore che non serve più: non esce e sparisce dall'allarme. Anche fiscale: lo scontrino resta da rimandare dal conto. */
+export async function archiviaLavoro(db: Db, id: string): Promise<boolean> {
+  if (!idValido(id)) return false
+  return (await db.query(`update stampe set stato='annullata',finita_il=clock_timestamp() where id=$1 and stato='errore' returning id`,[id])).length === 1
+}
+
 /** Per l'allarme della cassa: errori e incerti delle ultime 12 ore. */
 export async function statoCoda(db: Db): Promise<StatoCoda> {
   const [s] = await db.query<StatoCoda>(`select (select visto_il from ponte_stampa where id=1) as "ponteVistoIl",
@@ -154,7 +189,10 @@ export async function statoCoda(db: Db): Promise<StatoCoda> {
     count(*) filter (where stato='incerta' and creata_il > now() - interval '12 hours')::int as incerte from stampe`)
   return s
 }
-export interface LavoroInErrore { id: string; stampante: Stampante; tipo: TipoLavoro; errore: string | null; creataIl: Date }
+/** `dove`: il tavolo o il nome del cliente, per capire di che cosa si tratta. */
+export interface LavoroInErrore { id: string; stampante: Stampante; tipo: TipoLavoro; errore: string | null; creataIl: Date; dove: string | null }
 export async function lavoriInErrore(db: Db): Promise<LavoroInErrore[]> {
-  return db.query<LavoroInErrore>(`select id,stampante,tipo,errore,creata_il as "creataIl" from stampe where stato='errore' and creata_il > now() - interval '12 hours' order by creata_il`)
+  return db.query<LavoroInErrore>(`select s.id,s.stampante,s.tipo,s.errore,s.creata_il as "creataIl",coalesce(t.nome,o.cliente_nome) as dove
+    from stampe s left join ordini o on o.id=s.ordine_id left join sessioni_tavolo se on se.id=coalesce(s.sessione_id,o.sessione_id) left join tavoli t on t.id=se.tavolo_id
+    where s.stato='errore' and s.creata_il > now() - interval '12 hours' order by s.creata_il limit 30`)
 }

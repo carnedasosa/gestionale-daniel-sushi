@@ -1,14 +1,18 @@
 import { db } from '@/server/db'
 import { prendiLavori } from '@/stampa/stampe-repo'
 import { autorizzatoPonte, perIlPonte } from '@/stampa/ponte'
+import { codaValida } from '@/stampa/instradamento'
 export const dynamic = 'force-dynamic'
 
-// Il ponte di stampa del locale chiede lavoro ogni 2 secondi. Ogni chiamata è anche il suo segnale di vita.
+// Il ponte di stampa del locale chiede lavoro ogni 2 secondi, una coda alla volta (`?coda=termiche` o `fiscale`; senza, tutte).
+// Ogni chiamata è anche il suo segnale di vita.
 export async function GET(request: Request) {
   if (!process.env.STAMPA_TOKEN) return new Response('Stampa non configurata',{ status: 503 })
   if (!autorizzatoPonte(request.headers.get('authorization'),process.env.STAMPA_TOKEN)) return new Response('Non autorizzato',{ status: 401 })
+  const coda = new URL(request.url).searchParams.get('coda')
+  if (coda !== null && !codaValida(coda)) return new Response('Coda non valida',{ status: 400 })
   try {
-    const lavori = await prendiLavori(db)
+    const lavori = await prendiLavori(db,coda ?? undefined)
     return Response.json({ lavori: lavori.map(perIlPonte) },{ headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'errore sconosciuto')

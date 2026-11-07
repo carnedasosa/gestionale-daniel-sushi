@@ -6,6 +6,7 @@ export type Stampante = typeof STAMPANTI[number]
 export const ETICHETTA_STAMPANTE: Record<Stampante,string> = { cassa: 'Cassa',banco: 'Banco sushi',cucina: 'Cucina',fiscale: 'Registratore telematico' }
 export const TIPI_LAVORO = ['comanda','annullo','preconto','scontrino','prova'] as const
 export type TipoLavoro = typeof TIPI_LAVORO[number]
+export const ETICHETTA_TIPO_LAVORO: Record<TipoLavoro,string> = { comanda: 'Comanda',annullo: 'Biglietto ANNULLATO',preconto: 'Pre-conto',scontrino: 'Scontrino',prova: 'Prova' }
 
 /** Quali reparti hanno le comande su carta (impostazione della cassa). */
 export interface StampaReparti { banco: boolean; cucina: boolean; sala: boolean }
@@ -21,15 +22,27 @@ export function stampanteDelLavoro(tipo: Exclude<TipoLavoro,'comanda' | 'annullo
   return tipo === 'scontrino' ? 'fiscale' : 'cassa'
 }
 
-/**
- * Un lavoro rimasto «in stampa» oltre il limite: quelli normali tornano in coda (al più una ristampa doppia),
- * quelli fiscali no, perché un secondo invio potrebbe battere un secondo scontrino: restano da controllare.
- */
-export function esitoScadenza(stampante: Stampante): 'in_coda' | 'incerta' {
-  return stampante === 'fiscale' ? 'incerta' : 'in_coda'
-}
 export const SCADENZA_LAVORO_SECONDI = 60
+/**
+ * Quanti lavori prende il ponte a ogni giro, per stampante. Sulla stessa stampante vanno in fila, ognuno col suo esito da
+ * riportare: `quanti × (timeout + esito)` deve stare ben sotto la scadenza (i conti stanno in trasporto.test.ts). Fra stampanti
+ * diverse vanno in parallelo. Il registratore può metterci 30 s, quindi uno alla volta.
+ */
+export const LAVORI_PER_STAMPANTE = 2
+export const LAVORI_FISCALI_PER_GIRO = 1
+/** Il ponte chiede le due code separatamente: il registratore fermo non deve far aspettare le comande. Senza coda, tutto insieme. */
+export const CODE_STAMPA = ['termiche','fiscale'] as const
+export type CodaStampa = typeof CODE_STAMPA[number]
+export function codaValida(c: unknown): c is CodaStampa { return (CODE_STAMPA as readonly unknown[]).includes(c) }
 export const TENTATIVI_MASSIMI = 5
+/**
+ * Un lavoro rimasto «in stampa» oltre il limite: quelli normali tornano in coda (al più una ristampa doppia) finché non
+ * finiscono i tentativi, quelli fiscali no, perché un secondo invio potrebbe battere un secondo scontrino: restano da controllare.
+ */
+export function esitoScadenza(stampante: Stampante, tentativi = 0): 'in_coda' | 'incerta' | 'errore' {
+  if (stampante === 'fiscale') return 'incerta'
+  return tentativi >= TENTATIVI_MASSIMI ? 'errore' : 'in_coda'
+}
 /** Allarme alla cassa: ponte zitto o lavoro fermo in coda da più di così. */
 export const ALLARME_SECONDI = 30
 
@@ -42,6 +55,6 @@ export function allarmeStampa(s: StatoCoda, usata: boolean, adesso: Date): Allar
   if (s.incerte) return { tipo: 'incerte',testo: `${s.incerte === 1 ? 'Uno scontrino' : `${s.incerte} scontrini`} da controllare sul registratore.` }
   if (!s.ponteVistoIl || secondi(s.ponteVistoIl) > ALLARME_SECONDI) return { tipo: 'ponte',testo: 'Stampanti scollegate: il ponte di stampa non risponde. Le comande restano in coda.' }
   if (s.piuVecchia && secondi(s.piuVecchia) > ALLARME_SECONDI) return { tipo: 'coda',testo: `${s.inCoda === 1 ? 'Una stampa ferma' : `${s.inCoda} stampe ferme`} in coda: controlla carta e stampanti.` }
-  if (s.errori) return { tipo: 'errori',testo: `${s.errori === 1 ? 'Una stampa non riuscita' : `${s.errori} stampe non riuscite`}: controlla le stampanti e ristampa.` }
+  if (s.errori) return { tipo: 'errori',testo: `${s.errori === 1 ? 'Una stampa non riuscita' : `${s.errori} stampe non riuscite`}: controlla le stampanti, poi Riprova o Ignora.` }
   return null
 }

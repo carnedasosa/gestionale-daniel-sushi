@@ -17,7 +17,7 @@ import { InizioTurno } from './InizioTurno'
 import { SchermoStaff, type DatiStaff } from './SchermoStaff'
 import { SchermoReparto, type DatiReparto } from './SchermoReparto'
 import { vistaStaff } from './vista'
-import { statoCoda } from '@/stampa/stampe-repo'
+import { lavoriInErrore, statoCoda } from '@/stampa/stampe-repo'
 import { allarmeStampa } from '@/stampa/instradamento'
 import { leggiImpostazioniCassa } from '@/cassa/impostazioni-repo'
 // Il contatore − / + dei coperti nel dettaglio del tavolo.
@@ -32,6 +32,7 @@ async function leggiCassa(vista: string): Promise<DatiStaff> {
     vista === 'menu' ? leggiMenu(db) : null,daPortare(db),statoCoda(db),leggiImpostazioniCassa(db)])
   const usata = Object.values(dati[9].stampa).some(Boolean)
   const comande = await riepilogoComande(db,[...dati[1],...dati[4]].map(o => o.id))
+  const inErrore = dati[8].errori ? await lavoriInErrore(db) : []
   const motivo = (a: StatoApertura) => a.aperto ? null : TESTO_MOTIVO[a.motivo]
   return {
     tavoli: dati[0].map(t => ({ ...t,sessione: t.sessione ? { ...t.sessione,apertaIl: t.sessione.apertaIl.toISOString() } : null })),
@@ -43,7 +44,7 @@ async function leggiCassa(vista: string): Promise<DatiStaff> {
     ordiniOnline: { accesi: dati[5].apertiIl === dati[5].oggi,asporto: motivo(dati[5].servizi.asporto.apertura),domicilio: motivo(dati[5].servizi.domicilio.apertura) },
     daPortare: dati[7].map(v => ({ ...v,quando: new Date(v.quando).toISOString() })),
     comande: Object.fromEntries(comande),
-    stampa: { usata,allarme: allarmeStampa(dati[8],usata,new Date()) },
+    stampa: { usata,allarme: allarmeStampa(dati[8],usata,new Date()),inErrore: inErrore.map(l => ({ ...l,creataIl: new Date(l.creataIl).toISOString() })) },
   }
 }
 
