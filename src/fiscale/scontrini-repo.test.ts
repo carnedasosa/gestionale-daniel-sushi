@@ -187,6 +187,16 @@ describe('esiti del registratore', () => {
       expect(await statoLavoro()).toBe('stampata')
       expect(await risolviIncerto(db,id,false)).toBe(false)
     })
+    it('doppio esito: il secondo non cambia numero, data e chiusura dello scontrino già emesso', async () => {
+      const { db } = ambiente, { id,lavoro } = await incerto()
+      const registrati = async () => (await db.query(`select scontrino,scontrino_numero,scontrino_data,scontrino_z,scontrino_il from pagamenti where id=$1`,[id]))[0]
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: RISPOSTA_OK(12) })).toBe(true)
+      const primo = await registrati()
+      expect(primo).toMatchObject({ scontrino: 'emesso',scontrino_numero: '12',scontrino_z: '301' })
+      expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: RISPOSTA_OK(13).replace('301','302') })).toBe(false)
+      expect(await registrati()).toEqual(primo)
+      expect(await statoLavoro()).toBe('stampata')
+    })
     it('rifiutato: come se fosse arrivata in tempo, si può rimandare', async () => {
       const { db } = ambiente, { id,lavoro } = await incerto()
       expect(await registraEsitoPonte(db,{ id: lavoro,ok: true,risposta: '<response success="false" code="EPTR_REC_EMPTY"/>' })).toBe(true)
