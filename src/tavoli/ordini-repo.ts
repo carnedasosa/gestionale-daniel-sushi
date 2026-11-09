@@ -11,6 +11,7 @@ import { cascataComande, creaComande, segnaComandeAnnullate } from '@/comande/co
 import { numeroGiorno } from './numero-giorno'
 import { importoCoperti } from '@/domain/coperti'
 import { accodaComande, annunciaAnnullo } from '@/stampa/stampe-repo'
+import { difendiScontriniConto, difendiScontriniOrdine, senzaScendereSottoGliScontrini } from '@/cassa/fiscalizzato'
 
 export interface RigaOrdine { id: string; numero: number | null; nome: string; prezzoUnitCent: number; quantita: number; nota: string | null; poke: SceltePoke | null; annullata: boolean; reparto: Reparto }
 export interface Ordine { id: string; numero: number; numeroGiorno: number; stato: StatoOrdineTavolo; totaleCent: number; creatoIl: Date; sessioneId: string; tavoloNome: string; tavoloChiuso: boolean; origine: OrigineOrdine; righe: RigaOrdine[] }
@@ -130,14 +131,22 @@ export async function avanzaStato(db: Db, ordineId: string, da: StatoOrdineTavol
 }
 /**
  * Esito di un annullamento: `conto_chiuso` se il tavolo è già stato chiuso (il conto incassato non si tocca più),
- * `ordine_concluso` se l'ordine da casa è già completato (consegnato o ritirato, quindi incassato).
+ * `ordine_concluso` se l'ordine da casa è già completato (consegnato o ritirato, quindi incassato),
+ * `scontrino_emesso` se l'annullo porterebbe il conto sotto gli scontrini già usciti (niente viene modificato).
  */
-export type EsitoAnnullo = 'ok' | 'conto_chiuso' | 'ordine_concluso' | 'non_disponibile'
+export type EsitoAnnullo = 'ok' | 'conto_chiuso' | 'ordine_concluso' | 'scontrino_emesso' | 'non_disponibile'
 // Blocca la sessione prima degli ordini (stesso ordine di chiudiSessione e annullaVoceConto): una chiusura in corso aspetta o viene vista.
+// «for update» e non «for share»: due annulli sullo stesso conto vanno uno alla volta, altrimenti ognuno vedrebbe
+// il totale senza l'annullo dell'altro e insieme potrebbero scendere sotto gli scontrini emessi.
 async function contoChiuso(tx: Db,sessioneId: string | null): Promise<boolean> {
   if (!sessioneId) return false
-  const [s] = await tx.query<{ chiusa: boolean }>('select chiusa_il is not null as chiusa from sessioni_tavolo where id=$1 for share',[sessioneId])
+  const [s] = await tx.query<{ chiusa: boolean }>('select chiusa_il is not null as chiusa from sessioni_tavolo where id=$1 for update',[sessioneId])
   return !s || s.chiusa
+}
+// Ultimo controllo di ogni annullo, a modifica fatta: se il conto è sceso sotto gli scontrini la transazione torna indietro.
+async function difendiScontrini(tx: Db,sessioneId: string | null,ordineId: string): Promise<void> {
+  if (sessioneId) await difendiScontriniConto(tx,sessioneId,async () => (await leggiConto(tx,sessioneId))?.totaleCent ?? 0)
+  else await difendiScontriniOrdine(tx,ordineId)
 }
 type Annullo = { tipo: 'ordine' | 'riga' | 'voce_conto'; ordineId: string; rigaId: string | null; importoCent: number }
 async function registraAnnulli(tx: Db,utenteId: string,annulli: Annullo[]) {
@@ -145,7 +154,7 @@ async function registraAnnulli(tx: Db,utenteId: string,annulli: Annullo[]) {
 }
 export async function annullaOrdine(db: Db, ordineId: string, utenteId: string): Promise<EsitoAnnullo> {
   if (!idValido(ordineId) || !idValido(utenteId)) return 'non_disponibile'
-  return db.transazione(async tx => {
+  return senzaScendereSottoGliScontrini(() => db.transazione(async tx => {
     const [s] = await tx.query<{ sessioneId: string }>("select sessione_id as \"sessioneId\" from ordini where id=$1 and tipo='tavolo'",[ordineId])
     if (!s) return 'non_disponibile'
     if (await contoChiuso(tx,s.sessioneId)) return 'conto_chiuso'
@@ -154,12 +163,13 @@ export async function annullaOrdine(db: Db, ordineId: string, utenteId: string):
     await cascataComande(tx,ordineId,'annullato')
     await annunciaAnnullo(tx,ordineId,'tutte')
     await registraAnnulli(tx,utenteId,[{ tipo: 'ordine',ordineId,rigaId: null,importoCent: o.totaleCent }])
+    await difendiScontrini(tx,s.sessioneId,ordineId)
     return 'ok'
-  })
+  }))
 }
 export async function annullaRiga(db: Db, rigaId: string, utenteId: string): Promise<EsitoAnnullo> {
   if (!idValido(rigaId) || !idValido(utenteId)) return 'non_disponibile'
-  return db.transazione(async tx => {
+  return senzaScendereSottoGliScontrini(() => db.transazione(async tx => {
     const [s] = await tx.query<{ sessioneId: string | null }>('select o.sessione_id as "sessioneId" from ordini o join righe_ordine r on r.ordine_id=o.id where r.id=$1',[rigaId])
     if (!s) return 'non_disponibile'
     // Al tavolo decide la sessione (bloccata prima dell'ordine); da casa sessione_id è null e decide lo stato dell'ordine.
@@ -174,8 +184,9 @@ export async function annullaRiga(db: Db, rigaId: string, utenteId: string): Pro
     await ricalcolaOrdine(tx,o.id)
     await annunciaAnnullo(tx,o.id,[rigaId])
     await registraAnnulli(tx,utenteId,[{ tipo: 'riga',ordineId: o.id,rigaId,importoCent: r.importoCent }])
+    await difendiScontrini(tx,s.sessioneId,o.id)
     return 'ok'
-  })
+  }))
 }
 // Totale = righe attive + consegna (solo domicilio). Senza righe attive l'ordine è annullato; da casa il cliente riceve l'email.
 async function ricalcolaOrdine(db: Db,id: string) {
@@ -186,7 +197,7 @@ async function ricalcolaOrdine(db: Db,id: string) {
 export interface IdentitaVoce { nome: string; numero: number | null; prezzoUnitCent: number; poke: SceltePoke | null }
 export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce,utenteId: string): Promise<EsitoAnnullo> {
   if (!idValido(sessioneId) || !idValido(utenteId) || !v || typeof v.nome !== 'string' || !v.nome.length || v.nome.length>300 || !Number.isSafeInteger(v.prezzoUnitCent) || v.prezzoUnitCent<0 || v.prezzoUnitCent>2147483647 || (v.numero!==null && (!Number.isSafeInteger(v.numero) || v.numero<0 || v.numero>2147483647)) || (v.poke!==null && (typeof v.poke!=='object' || Array.isArray(v.poke) || !Object.values(v.poke).every(x => Array.isArray(x) && x.every(s => typeof s==='string'))))) return 'non_disponibile'
-  return db.transazione(async tx => {
+  return senzaScendereSottoGliScontrini(() => db.transazione(async tx => {
     const [s] = await tx.query<{ chiusa: boolean }>('select chiusa_il is not null as chiusa from sessioni_tavolo where id=$1 for update',[sessioneId])
     if (!s) return 'non_disponibile'
     if (s.chiusa) return 'conto_chiuso'
@@ -197,8 +208,10 @@ export async function annullaVoceConto(db: Db,sessioneId: string,v: IdentitaVoce
       await annunciaAnnullo(tx,id,righe.filter(r => r.ordineId === id).map(r => r.id))
     }
     await registraAnnulli(tx,utenteId,righe.map(r => ({ tipo: 'voce_conto',ordineId: r.ordineId,rigaId: r.id,importoCent: r.importoCent })))
-    return righe.length>0 ? 'ok' : 'non_disponibile'
-  })
+    if (!righe.length) return 'non_disponibile'
+    await difendiScontrini(tx,sessioneId,righe[0].ordineId)
+    return 'ok'
+  }))
 }
 // ordiniIds: ordini non annullati del conto, per riconoscere quelli arrivati dopo l'apertura della pagina.
 // totaleCent = voci + coperti (copertiCent); copertoCent è il prezzo fissato sulla sessione (null senza coperti).

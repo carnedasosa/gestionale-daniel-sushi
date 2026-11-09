@@ -4,6 +4,8 @@ import { generaChiaveTavolo } from '@/domain/chiave-tavolo'
 import { idValido, nomeValido, slugValido, chiaveValida } from './validazione'
 import type { ErroriCodice } from '@/domain/limiti-tentativi'
 import { copertiValidi } from '@/domain/coperti'
+import { difendiScontriniConto, senzaScendereSottoGliScontrini } from '@/cassa/fiscalizzato'
+import { leggiConto } from './ordini-repo'
 
 export interface Tavolo { id: string; nome: string; slug: string; chiave: string; posizione: number; attivo: boolean }
 export interface SessioneAperta { id: string; tavoloId: string; codice: string; apertaIl: Date; coperti: number | null }
@@ -77,17 +79,19 @@ export async function chiudiSessione(db: Db, sessioneId: string,contoVistoAlle: 
 /**
  * Coperti del tavolo (null per toglierli). Il prezzo del coperto si fissa la prima volta che si segnano:
  * cambiarlo in admin a serata in corso non tocca i tavoli già aperti. A tavolo chiuso il conto non si tocca più.
+ * Togliere coperti abbassa il conto come un annullo: `scontrino_emesso` se scenderebbe sotto gli scontrini già usciti.
  */
-export async function impostaCoperti(db: Db, sessioneId: string, coperti: number | null): Promise<'ok' | 'conto_chiuso' | 'non_disponibile'> {
+export async function impostaCoperti(db: Db, sessioneId: string, coperti: number | null): Promise<'ok' | 'conto_chiuso' | 'scontrino_emesso' | 'non_disponibile'> {
   if (!idValido(sessioneId) || (coperti !== null && !copertiValidi(coperti))) return 'non_disponibile'
-  return db.transazione(async tx => {
+  return senzaScendereSottoGliScontrini(() => db.transazione(async tx => {
     const [s] = await tx.query<{ chiusa: boolean }>('select chiusa_il is not null as chiusa from sessioni_tavolo where id=$1 for update',[sessioneId])
     if (!s) return 'non_disponibile'
     if (s.chiusa) return 'conto_chiuso'
     await tx.query(`update sessioni_tavolo set coperti=$2,
       coperto_cent=case when $2::int is null then null else coalesce(coperto_cent,(select coperto_cent from impostazioni_cassa where id=1)) end where id=$1`,[sessioneId,coperti])
+    await difendiScontriniConto(tx,sessioneId,async () => (await leggiConto(tx,sessioneId))?.totaleCent ?? 0)
     return 'ok'
-  })
+  }))
 }
 export interface ContoRecente { id: string; tavoloNome: string; chiusaIl: Date }
 export async function contiRecenti(db: Db): Promise<ContoRecente[]> {
