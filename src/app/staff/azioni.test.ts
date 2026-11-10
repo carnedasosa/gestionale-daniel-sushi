@@ -60,6 +60,10 @@ it('gli annullamenti registrano l’utente staff e rifiutano i conti chiusi con 
     expect(await chiama()).toEqual({ ok: false,errore: 'Il conto di questo tavolo è già chiuso: non si può più modificare.' })
     repo.mockResolvedValueOnce('non_disponibile')
     expect(await chiama()).toEqual({ ok: false,errore: 'Operazione non disponibile: aggiorna lo schermo.' })
+    m.revalidatePath.mockClear()
+    repo.mockResolvedValueOnce('scontrino_emesso')
+    expect(await chiama()).toEqual({ ok: false,errore: expect.stringContaining('Il reso si fa sul registratore') })
+    expect(m.revalidatePath).not.toHaveBeenCalled()
   }
 })
 it('una riga di un ordine da casa già completato si rifiuta con un messaggio che non parla di tavolo', async () => {

@@ -13,6 +13,7 @@ import { cascataComande, creaComande } from '@/comande/comande-repo'
 import { numeroGiorno } from '@/tavoli/numero-giorno'
 import { leggiDisponibilita } from './disponibilita'
 import { accodaComande, annunciaAnnullo } from '@/stampa/stampe-repo'
+import { difendiScontriniOrdine, senzaScendereSottoGliScontrini } from '@/cassa/fiscalizzato'
 
 export interface OrdineCasa {
   id: string; numero: number; numeroGiorno: number; tipo: Servizio; stato: StatoCasa; token: string; totaleCent: number; consegnaCent: number; fascia: Date; creatoIl: Date; aggiornatoIl: Date
@@ -129,6 +130,8 @@ async function cambiaStato(db: Db, id: string, da: StatoCasa[], verso: (o: { tip
     // Dopo lo spostamento della fascia (+15/+30): il biglietto mostra l'orario giusto.
     if (nuovo === 'accettato') await accodaComande(tx,id)
     if (nuovo === 'annullato') await annunciaAnnullo(tx,id,'tutte')
+    // Annullato o rifiutato l'ordine vale zero: non se uno scontrino è già uscito (la transazione torna indietro).
+    if (nuovo === 'annullato' || nuovo === 'rifiutato') await difendiScontriniOrdine(tx,id)
     // Le email partono solo per gli ordini del cliente: quelli della cassa non hanno indirizzo né consenso.
     if (extra.email) await tx.query(`insert into email_ordini (ordine_id,tipo) select id,$2 from ordini where id=$1 and origine='cliente' on conflict (ordine_id,tipo) do nothing`,[id,extra.email])
     return ordineCasaPerId(tx,id)
@@ -138,14 +141,15 @@ export async function accettaOrdine(db: Db, id: string, ritardoMinuti: 0 | 15 | 
   if (![0,15,30].includes(ritardoMinuti)) return null
   return cambiaStato(db,id,['in_attesa'],() => 'accettato',{ set: `fascia=fascia + make_interval(mins => $3::int)`,parametri: [ritardoMinuti],email: 'accettato' })
 }
-export async function rifiutaOrdine(db: Db, id: string, motivo: string): Promise<OrdineCasa | null> {
-  return cambiaStato(db,id,['in_attesa'],() => 'rifiutato',{ set: 'motivo_rifiuto=$3',parametri: [motivo],email: 'rifiutato' })
+/** `scontrino_emesso`: l'ordine ha già uno scontrino uscito, in coda o incerto, e resta com'è (il reso si fa sul registratore). */
+export async function rifiutaOrdine(db: Db, id: string, motivo: string): Promise<OrdineCasa | 'scontrino_emesso' | null> {
+  return senzaScendereSottoGliScontrini(() => cambiaStato(db,id,['in_attesa'],() => 'rifiutato',{ set: 'motivo_rifiuto=$3',parametri: [motivo],email: 'rifiutato' }))
 }
 export async function avanzaOrdineCasa(db: Db, id: string, da: StatoCasa): Promise<OrdineCasa | null> {
   return cambiaStato(db,id,[da],o => prossimoStatoCasa(o.tipo,o.stato))
 }
-export async function annullaOrdineCasa(db: Db, id: string): Promise<OrdineCasa | null> {
-  return cambiaStato(db,id,STATI_CASA.filter(puoAnnullareCasa),() => 'annullato',{ email: 'annullato' })
+export async function annullaOrdineCasa(db: Db, id: string): Promise<OrdineCasa | 'scontrino_emesso' | null> {
+  return senzaScendereSottoGliScontrini(() => cambiaStato(db,id,STATI_CASA.filter(puoAnnullareCasa),() => 'annullato',{ email: 'annullato' }))
 }
 /**
  * Toglie i dati personali dagli ordini da casa più vecchi di 12 mesi: nome, telefono, email, indirizzo, note, contanti e note

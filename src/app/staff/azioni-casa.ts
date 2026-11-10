@@ -7,6 +7,7 @@ import { accettaOrdine, annullaOrdineCasa, avanzaOrdineCasa, rifiutaOrdine } fro
 import { motivoRifiuto, STATI_CASA, type StatoCasa } from '@/domain/stati-casa'
 import { dataRoma } from '@/domain/ora-roma'
 import { idValido } from '@/tavoli/validazione'
+import { ERRORE_SCONTRINO_EMESSO } from '@/cassa/fiscalizzato'
 import type { EsitoStaff } from './azioni'
 // Le email accodate partono al rendering successivo di /staff (router.refresh dopo ogni azione).
 async function operazione(fn: () => Promise<unknown>): Promise<EsitoStaff> {
@@ -16,6 +17,7 @@ async function operazione(fn: () => Promise<unknown>): Promise<EsitoStaff> {
     return { ok: false,errore: 'Operazione non riuscita, riprova.' }
   }
   if (risultato === null) return { ok: false,errore: 'Operazione non disponibile: aggiorna lo schermo.' }
+  if (risultato === 'scontrino_emesso') return { ok: false,errore: ERRORE_SCONTRINO_EMESSO }
   revalidatePath('/staff'); revalidatePath('/'); revalidatePath('/ordina'); revalidatePath('/ordine/[token]','page')
   return { ok: true }
 }
