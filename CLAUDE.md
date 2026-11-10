@@ -54,9 +54,10 @@ La CI (`.github/workflows/ci.yml`) esegue typecheck, lint, test, e2e e serata su
 ## Database e migrazioni
 
 - Migrazioni in `supabase/migrations/` (ordinate per nome, applicate nell'ordine anche da test ed e2e). Il seed è per un database vuoto: non rieseguirlo sul DB reale.
-- Applicare una migrazione al DB reale è un'azione da far autorizzare all'utente. Il connettore Supabase MCP non vede il progetto: per il DB reale si usano script `tsx --env-file=.env.local` (es. `scripts/applica-sql.ts`) con `src/server/tls-db`.
+- Applicare una migrazione al DB reale è un'azione da far autorizzare all'utente. Il connettore Supabase MCP non vede il progetto: per il DB reale si usano script `tsx --env-file=.env.local` con `src/server/tls-db` (`scripts/interroga-sql.ts` in sola lettura, `scripts/applica-sql.ts` per scrivere).
+- `npx tsx --env-file=.env.local scripts/applica-sql.ts <file.sql>` senza flag stampa solo il riepilogo (host, database, utente, file, SHA-256) ed esce con codice 2, senza collegarsi. `--prova` esegue in una transazione e fa rollback; `--conferma` esegue in una sola transazione e, per i file di `supabase/migrations/`, registra la riga in `supabase_migrations.schema_migrations` nella stessa transazione (non va più inserita a mano) e rifiuta una versione già registrata. Anche `--prova` si collega al DB reale e prende i lock: va autorizzato come `--conferma`. I file non devono contenere `begin`/`commit`. Logica e test in `scripts/applica-sql/`.
 - Le Preview Vercel non hanno `DATABASE_URL`: nessuna anteprima scrive sul DB reale.
 
 ## Documentazione di progetto
 
-Specifiche in `docs/superpowers/specs/`, piani di lavoro in `docs/superpowers/plans/`, verbali delle verifiche in `docs/verifiche/`. Il README descrive in dettaglio il comportamento di tavoli, schermo staff, ordini da casa ed email.
+Specifiche in `docs/superpowers/specs/`, piani di lavoro in `docs/superpowers/plans/`, verbali delle verifiche in `docs/verifiche/`, runbook di backup e ripristino in `docs/operativita/ripristino.md`. Il README descrive in dettaglio il comportamento di tavoli, schermo staff, ordini da casa ed email.
